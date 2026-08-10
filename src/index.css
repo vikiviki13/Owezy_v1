@@ -1,0 +1,97 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  /* light mode tokens */
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-soft: #ecfdf5;
+  --color-bg: #fbfaf7;
+  --color-surface: #ffffff;
+  --color-surface-secondary: #f4f2ec;
+  --color-border: #e7e3d8;
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #57534e;
+  --color-text-muted: #a8a29e;
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #0284c7;
+}
+
+.dark {
+  --color-primary: #10b981;
+  --color-primary-hover: #34d399;
+  --color-primary-soft: #052e23;
+  --color-bg: #14120f;
+  --color-surface: #1c1a16;
+  --color-surface-secondary: #26221c;
+  --color-border: #34302a;
+  --color-text-primary: #f5f4f0;
+  --color-text-secondary: #b8b3a8;
+  --color-text-muted: #756e63;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+.amount-tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* torn-receipt edge signature, used on the hero balance card */
+.receipt-edge {
+  position: relative;
+}
+.receipt-edge::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -9px;
+  height: 18px;
+  background-image: radial-gradient(circle at 9px 0, transparent 9px, var(--color-bg) 9.5px);
+  background-size: 18px 18px;
+  background-repeat: repeat-x;
+}
+
+.input {
+  width: 100%;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  color: var(--color-text-primary);
+}
+.input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+::-webkit-scrollbar { display: none; }
+* { scrollbar-width: none; }
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-sheet-up {
+  animation: sheet-up 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
