@@ -16,6 +16,39 @@ export interface Profile {
   updated_at: string;
 }
 
+export type CurrencyCode = 'INR' | 'USD' | 'GBP' | 'EUR' | 'AED' | 'SGD';
+export type NumberFormat = 'indian' | 'international';
+export type DecimalDisplay = 'automatic' | '0' | '2';
+export type DateFormat = 'DD MMM YYYY' | 'DD/MM/YYYY' | 'MM/DD/YYYY' | 'YYYY-MM-DD' | 'DD MMM YY';
+export type TimeFormat = '12h' | '24h';
+export type WeekStartsOn = 'automatic' | 'monday' | 'sunday';
+export type ThemePreference = 'system' | 'light' | 'dark';
+
+export interface UserPreferences {
+  id: UUID;
+  user_id: UUID;
+  currency_code: CurrencyCode;
+  number_format: NumberFormat;
+  decimal_display: DecimalDisplay;
+  date_format: DateFormat;
+  time_format: TimeFormat;
+  week_starts_on: WeekStartsOn;
+  timezone: string;
+  timezone_mode: 'automatic' | 'manual';
+  language: 'en';
+  theme: ThemePreference;
+  notifications_enabled: boolean;
+  payment_reminders_enabled: boolean;
+  pending_balance_reminders_enabled: boolean;
+  app_updates_enabled: boolean;
+  default_reminder_days: number;
+  default_reminder_time: string;
+  app_lock_enabled: boolean;
+  auto_lock_duration: 'immediately' | '1m' | '5m' | '15m' | '30m';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Friend {
   id: UUID;
   owner_id: UUID;
@@ -65,6 +98,7 @@ export interface Expense {
   recoverable_amount: number;
   expense_date: string; // YYYY-MM-DD
   expense_time: string; // HH:mm
+  occurred_at?: string; // UTC timestamp for the actual transaction moment
   currency: string;
   group_id?: UUID;
   notes?: string;
@@ -128,6 +162,7 @@ export interface Repayment {
   transaction_reference?: string;
   repayment_date: string;
   repayment_time: string;
+  occurred_at?: string; // UTC timestamp for the actual repayment moment
   notes?: string;
   created_at: string;
   updated_at: string;

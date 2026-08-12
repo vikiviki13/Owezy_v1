@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Activity as ActivityIcon } from 'lucide-react';
 import { listAllRepayments, listExpenses, getFriend, getExpenseParticipants } from '../lib/db';
-import { formatCurrency, formatTime, todayDate } from '../lib/utils';
+import { formatCurrency, formatTime, formatTimestampTime, todayDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 
@@ -22,6 +22,7 @@ export function Activity() {
       amount: e.recoverable_amount,
       date: e.expense_date,
       time: e.expense_time,
+      occurredAt: e.occurred_at,
       status: e.status,
     }));
     const repayments = listAllRepayments().map((r) => ({
@@ -32,6 +33,7 @@ export function Activity() {
       amount: r.amount,
       date: r.repayment_date,
       time: r.repayment_time,
+      occurredAt: r.occurred_at,
       status: undefined,
     }));
     let merged = [...expenses, ...repayments].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
@@ -80,7 +82,7 @@ export function Activity() {
                   >
                     <div className="min-w-0">
                       <p className="font-medium truncate">{r.title}</p>
-                      <p className="text-xs text-[var(--color-text-muted)] truncate">{r.subtitle} · {formatTime(r.time)}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] truncate">{r.subtitle} · {r.occurredAt ? formatTimestampTime(r.occurredAt) : formatTime(r.time)}</p>
                     </div>
                     <div className="text-right shrink-0 ml-3">
                       <p className={`font-semibold amount-tabular ${r.type === 'repayment' ? 'text-[var(--color-primary)]' : ''}`}>

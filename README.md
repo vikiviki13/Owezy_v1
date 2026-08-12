@@ -14,8 +14,9 @@ A mobile-first PWA for tracking money you have fronted for friends and what they
 
 1. Create a Supabase project.
 2. Run `supabase/schema.sql` in the Supabase SQL Editor.
-3. Copy `.env.example` to `.env.local`.
-4. Add your Supabase Project URL and **publishable** key to `.env.local`.
+3. Deploy `supabase/functions/security` and configure its exact allowed origins and WebAuthn RP ID as described in `DEPLOYMENT.md`.
+4. Copy `.env.example` to `.env.local`.
+5. Add your Supabase Project URL and **publishable** key to `.env.local`.
 
 ```env
 VITE_SUPABASE_URL=https://your-project-id.supabase.co
@@ -49,6 +50,8 @@ The production site is generated in `dist/`.
 - Supabase Auth stores passwords; the application never stores plain-text passwords.
 - Each account's expense data is stored in its own `app_data` row.
 - PostgreSQL Row Level Security uses `auth.uid()` so users can only access their own row.
+- App Lock uses server-verified WebAuthn Device Security plus a 6-digit Argon2id-hashed PIN fallback.
+- WebAuthn private keys and biometric information remain on the device; the database stores only public credential material.
 - A per-user cloud document preserves the existing calculation engine while syncing across devices.
 - Existing local-only data is imported into the first account used in that browser one time.
 

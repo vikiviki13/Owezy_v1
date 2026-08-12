@@ -1,9 +1,10 @@
 import {
   Attachment, Expense, ExpenseAdjustment, ExpenseItem, ExpenseItemAssignment,
   ExpenseParticipant, Friend, FriendBalance, Group, GroupMember, LedgerEntry,
-  Profile, Repayment,
+  Profile, Repayment, UserPreferences,
 } from '../types';
-import { roundCurrency, todayDate, nowTime, uid } from './utils';
+import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
+import { defaultPreferences, setPreferenceSnapshot } from './preferences';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -20,6 +21,7 @@ const KEY = 'tab_db_v1';
 
 interface DB {
   profile: Profile;
+  preferences: UserPreferences;
   friends: Friend[];
   groups: Group[];
   groupMembers: GroupMember[];
@@ -44,6 +46,7 @@ function emptyDB(): DB {
       created_at: now,
       updated_at: now,
     },
+    preferences: defaultPreferences(OWNER_ID),
     friends: [],
     groups: [],
     groupMembers: [],
@@ -67,6 +70,8 @@ function load(): DB {
   } catch {
     cache = emptyDB();
   }
+  cache.preferences = { ...defaultPreferences(cache.profile.id), ...(cache.preferences || {}) };
+  setPreferenceSnapshot(cache.preferences);
   return cache;
 }
 
@@ -79,6 +84,18 @@ function persist() {
 export function resetDB() {
   cache = emptyDB();
   persist();
+}
+
+export function clearSensitiveLocalData() {
+  cache = null;
+  localStorage.removeItem(KEY);
+  setPreferenceSnapshot(defaultPreferences());
+  window.dispatchEvent(new CustomEvent('tab-db-changed'));
+}
+
+export function releaseSensitiveMemory() {
+  cache = null;
+  setPreferenceSnapshot(defaultPreferences());
 }
 
 export function seedSampleData() {
@@ -154,6 +171,39 @@ export function updateProfile(patch: Partial<Profile>) {
   db.profile = { ...db.profile, ...patch, updated_at: new Date().toISOString() };
   persist();
   return db.profile;
+}
+
+export function getUserPreferences(): UserPreferences {
+  return load().preferences;
+}
+
+export function updateUserPreferences(patch: Partial<UserPreferences>): UserPreferences {
+  const db = load();
+  db.preferences = { ...db.preferences, ...patch, updated_at: new Date().toISOString() };
+  if (patch.currency_code) db.profile.default_currency = patch.currency_code;
+  setPreferenceSnapshot(db.preferences);
+  persist();
+  return db.preferences;
+}
+
+export function getExportData() {
+  const db = load();
+  return {
+    profile: db.profile,
+    preferences: db.preferences,
+    friends: db.friends,
+    groups: db.groups,
+    groupMembers: db.groupMembers,
+    expenses: db.expenses,
+    expenseParticipants: db.expenseParticipants,
+    repayments: db.repayments,
+  };
+}
+
+export function getStorageSummary() {
+  const db = load();
+  const bytes = new Blob([JSON.stringify(db)]).size;
+  return { receiptCount: db.attachments.length, bytes };
 }
 
 // ---------------------------------------------------------------------------
@@ -242,6 +292,8 @@ export function createExpense(input: CreateExpenseInput): Expense {
   const db = load();
   const now = new Date().toISOString();
   const recoverable = roundCurrency(input.participants.reduce((s, p) => s + p.share_amount, 0));
+  const expenseDate = input.expense_date;
+  const expenseTime = input.expense_time || nowTime();
 
   const expense: Expense = {
     id: uid(),
@@ -253,9 +305,10 @@ export function createExpense(input: CreateExpenseInput): Expense {
     total_amount: roundCurrency(input.total_amount),
     owner_share: roundCurrency(input.owner_share),
     recoverable_amount: recoverable,
-    expense_date: input.expense_date,
-    expense_time: input.expense_time || nowTime(),
-    currency: db.profile.default_currency,
+    expense_date: expenseDate,
+    expense_time: expenseTime,
+    occurred_at: localDateTimeToUTC(expenseDate, expenseTime, db.preferences.timezone_mode === 'automatic' ? Intl.DateTimeFormat().resolvedOptions().timeZone : db.preferences.timezone),
+    currency: db.preferences.currency_code,
     group_id: input.group_id,
     notes: input.notes,
     split_mode: input.split_mode || 'custom',
@@ -341,6 +394,8 @@ interface RecordRepaymentInput {
 export function recordRepayment(input: RecordRepaymentInput): Repayment {
   const db = load();
   const now = new Date().toISOString();
+  const repaymentDate = input.repayment_date || todayDate();
+  const repaymentTime = input.repayment_time || nowTime();
   const repayment: Repayment = {
     id: uid(),
     owner_id: OWNER_ID,
@@ -349,8 +404,9 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
     amount: roundCurrency(input.amount),
     payment_method: input.payment_method || 'UPI',
     transaction_reference: input.transaction_reference,
-    repayment_date: input.repayment_date || todayDate(),
-    repayment_time: input.repayment_time || nowTime(),
+    repayment_date: repaymentDate,
+    repayment_time: repaymentTime,
+    occurred_at: localDateTimeToUTC(repaymentDate, repaymentTime, db.preferences.timezone_mode === 'automatic' ? Intl.DateTimeFormat().resolvedOptions().timeZone : db.preferences.timezone),
     notes: input.notes,
     created_at: now,
     updated_at: now,

@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { defaultPreferences } from './preferences';
 
 const LOCAL_DB_KEY = 'tab_db_v1';
 const LEGACY_MIGRATION_KEY = 'tab_legacy_migrated_v1';
@@ -28,6 +29,7 @@ function emptyData(user: User): StoredData {
       created_at: now,
       updated_at: now,
     },
+    preferences: defaultPreferences(user.id),
     friends: [],
     groups: [],
     groupMembers: [],
@@ -49,6 +51,9 @@ function prepareData(value: unknown, user: User): StoredData {
   const storedProfile = stored.profile && typeof stored.profile === 'object' && !Array.isArray(stored.profile)
     ? stored.profile as Record<string, unknown>
     : {};
+  const storedPreferences = stored.preferences && typeof stored.preferences === 'object' && !Array.isArray(stored.preferences)
+    ? stored.preferences as Record<string, unknown>
+    : {};
 
   return {
     ...fallback,
@@ -58,6 +63,11 @@ function prepareData(value: unknown, user: User): StoredData {
       ...storedProfile,
       id: user.id,
       email: user.email,
+    },
+    preferences: {
+      ...defaultPreferences(user.id),
+      ...storedPreferences,
+      user_id: user.id,
     },
   };
 }
@@ -137,6 +147,12 @@ export function stopCloudData() {
   if (syncHandler) window.removeEventListener('tab-db-changed', syncHandler);
   syncHandler = null;
   activeUserId = null;
+}
+
+export function clearCloudRuntimeState() {
+  stopCloudData();
+  pendingSync = Promise.resolve();
+  lastSyncError = null;
 }
 
 export async function flushCloudData() {

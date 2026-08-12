@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, Users2, PiggyBank, ArrowUpRight, FileText, HandCoins } from 'lucide-react';
 import { dashboardTotals, getProfile, listFriendBalances, onDBChange, listAllRepayments, listExpenses } from '../lib/db';
-import { formatCurrency, formatDateTimeRelative, greeting } from '../lib/utils';
+import { formatCurrency, formatDateTimeRelative, formatTimestampRelative, greeting } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
@@ -18,8 +18,8 @@ export function Home() {
   const owing = balances.slice(0, 8);
 
   const activity = [
-    ...listExpenses().slice(0, 6).map((e) => ({ type: 'expense' as const, id: e.id, title: e.title, amount: e.recoverable_amount, date: e.expense_date, time: e.expense_time, status: e.status })),
-    ...listAllRepayments().slice(0, 6).map((r) => ({ type: 'repayment' as const, id: r.id, title: 'Payment received', amount: r.amount, date: r.repayment_date, time: r.repayment_time, status: undefined })),
+    ...listExpenses().slice(0, 6).map((e) => ({ type: 'expense' as const, id: e.id, title: e.title, amount: e.recoverable_amount, date: e.expense_date, time: e.expense_time, occurredAt: e.occurred_at, status: e.status })),
+    ...listAllRepayments().slice(0, 6).map((r) => ({ type: 'repayment' as const, id: r.id, title: 'Payment received', amount: r.amount, date: r.repayment_date, time: r.repayment_time, occurredAt: r.occurred_at, status: undefined })),
   ]
     .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))
     .slice(0, 6);
@@ -109,7 +109,7 @@ export function Home() {
               <div key={a.id} className="flex items-center justify-between p-4">
                 <div className="min-w-0">
                   <p className="font-medium truncate">{a.title}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{formatDateTimeRelative(a.date, a.time)}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">{a.occurredAt ? formatTimestampRelative(a.occurredAt) : formatDateTimeRelative(a.date, a.time)}</p>
                 </div>
                 <div className="text-right shrink-0 ml-3">
                   <p className={`font-semibold amount-tabular ${a.type === 'repayment' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'}`}>

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X } from 'lucide-react';
+import { usePreferences } from './PreferencesContext';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Home', icon: Home },
@@ -13,6 +14,9 @@ const NAV_ITEMS = [
 export function Shell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  usePreferences();
+  const isSubPage = location.pathname.startsWith('/profile/');
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
@@ -22,12 +26,12 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white font-bold">T</div>
           <span className="font-bold text-lg">Tab</span>
         </div>
-        <button
+        {!isSubPage && <button
           onClick={() => setQuickOpen(true)}
           className="flex items-center gap-2 justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium rounded-xl py-2.5 mb-6 transition-colors"
         >
           <Plus size={18} /> Add
-        </button>
+        </button>}
         <nav className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <NavLink
@@ -51,16 +55,16 @@ export function Shell({ children }: { children: ReactNode }) {
         <main className="flex-1 pb-24 md:pb-8 max-w-2xl w-full mx-auto">{children}</main>
 
         {/* Mobile floating add button */}
-        <button
+        {!isSubPage && <button
           onClick={() => setQuickOpen(true)}
           className="md:hidden fixed bottom-20 right-5 z-40 w-14 h-14 rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white shadow-lg shadow-black/20 flex items-center justify-center active:scale-95 transition-transform"
           aria-label="Add"
         >
           <Plus size={26} />
-        </button>
+        </button>}
 
         {/* Mobile bottom nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-bottom">
+        {!isSubPage && <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-bottom">
           <div className="flex items-stretch justify-around max-w-2xl mx-auto">
             {NAV_ITEMS.map((item) => (
               <NavLink
@@ -78,7 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </NavLink>
             ))}
           </div>
-        </nav>
+        </nav>}
       </div>
 
       {quickOpen && (

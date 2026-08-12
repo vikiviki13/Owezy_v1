@@ -1,6 +1,9 @@
 import { avatarColor, initials } from '../lib/utils';
 
-export function Avatar({ name, size = 44 }: { name: string; size?: number }) {
+export function Avatar({ name, size = 44, src }: { name: string; size?: number; src?: string }) {
+  if (src) {
+    return <img src={src} alt="" className="rounded-full object-cover shrink-0" style={{ width: size, height: size }} />;
+  }
   return (
     <div
       className="flex items-center justify-center rounded-full font-semibold text-white shrink-0 select-none"

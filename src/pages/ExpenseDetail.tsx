@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Trash2, Share2 } from 'lucide-react';
 import { deleteExpense, getExpense, getExpenseParticipants, getFriend } from '../lib/db';
-import { formatCurrency, formatDate, formatTime } from '../lib/utils';
+import { formatCurrency, formatDate, formatTime, formatTimestamp } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { useToast } from '../components/ToastContext';
@@ -46,7 +46,7 @@ export function ExpenseDetail() {
         </button>
         <div className="flex-1">
           <h1 className="font-semibold">{expense.title}</h1>
-          <p className="text-xs text-[var(--color-text-muted)]">{formatDate(expense.expense_date)} · {formatTime(expense.expense_time)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{expense.occurred_at ? formatTimestamp(expense.occurred_at) : `${formatDate(expense.expense_date)} · ${formatTime(expense.expense_time)}`}</p>
         </div>
         <StatusBadge status={expense.status} />
       </div>

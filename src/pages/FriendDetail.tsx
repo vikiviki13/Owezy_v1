@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Receipt, HandCoins, Share2, Phone } from 'lucide-react';
 import { calculateFriendBalance, friendLedger, getFriend, listExpensesForFriend, listRepaymentsForFriend, onDBChange } from '../lib/db';
-import { formatCurrency, formatDateShort, formatTime } from '../lib/utils';
+import { formatCurrency, formatDateShort, formatTime, formatTimestamp } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
@@ -88,7 +88,7 @@ export function FriendDetail() {
                 <button key={e.id} onClick={() => navigate(`/expense/${e.id}`)} className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4 text-left">
                   <div>
                     <p className="font-medium">{e.title}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{formatDateShort(e.expense_date)}, {formatTime(e.expense_time)}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{e.occurred_at ? formatTimestamp(e.occurred_at) : `${formatDateShort(e.expense_date)} · ${formatTime(e.expense_time)}`}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold amount-tabular">{formatCurrency(e.recoverable_amount)}</p>
@@ -109,7 +109,7 @@ export function FriendDetail() {
                 <div key={r.id} className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
                   <div>
                     <p className="font-medium">{r.payment_method}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{formatDateShort(r.repayment_date)}, {formatTime(r.repayment_time)}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">{r.occurred_at ? formatTimestamp(r.occurred_at) : `${formatDateShort(r.repayment_date)} · ${formatTime(r.repayment_time)}`}</p>
                   </div>
                   <p className="font-semibold amount-tabular text-[var(--color-primary)]">+{formatCurrency(r.amount)}</p>
                 </div>

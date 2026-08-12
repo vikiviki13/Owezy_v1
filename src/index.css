@@ -45,6 +45,25 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* Best-effort app-switcher privacy cover. Browser PWAs cannot promise native
+   screenshot blocking, so sensitive content is obscured as the page hides. */
+html.privacy-mode body::after {
+  content: "Tab\A Your financial records are protected";
+  white-space: pre;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  font-weight: 700;
+  line-height: 2;
+  color: var(--color-text-primary);
+  background: var(--color-bg);
+}
+
 .amount-tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
