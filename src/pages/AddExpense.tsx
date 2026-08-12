@@ -4,7 +4,7 @@ import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2
 import { createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
 import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [

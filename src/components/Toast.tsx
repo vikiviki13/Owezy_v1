@@ -1,15 +1,10 @@
-import { createContext, useCallback, useContext, useState, ReactNode } from 'react';
+import { useCallback, useState, ReactNode } from 'react';
 import { CheckCircle2 } from 'lucide-react';
+import { ToastContext } from './ToastContext';
 
 interface ToastItem {
   id: number;
   message: string;
-}
-
-const ToastCtx = createContext<(message: string) => void>(() => {});
-
-export function useToast() {
-  return useContext(ToastCtx);
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -22,7 +17,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ToastCtx.Provider value={show}>
+    <ToastContext.Provider value={show}>
       {children}
       <div className="fixed bottom-24 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none">
         {toasts.map((t) => (
@@ -35,6 +30,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           </div>
         ))}
       </div>
-    </ToastCtx.Provider>
+    </ToastContext.Provider>
   );
 }

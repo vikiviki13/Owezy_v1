@@ -4,7 +4,7 @@ import { ArrowLeft, MessageCircle, Copy, Share2 } from 'lucide-react';
 import { calculateStatement, getFriend } from '../lib/db';
 import { formatCurrency, formatDateShort, todayDate } from '../lib/utils';
 import { buildStatementMessage, copyToClipboard, nativeShare, shareToWhatsApp } from '../lib/share';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 
 type Preset = 'week' | 'month' | 'lastMonth' | '3months' | 'year' | 'all' | 'custom';
 

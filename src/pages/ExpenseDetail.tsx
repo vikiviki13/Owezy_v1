@@ -5,7 +5,7 @@ import { deleteExpense, getExpense, getExpenseParticipants, getFriend } from '..
 import { formatCurrency, formatDate, formatTime } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 import { nativeShare } from '../lib/share';
 
 export function ExpenseDetail() {

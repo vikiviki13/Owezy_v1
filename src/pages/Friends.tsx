@@ -7,7 +7,7 @@ import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 
 type Tab = 'all' | 'pending' | 'settled';
 

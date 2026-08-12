@@ -4,7 +4,7 @@ import { getProfile, updateProfile, listFriends, listExpenses, listAllRepayments
 import { flushCloudData, stopCloudData } from '../lib/cloudData';
 import { supabase } from '../lib/supabase';
 import { Avatar } from '../components/Avatar';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 
 type Theme = 'light' | 'dark' | 'system';
 

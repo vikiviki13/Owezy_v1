@@ -4,7 +4,7 @@ import { ArrowLeft, Check } from 'lucide-react';
 import { calculateFriendBalance, listExpensesForFriend, listFriends, recordRepayment, getExpenseParticipants } from '../lib/db';
 import { formatCurrency } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 import { PaymentMethod } from '../types';
 
 const METHODS: PaymentMethod[] = ['UPI', 'Cash', 'Bank Transfer', 'Card', 'Other'];

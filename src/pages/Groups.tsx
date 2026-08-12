@@ -7,7 +7,7 @@ import { AvatarGroup } from '../components/Avatar';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
 import { Field } from './Friends';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/ToastContext';
 
 export function Groups() {
   const [, setTick] = useState(0);
