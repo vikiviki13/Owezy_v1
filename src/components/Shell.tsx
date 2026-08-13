@@ -4,7 +4,7 @@ import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X } 
 import { usePreferences } from './PreferencesContext';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: Home },
+  { to: '/home', label: 'Home', icon: Home },
   { to: '/friends', label: 'Friends', icon: Users },
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/groups', label: 'Groups', icon: LayoutGrid },
@@ -37,7 +37,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/home'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]'
@@ -70,7 +70,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
+                end={item.to === '/home'}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-0.5 py-2.5 flex-1 text-[11px] font-medium transition-colors ${
                     isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'

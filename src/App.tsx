@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AlertCircle, CloudOff, LoaderCircle, Wallet } from 'lucide-react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
 import { PreferencesProvider } from './components/PreferencesProvider';
@@ -27,8 +27,14 @@ import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPa
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { clearSensitiveLocalData } from './lib/db';
+import { clearSensitiveLocalData, updateProfile } from './lib/db';
 import { clearLocalSecurityState } from './lib/securityService';
+import {
+  completeOnboarding,
+  getOnboardingProfile,
+  onboardingDestination,
+  type OnboardingProfile,
+} from './lib/onboardingProfile';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -89,6 +95,30 @@ export default function App() {
 }
 
 function AuthenticatedApp({ user }: { user: User }) {
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setProfileLoading(true);
+    setProfileError('');
+    setOnboardingProfile(null);
+    void getOnboardingProfile(user.id)
+      .then((profile) => { if (active) setOnboardingProfile(profile); })
+      .catch((caught) => {
+        if (active) setProfileError(caught instanceof Error ? caught.message : 'Could not load your profile.');
+      })
+      .finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, [user.id]);
+
+  const finishOnboarding = useCallback(async (name: string) => {
+    updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR' });
+    const profile = await completeOnboarding(user.id);
+    setOnboardingProfile(profile);
+  }, [user.id]);
+
   return (
     <ToastProvider>
       <SecurityProvider userId={user.id}>
@@ -96,7 +126,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Routes>
             <Route path="/unlock" element={<LockScreen />} />
             <Route path="/account-recovery" element={<AccountRecoveryPage />} />
-            <Route path="*" element={<AppLockGuard><PrivateDataApp user={user} /></AppLockGuard>} />
+            <Route path="*" element={<AppLockGuard><PrivateDataApp user={user} onboardingProfile={onboardingProfile} profileLoading={profileLoading} profileError={profileError} onFinishOnboarding={finishOnboarding} /></AppLockGuard>} />
           </Routes>
         </HashRouter>
       </SecurityProvider>
@@ -104,10 +134,19 @@ function AuthenticatedApp({ user }: { user: User }) {
   );
 }
 
-function PrivateDataApp({ user }: { user: User }) {
-  const userId = user.id;
-  const onboardingKey = `tab_onboarded_v2_${userId}`;
-  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(onboardingKey) === '1');
+function PrivateDataApp({
+  user,
+  onboardingProfile,
+  profileLoading,
+  profileError,
+  onFinishOnboarding,
+}: {
+  user: User;
+  onboardingProfile: OnboardingProfile | null;
+  profileLoading: boolean;
+  profileError: string;
+  onFinishOnboarding: (name: string) => Promise<void>;
+}) {
   const [syncError, setSyncError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
@@ -132,15 +171,15 @@ function PrivateDataApp({ user }: { user: User }) {
     };
   }, []);
 
-  if (dataLoading) return <LoadingScreen />;
+  if (dataLoading || profileLoading) return <LoadingScreen />;
+  if (profileError) return <StartupError message={profileError} />;
   if (dataError) return <StartupError message={dataError} />;
-  if (!onboarded) {
-    return (
-      <Onboarding onDone={() => {
-        localStorage.setItem(onboardingKey, '1');
-        setOnboarded(true);
-      }} />
-    );
+  if (!onboardingProfile) return <StartupError message="Your profile could not be loaded." />;
+  if (!onboardingProfile.onboardingCompleted) {
+    return <Routes>
+      <Route path="/onboarding" element={<Onboarding onDone={onFinishOnboarding} />} />
+      <Route path="*" element={<Navigate to="/onboarding" replace />} />
+    </Routes>;
   }
 
   return (
@@ -153,7 +192,9 @@ function PrivateDataApp({ user }: { user: User }) {
       <PreferencesProvider>
             <Shell>
             <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Navigate to={onboardingDestination(true)} replace />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/onboarding" element={<Navigate to="/home" replace />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/friends/:id" element={<FriendDetail />} />
             <Route path="/add-expense" element={<AddExpense />} />
@@ -181,6 +222,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/install" element={<InstallAppSettings />} />
             <Route path="/profile/help" element={<HelpSupport />} />
             <Route path="/profile/about" element={<AboutSettings />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             </Shell>
       </PreferencesProvider>

@@ -35,6 +35,7 @@ export function Auth() {
           password,
         });
         if (signInError) throw signInError;
+        window.location.hash = '#/';
       } else {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
@@ -45,6 +46,7 @@ export function Auth() {
           },
         });
         if (signUpError) throw signUpError;
+        if (data.session) window.location.hash = '#/';
         if (!data.session) {
           setMessage('Account created. Check your email and confirm your address, then sign in.');
           setMode('sign-in');

@@ -16,7 +16,7 @@ export function LockScreen() {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => { void isPlatformAuthenticatorAvailable().then(setPlatformAvailable); }, []);
-  useEffect(() => { if (!isLocked) navigate('/', { replace: true }); }, [isLocked, navigate]);
+  useEffect(() => { if (!isLocked) navigate('/home', { replace: true }); }, [isLocked, navigate]);
   useEffect(() => {
     if (retryUntil <= Date.now()) return;
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
