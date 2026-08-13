@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal } from 'lucide-react';
-import { createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
+import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, UserPlus } from 'lucide-react';
+import { createExpense, listFriends, getGroupMembers } from '../lib/db';
 import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
+import { AddFriendForm } from '../components/AddFriendForm';
+import { BottomSheet } from '../components/BottomSheet';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -28,7 +30,7 @@ export function AddExpense() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selected, setSelected] = useState<string[]>(preselectFriend ? [preselectFriend] : groupMemberIds);
   const [search, setSearch] = useState('');
-  const [newFriendName, setNewFriendName] = useState('');
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
 
   const [total, setTotal] = useState('');
   const [includeOwner, setIncludeOwner] = useState(true);
@@ -45,13 +47,6 @@ export function AddExpense() {
 
   function toggleFriend(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  }
-
-  function addNewFriend() {
-    if (!newFriendName.trim()) return;
-    const f = createFriend({ name: newFriendName.trim() });
-    setSelected((s) => [...s, f.id]);
-    setNewFriendName('');
   }
 
   const totalNum = parseFloat(total) || 0;
@@ -98,7 +93,7 @@ export function AddExpense() {
 
     const friendNames = selected.map((id) => friends.find((f) => f.id === id)?.name).filter(Boolean).join(', ');
     toast(`${formatCurrency(totalNum)} added for ${friendNames}`);
-    navigate('/');
+    navigate('/home');
   }
 
   const canProceedStep1 = selected.length > 0;
@@ -143,7 +138,7 @@ export function AddExpense() {
           <div className="flex flex-col gap-1 mb-4">
             {filtered.map((f) => (
               <button key={f.id} onClick={() => toggleFriend(f.id)} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--color-surface-secondary)] text-left">
-                <Avatar name={f.name} size={38} />
+                <Avatar name={f.name} src={f.avatar_url} size={38} />
                 <span className="flex-1 font-medium">{f.name}</span>
                 {selected.includes(f.id) && (
                   <span className="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
@@ -154,15 +149,10 @@ export function AddExpense() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-4">
-            <input
-              value={newFriendName}
-              onChange={(e) => setNewFriendName(e.target.value)}
-              placeholder="Add a new friend by name"
-              className="input"
-              onKeyDown={(e) => e.key === 'Enter' && addNewFriend()}
-            />
-            <button onClick={addNewFriend} className="shrink-0 px-4 py-2.5 rounded-xl bg-[var(--color-surface-secondary)] font-medium text-sm">Add</button>
+          <div className="border-t border-[var(--color-border)] pt-4">
+            <button onClick={() => setAddFriendOpen(true)} className="w-full min-h-12 rounded-xl bg-[var(--color-surface-secondary)] border border-[var(--color-border)] font-semibold text-sm flex items-center justify-center gap-2">
+              <UserPlus size={18} /> Add New Friend
+            </button>
           </div>
 
           <button
@@ -310,6 +300,18 @@ export function AddExpense() {
           </button>
         </div>
       )}
+
+      <BottomSheet open={addFriendOpen} onClose={() => setAddFriendOpen(false)} title="Add New Friend">
+        <AddFriendForm
+          submitLabel="Save and Continue"
+          onCreated={(friend) => {
+            setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
+            setAddFriendOpen(false);
+            setStep(2);
+            toast(`${friend.name} added and selected`);
+          }}
+        />
+      </BottomSheet>
     </div>
   );
 }

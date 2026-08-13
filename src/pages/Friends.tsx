@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, UserPlus, Users2 } from 'lucide-react';
-import { createFriend, listFriendBalances, onDBChange } from '../lib/db';
+import { Search, Plus, Users2 } from 'lucide-react';
+import { listFriendBalances, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
+import { AddFriendForm } from '../components/AddFriendForm';
 
 type Tab = 'all' | 'pending' | 'settled';
 
@@ -76,7 +77,7 @@ export function Friends() {
               onClick={() => navigate(`/friends/${b.friend.id}`)}
               className="flex items-center gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-3.5 text-left"
             >
-              <Avatar name={b.friend.name} size={46} />
+              <Avatar name={b.friend.name} src={b.friend.avatar_url} size={46} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{b.friend.name}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
@@ -98,52 +99,16 @@ export function Friends() {
 }
 
 function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [nickname, setNickname] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
 
-  function save() {
-    if (!name.trim()) return;
-    const friend = createFriend({ name: name.trim(), phone: phone.trim() || undefined, nickname: nickname.trim() || undefined, whatsapp_number: phone.trim() || undefined });
-    toast(`${friend.name} added`);
-    setName(''); setPhone(''); setNickname('');
-    onClose();
-    navigate(`/friends/${friend.id}`);
-  }
-
   return (
     <BottomSheet open={open} onClose={onClose} title="Add Friend">
-      <div className="flex flex-col gap-4">
-        <Field label="Name" required>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Arun Kumar" className="input" />
-        </Field>
-        <Field label="Nickname">
-          <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Optional" className="input" />
-        </Field>
-        <Field label="Phone / WhatsApp">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 98765 43210" className="input" inputMode="tel" />
-        </Field>
-        <button
-          onClick={save}
-          disabled={!name.trim()}
-          className="mt-2 flex items-center justify-center gap-2 bg-[var(--color-primary)] disabled:opacity-40 text-white font-medium rounded-xl py-3"
-        >
-          <UserPlus size={17} /> Add Friend
-        </button>
-      </div>
+      <AddFriendForm onCreated={(friend) => {
+        toast(`${friend.name} added`);
+        onClose();
+        navigate(`/friends/${friend.id}`);
+      }} />
     </BottomSheet>
-  );
-}
-
-export function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-        {label} {required && <span className="text-[var(--color-error)]">*</span>}
-      </span>
-      {children}
-    </label>
   );
 }
