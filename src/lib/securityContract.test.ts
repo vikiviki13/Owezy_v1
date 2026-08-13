@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 const root = resolve(import.meta.dirname, '../..');
 const schema = readFileSync(resolve(root, 'supabase/schema.sql'), 'utf8');
 const edgeFunction = readFileSync(resolve(root, 'supabase/functions/security/index.ts'), 'utf8');
+const changePinFlow = readFileSync(resolve(root, 'src/components/security/ChangePinFlow.tsx'), 'utf8');
+const securityService = readFileSync(resolve(root, 'src/lib/securityService.ts'), 'utf8');
 const legacyLockPath = resolve(root, 'src/lib/appLock.ts');
 
 describe('server-side security contract', () => {
@@ -30,5 +32,19 @@ describe('server-side security contract', () => {
 
   it('has removed the legacy browser PIN verifier', () => {
     expect(() => readFileSync(legacyLockPath, 'utf8')).toThrow();
+  });
+
+  it('requires a one-purpose current-PIN grant before changing the PIN', () => {
+    expect(edgeFunction).toContain("if (action === 'pin/change/verify')");
+    expect(edgeFunction).toContain("authenticationMethod: 'pin_change'");
+    expect(edgeFunction).toContain("data.authentication_method === 'pin_change'");
+    expect(edgeFunction).toContain("body.changeToken");
+    expect(edgeFunction).toContain("'pin_unchanged'");
+    expect(schema).toContain("'pin_change'");
+    expect(securityService).toContain("return result.grant.token");
+    expect(changePinFlow).toContain('Enter your current PIN');
+    expect(changePinFlow).toContain("useState<ChangePinStep>('current')");
+    expect(changePinFlow).toContain('Your new PIN must be different from your current PIN.');
+    expect(changePinFlow).toContain("PINs don't match. Try again.");
   });
 });

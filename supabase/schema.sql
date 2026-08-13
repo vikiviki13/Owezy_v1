@@ -203,7 +203,7 @@ create table if not exists public.app_unlock_sessions (
   expires_at timestamptz not null,
   revoked_at timestamptz,
   created_at timestamptz not null default now(),
-  constraint app_unlock_sessions_method check (authentication_method in ('device', 'pin', 'recovery'))
+  constraint app_unlock_sessions_method check (authentication_method in ('device', 'pin', 'recovery', 'pin_change'))
 );
 
 create index if not exists app_unlock_sessions_lookup_idx

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Fingerprint, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, WifiOff } from 'lucide-react';
+import { Fingerprint, KeyRound, LoaderCircle, LockKeyhole, WifiOff } from 'lucide-react';
 import { useSecurity } from '../SecurityContext';
 import { isPlatformAuthenticatorAvailable, SecurityServiceError } from '../../lib/securityService';
 import { PinPad } from './PinPad';
 import { useNavigate } from 'react-router-dom';
-import { APP_NAME, BrandWordmark } from '../Brand';
+import { APP_NAME, BrandLogo, BrandWordmark } from '../Brand';
 
 export function LockScreen() {
   const { status, unlockWithDevice, unlockWithPin, unlockMessage, isLocked, serviceError, refresh } = useSecurity();
@@ -62,7 +62,7 @@ export function LockScreen() {
     <main className="fixed inset-0 z-[200] overflow-y-auto bg-[var(--color-bg)] px-5 py-8 safe-top safe-bottom">
       <div className="min-h-full w-full max-w-sm mx-auto flex flex-col justify-center text-center">
         <div className="flex items-center justify-center gap-2 text-[var(--color-primary)] mb-8" aria-label={`${APP_NAME} expense tracker`}>
-          <ShieldCheck size={22} />
+          <BrandLogo size={28} className="rounded-xl" />
           <BrandWordmark className="font-bold tracking-tight" />
         </div>
         <span className="size-20 rounded-[26px] bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto shadow-sm">

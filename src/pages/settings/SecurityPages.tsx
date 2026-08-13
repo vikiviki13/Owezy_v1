@@ -11,9 +11,10 @@ import { useSecurity } from '../../components/SecurityContext';
 import { SecuritySetupFlow } from '../../components/security/SecuritySetupFlow';
 import { RequireReauthentication } from '../../components/security/RequireReauthentication';
 import { PinCreationFlow } from '../../components/security/PinCreationFlow';
+import { ChangePinFlow } from '../../components/security/ChangePinFlow';
 import { useToast } from '../../components/ToastContext';
 import {
-  changePin, disableAppLock, isPlatformAuthenticatorAvailable, listSecurityEvents,
+  disableAppLock, isPlatformAuthenticatorAvailable, listSecurityEvents,
   recoverPin, registerAuthenticator, removeAuthenticator, renameAuthenticator,
   SecurityServiceError,
 } from '../../lib/securityService';
@@ -156,15 +157,21 @@ export function SecurityActivityPage() {
 }
 
 export function ChangePinPage() {
-  const { userId, refresh } = useSecurity();
+  const { userId, status, loading, refresh } = useSecurity();
   const navigate = useNavigate();
   const toast = useToast();
-  const [verified, setVerified] = useState(false);
-  const [reauth, setReauth] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const allow = useCallback(() => { setReauth(false); setVerified(true); }, []);
-  const save = useCallback(async (pin: string) => { setBusy(true); try { await changePin(userId, pin); await refresh(); toast('PIN changed successfully'); navigate('/profile/security'); } catch (caught) { toast(caught instanceof Error ? caught.message : 'PIN could not be changed'); } finally { setBusy(false); } }, [navigate, refresh, toast, userId]);
-  return <SettingsPage title="Change PIN" description="Fresh verification is required before changing your App PIN.">{verified && <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5"><PinCreationFlow title="Create New PIN" busy={busy} onConfirmed={save} /></div>}<RequireReauthentication open={reauth} purpose="change your App PIN" onCancel={() => navigate(-1)} onVerified={allow} /></SettingsPage>;
+  useEffect(() => {
+    if (!loading && status && !status.pinEnabled) navigate('/profile/app-lock', { replace: true });
+  }, [loading, navigate, status]);
+  const changed = useCallback(async () => {
+    await refresh();
+    toast('PIN changed successfully');
+    navigate('/profile/app-lock', { replace: true });
+  }, [navigate, refresh, toast]);
+  if (loading || !status || !status.pinEnabled) {
+    return <SettingsPage title="Change PIN"><div className="min-h-48 flex items-center justify-center"><LoaderCircle className="animate-spin" /></div></SettingsPage>;
+  }
+  return <SettingsPage title="Change PIN" description="Change your App PIN securely."><div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5"><ChangePinFlow userId={userId} onChanged={changed} onForgot={() => navigate('/account-recovery')} /></div></SettingsPage>;
 }
 
 export function AccountRecoveryPage() {

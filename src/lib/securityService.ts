@@ -211,8 +211,19 @@ export async function verifyPin(userId: string, pin: string, duration: AutoLockD
   return result.grant;
 }
 
-export async function changePin(userId: string, pin: string) {
-  await invoke('pin/change', { pin }, userId);
+export async function verifyCurrentPinForChange(userId: string, currentPin: string) {
+  if (!navigator.onLine) throw new SecurityServiceError('offline', "You're offline. Connect to the internet to verify your App PIN securely.");
+  const result = await invoke<{ grant: UnlockGrant }>('pin/change/verify', { currentPin }, userId);
+  return result.grant.token;
+}
+
+export async function validateNewPinForChange(userId: string, changeToken: string, newPin: string) {
+  await invoke('pin/change/check', { changeToken, newPin }, userId);
+}
+
+export async function changePin(userId: string, changeToken: string, currentPin: string, newPin: string) {
+  const result = await invoke<{ grant: UnlockGrant; autoLockDuration: AutoLockDuration }>('pin/change', { changeToken, currentPin, newPin }, userId);
+  saveUnlockGrant(userId, result.grant, result.autoLockDuration);
 }
 
 export async function recoverPin(userId: string, pin: string, duration: AutoLockDuration) {
