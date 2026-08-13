@@ -13,10 +13,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'logo.svg'],
       manifest: {
-        name: 'Tab — Friend Expense Tracker',
-        short_name: 'Tab',
+        name: 'Owezy — Friend Expense Tracker',
+        short_name: 'Owezy',
         description: 'I paid. Remember it for me.',
         theme_color: '#059669',
         background_color: '#FBFAF7',
@@ -26,7 +26,7 @@ export default defineConfig({
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
         ]
       },
       workbox: {

@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 
 /* ============================================================
-   Semantic tokens — "Tab" palette (see design.md §4)
+   Semantic tokens — "Owezy" palette (see design.md §4)
    Light mode
    ============================================================ */
 :root {
@@ -35,7 +35,7 @@
   --input: #e7e3d8;
   --ring: #059669;
 
-  /* Tab legacy / extra semantics (kept for existing code) */
+  /* Owezy legacy / extra semantics (kept for existing code) */
   --text-secondary: #57534e;
   --text-muted: #a8a29e;
   --primary-hover: #047857;
@@ -125,7 +125,7 @@
 /* ============================================================
    @theme inline — maps semantic vars to Tailwind utilities.
    Includes shadcn utilities (bg-background, bg-card, bg-primary,
-   text-muted-foreground, rounded-lg…) and Tab legacy utilities
+   text-muted-foreground, rounded-lg…) and Owezy legacy utilities
    (bg-bg, bg-surface, text-text-secondary…).
    ============================================================ */
 @theme inline {
@@ -171,7 +171,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* Tab legacy utilities — keep existing var(--color-*) classes working */
+  /* Owezy legacy utilities — keep existing var(--color-*) classes working */
   --color-bg: var(--background);
   --color-surface: var(--card);
   --color-surface-secondary: var(--secondary);
@@ -201,7 +201,7 @@ body {
 /* Best-effort app-switcher privacy cover. Browser PWAs cannot promise native
    screenshot blocking, so sensitive content is obscured as the page hides. */
 html.privacy-mode body::after {
-  content: "Tab\A Your financial records are protected";
+  content: "Owezy\A Your financial records are protected";
   white-space: pre;
   position: fixed;
   inset: 0;

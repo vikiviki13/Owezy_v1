@@ -387,11 +387,11 @@ Deno.serve(async (request) => {
         .eq('rp_id', rpID)
         .eq('is_active', true);
       const options = await generateRegistrationOptions({
-        rpName: 'Tab Expense Tracker',
+        rpName: 'Owezy Expense Tracker',
         rpID,
         userID: encoder.encode(user.id),
         userName: user.email || user.id,
-        userDisplayName: user.user_metadata?.full_name || user.email || 'Tab user',
+        userDisplayName: user.user_metadata?.full_name || user.email || 'Owezy user',
         attestationType: 'none',
         supportedAlgorithmIDs: [-7, -257],
         excludeCredentials: (credentials || []).map((item) => ({ id: item.credential_id, transports: item.transports || [] })),

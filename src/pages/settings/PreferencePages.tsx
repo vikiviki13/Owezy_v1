@@ -6,6 +6,7 @@ import { usePreferences } from '../../components/PreferencesContext';
 import { useToast } from '../../components/ToastContext';
 import type { CurrencyCode, DateFormat, NumberFormat, ThemePreference, TimeFormat, WeekStartsOn } from '../../types';
 import { currencySymbol, formatCurrency, formatDate, formatTimestamp, formatTimestampDate, formatTimestampTime } from '../../lib/utils';
+import { APP_NAME } from '../../components/Brand';
 
 const CURRENCIES: { code: CurrencyCode; name: string; region: string; flag: string; keywords?: string }[] = [
   { code: 'INR', name: 'Indian Rupee', region: 'India', flag: '🇮🇳', keywords: '₹ rupee' },
@@ -131,9 +132,9 @@ export function AppearanceSettings() {
     { value: 'light', title: 'Light', text: 'Always use light theme', icon: Sun },
     { value: 'dark', title: 'Dark', text: 'Always use dark theme', icon: Moon },
   ];
-  return <SettingsPage title="Appearance" description="Choose how Tab looks on this device."><div className="grid gap-3">{options.map(({ value, title, text, icon: Icon }) => <button key={value} onClick={() => { updatePreferences({ theme: value }); toast('Appearance updated'); }} className={`relative min-h-32 rounded-2xl border-2 p-4 text-left overflow-hidden ${preferences.theme === value ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}><div className="flex items-start justify-between"><span className="w-10 h-10 rounded-xl bg-[var(--color-surface-secondary)] flex items-center justify-center"><Icon size={20} /></span>{preferences.theme === value && <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center"><Check size={15} /></span>}</div><p className="font-bold mt-4">{title}</p><p className="text-xs text-[var(--color-text-muted)] mt-1">{text}</p></button>)}</div></SettingsPage>;
+  return <SettingsPage title="Appearance" description={`Choose how ${APP_NAME} looks on this device.`}><div className="grid gap-3">{options.map(({ value, title, text, icon: Icon }) => <button key={value} onClick={() => { updatePreferences({ theme: value }); toast('Appearance updated'); }} className={`relative min-h-32 rounded-2xl border-2 p-4 text-left overflow-hidden ${preferences.theme === value ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}><div className="flex items-start justify-between"><span className="w-10 h-10 rounded-xl bg-[var(--color-surface-secondary)] flex items-center justify-center"><Icon size={20} /></span>{preferences.theme === value && <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center"><Check size={15} /></span>}</div><p className="font-bold mt-4">{title}</p><p className="text-xs text-[var(--color-text-muted)] mt-1">{text}</p></button>)}</div></SettingsPage>;
 }
 
 export function LanguageSettings() {
-  return <SettingsPage title="Language" description="Choose the language used throughout the app."><SettingsSection title="Available Languages"><ChoiceRow selected title="English" description="English" onClick={() => undefined} /></SettingsSection><p className="text-xs leading-5 text-[var(--color-text-muted)] px-1">More languages are coming later. Tab's interface is prepared for localization.</p></SettingsPage>;
+  return <SettingsPage title="Language" description="Choose the language used throughout the app."><SettingsSection title="Available Languages"><ChoiceRow selected title="English" description="English" onClick={() => undefined} /></SettingsSection><p className="text-xs leading-5 text-[var(--color-text-muted)] px-1">More languages are coming later. {APP_NAME}'s interface is prepared for localization.</p></SettingsPage>;
 }

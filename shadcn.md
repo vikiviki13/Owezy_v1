@@ -1,6 +1,6 @@
 # shadcn/ui — Setup, Conventions & UI-Library Spec
 
-> **Purpose of this document:** Documents exactly how **shadcn/ui** is configured and used in the **Tab** expense-tracker project, and — more importantly — contains a complete specification for building a **better, reusable shadcn-based UI library** out of it. Hand this file to ChatGPT or any design engineer to design/generate that library.
+> **Purpose of this document:** Documents exactly how **shadcn/ui** is configured and used in the **Owezy** expense-tracker project, and — more importantly — contains a complete specification for building a **better, reusable shadcn-based UI library** out of it. Hand this file to ChatGPT or any design engineer to design/generate that library.
 
 ---
 

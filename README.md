@@ -1,4 +1,4 @@
-# Tab — Friend Expense & Repayment Tracker
+# Owezy — Friend Expense & Repayment Tracker
 
 "I paid. Remember it for me."
 

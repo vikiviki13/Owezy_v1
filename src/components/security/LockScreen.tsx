@@ -4,6 +4,7 @@ import { useSecurity } from '../SecurityContext';
 import { isPlatformAuthenticatorAvailable, SecurityServiceError } from '../../lib/securityService';
 import { PinPad } from './PinPad';
 import { useNavigate } from 'react-router-dom';
+import { APP_NAME, BrandWordmark } from '../Brand';
 
 export function LockScreen() {
   const { status, unlockWithDevice, unlockWithPin, unlockMessage, isLocked, serviceError, refresh } = useSecurity();
@@ -60,9 +61,9 @@ export function LockScreen() {
   return (
     <main className="fixed inset-0 z-[200] overflow-y-auto bg-[var(--color-bg)] px-5 py-8 safe-top safe-bottom">
       <div className="min-h-full w-full max-w-sm mx-auto flex flex-col justify-center text-center">
-        <div className="flex items-center justify-center gap-2 text-[var(--color-primary)] mb-8" aria-label="Tab expense tracker">
+        <div className="flex items-center justify-center gap-2 text-[var(--color-primary)] mb-8" aria-label={`${APP_NAME} expense tracker`}>
           <ShieldCheck size={22} />
-          <span className="font-bold tracking-tight">Tab</span>
+          <BrandWordmark className="font-bold tracking-tight" />
         </div>
         <span className="size-20 rounded-[26px] bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto shadow-sm">
           <LockKeyhole size={34} />
@@ -103,7 +104,7 @@ export function LockScreen() {
           </div>
         )}
 
-        <p className="text-xs leading-5 text-[var(--color-text-muted)] mt-8">Your biometric information stays on your device. Tab only receives confirmation that verification succeeded.</p>
+        <p className="text-xs leading-5 text-[var(--color-text-muted)] mt-8">Your biometric information stays on your device. {APP_NAME} only receives confirmation that verification succeeded.</p>
       </div>
     </main>
   );

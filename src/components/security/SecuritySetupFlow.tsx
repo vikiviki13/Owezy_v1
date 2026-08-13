@@ -4,6 +4,7 @@ import type { AutoLockDuration } from '../../types/security';
 import { createPin, enableAppLock, isPlatformAuthenticatorAvailable, registerAuthenticator, SecurityServiceError } from '../../lib/securityService';
 import { useSecurity } from '../SecurityContext';
 import { PinCreationFlow } from './PinCreationFlow';
+import { APP_NAME } from '../Brand';
 
 type SetupStep = 'intro' | 'device' | 'pin' | 'auto-lock' | 'success';
 
@@ -82,7 +83,7 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
               <span className="size-20 rounded-[26px] bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto"><Fingerprint size={34} /></span>
               <h1 className="text-2xl font-bold mt-6">{platformAvailable === false ? "Device authentication isn't available" : 'Use Device Security'}</h1>
               <p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-3">{platformAvailable === false ? "This browser or device doesn't support secure device authentication for this app." : "Unlock using the security method configured on your device—such as fingerprint, face recognition, device PIN, pattern, Windows Hello or Touch ID."}</p>
-              <div className="rounded-2xl bg-[var(--color-surface-secondary)] p-4 mt-6 text-xs leading-5 text-[var(--color-text-secondary)]">Your biometric information stays on your device. Tab stores only a public credential and receives confirmation that verification succeeded.</div>
+              <div className="rounded-2xl bg-[var(--color-surface-secondary)] p-4 mt-6 text-xs leading-5 text-[var(--color-text-secondary)]">Your biometric information stays on your device. {APP_NAME} stores only a public credential and receives confirmation that verification succeeded.</div>
               {platformAvailable === null ? <div className="min-h-14 mt-7 flex items-center justify-center gap-2 text-sm text-[var(--color-text-secondary)]"><LoaderCircle className="animate-spin" size={18} />Checking this device…</div> : platformAvailable ? <button type="button" onClick={setupDevice} disabled={busy} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold mt-7 flex items-center justify-center gap-2 disabled:opacity-50">{busy && <LoaderCircle className="animate-spin" size={18} />}Set Up Device Unlock</button> : <button type="button" onClick={() => setStep(status?.pinEnabled ? 'auto-lock' : 'pin')} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold mt-7">Use App PIN Instead</button>}
               {platformAvailable && <button type="button" onClick={() => setStep(status?.pinEnabled ? 'auto-lock' : 'pin')} disabled={busy} className="min-h-12 px-5 text-sm font-semibold text-[var(--color-primary)] mt-2">{status?.pinEnabled ? 'Continue with Existing PIN' : 'Set Up PIN First'}</button>}
               {error && <p className="text-sm text-[var(--color-error)] mt-3" role="alert">{error}</p>}
@@ -99,7 +100,7 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
 
           {step === 'auto-lock' && (
             <section>
-              <div className="text-center"><span className="size-16 rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto"><LockKeyhole size={28} /></span><h1 className="text-2xl font-bold mt-5">Automatically Lock</h1><p className="text-sm text-[var(--color-text-secondary)] mt-2">Choose how quickly Tab locks when you stop using it.</p></div>
+              <div className="text-center"><span className="size-16 rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto"><LockKeyhole size={28} /></span><h1 className="text-2xl font-bold mt-5">Automatically Lock</h1><p className="text-sm text-[var(--color-text-secondary)] mt-2">Choose how quickly {APP_NAME} locks when you stop using it.</p></div>
               <div className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden divide-y divide-[var(--color-border)]">
                 {AUTO_LOCK_OPTIONS.map((option) => <button type="button" key={option.value} onClick={() => setAutoLockDuration(option.value)} className="w-full min-h-14 px-4 py-3 flex items-center gap-3 text-left"><span className={`size-5 rounded-full border-2 flex items-center justify-center ${autoLockDuration === option.value ? 'border-[var(--color-primary)] bg-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>{autoLockDuration === option.value && <Check size={12} className="text-white" strokeWidth={3} />}</span><span className="flex-1 text-sm font-medium">{option.label}</span>{option.description && <span className="text-xs font-semibold text-[var(--color-primary)]">{option.description}</span>}</button>)}
               </div>

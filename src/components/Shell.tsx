@@ -2,6 +2,7 @@ import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
+import { APP_NAME, BrandLogo } from './Brand';
 
 const NAV_ITEMS = [
   { to: '/home', label: 'Home', icon: Home },
@@ -23,8 +24,8 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 sticky top-0 h-screen">
         <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white font-bold">T</div>
-          <span className="font-bold text-lg">Tab</span>
+          <BrandLogo size={32} />
+          <span className="font-bold text-lg">{APP_NAME}</span>
         </div>
         {!isSubPage && <button
           onClick={() => setQuickOpen(true)}

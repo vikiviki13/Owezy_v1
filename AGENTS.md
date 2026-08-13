@@ -2,7 +2,7 @@
 
 ## Project
 
-**Tab** — mobile-first friend-expense tracker PWA (React 19 + TypeScript, Vite 8, Tailwind CSS v4, Supabase sync, local-first storage).
+**Owezy** — mobile-first friend-expense tracker PWA (React 19 + TypeScript, Vite 8, Tailwind CSS v4, Supabase sync, local-first storage).
 
 Always read `design.md` before making UI changes — it documents the design tokens, component inventory, brand constraints, and the migration plan.
 

@@ -1,6 +1,6 @@
-# Tab — Design System Analysis & Handoff Document
+# Owezy — Design System Analysis & Handoff Document
 
-> **Purpose of this document:** This is a complete analysis of the current UI/design state of **Tab**, a mobile-first friend-expense tracker (Splitwise-style PWA). Share this file with a design engineer or AI assistant to generate a **better, unified design system** for the app.
+> **Purpose of this document:** This is a complete analysis of the current UI/design state of **Owezy**, a mobile-first friend-expense tracker (Splitwise-style PWA). Share this file with a design engineer or AI assistant to generate a **better, unified design system** for the app.
 
 ---
 
@@ -8,7 +8,7 @@
 
 | | |
 |---|---|
-| **App name** | Tab |
+| **App name** | Owezy |
 | **Category** | Social expense tracker ("Who owes you what") |
 | **Platform** | Web app, installed as PWA; mobile-first but responsive to desktop |
 | **Core flow** | Add friend → add expense (split bill) → track balance → record repayment → share statement |

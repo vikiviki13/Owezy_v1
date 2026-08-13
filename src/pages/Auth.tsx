@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
-import { Wallet, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { APP_NAME, APP_TAGLINE, BrandLogo } from '../components/Brand';
 
 type Mode = 'sign-in' | 'sign-up';
 
@@ -70,12 +71,10 @@ export function Auth() {
     <main className="min-h-screen px-5 py-10 safe-top flex items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-white flex items-center justify-center">
-            <Wallet size={24} />
-          </div>
+          <BrandLogo size={48} className="rounded-2xl" />
           <div>
-            <h1 className="text-2xl font-bold">Tab</h1>
-            <p className="text-sm text-[var(--color-text-muted)]">Friend expense tracker</p>
+            <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+            <p className="text-sm text-[var(--color-text-muted)]">{APP_TAGLINE}</p>
           </div>
         </div>
 
