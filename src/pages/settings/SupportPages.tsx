@@ -1,7 +1,9 @@
-import { ChevronDown, ExternalLink, Mail, MessageCircleQuestion, Send } from 'lucide-react';
-import { SettingsPage, SettingsSection } from '../../components/SettingsUI';
+import { ChevronDown, ExternalLink, LoaderCircle, Mail, MessageCircleQuestion, PackageCheck, RefreshCw, Send } from 'lucide-react';
+import { SettingsPage, SettingsRow, SettingsSection } from '../../components/SettingsUI';
 import { useToast } from '../../components/ToastContext';
 import { APP_NAME, APP_SUPPORT_EMAIL, APP_TAGLINE, BrandLogo } from '../../components/Brand';
+import { useAppUpdate } from '../../components/AppUpdateContext';
+import { APP_VERSION } from '../../lib/release';
 
 const HELP_TOPICS = [
   ['Getting Started', 'Set up your profile, add your first friend, and record an expense.'],
@@ -30,8 +32,18 @@ export function HelpSupport() {
 function SupportAction({ icon: Icon, title, onClick }: { icon: typeof Mail; title: string; onClick: () => void }) { return <button onClick={onClick} className="w-full min-h-14 px-4 flex items-center gap-3 text-left"><Icon size={18} className="text-[var(--color-text-secondary)]" /><span className="flex-1 font-medium text-sm">{title}</span><ExternalLink size={15} className="text-[var(--color-text-muted)]" /></button>; }
 
 export function AboutSettings() {
-  const version = '1.0.0';
-  return <SettingsPage title="About"><div className="text-center py-7"><BrandLogo size={72} className="w-18 h-18 rounded-3xl mx-auto shadow-lg shadow-emerald-900/15" /><h2 className="text-2xl font-extrabold mt-4">{APP_NAME}</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">{APP_TAGLINE}</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {version} · Build {import.meta.env.MODE}</p></div><SettingsSection title="Legal"><LegalLink title="Privacy Policy" href="/privacy" /><LegalLink title="Terms of Service" href="/terms" /><LegalLink title="Open Source Licenses" href="/licenses" /></SettingsSection><p className="text-center text-xs text-[var(--color-text-muted)] mt-9">Made for clearer money conversations.</p></SettingsPage>;
+  const toast = useToast();
+  const { checking, checkForUpdates } = useAppUpdate();
+  const check = async () => {
+    if (checking) return;
+    const result = await checkForUpdates();
+    if (result === 'available') toast('New update available');
+    else if (result === 'up-to-date') toast("You're up to date");
+    else if (result === 'offline') toast('Connect to the internet to check for updates');
+    else if (result === 'unavailable') toast('Update checks are available in the production PWA');
+    else toast("Couldn't check for updates. Try again.");
+  };
+  return <SettingsPage title="About"><div className="text-center py-7"><BrandLogo size={72} className="w-18 h-18 rounded-3xl mx-auto shadow-lg shadow-emerald-900/15" /><h2 className="text-2xl font-extrabold mt-4">{APP_NAME}</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">{APP_TAGLINE}</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {APP_VERSION} · Build {import.meta.env.MODE}</p></div><SettingsSection title="App Version"><SettingsRow icon={PackageCheck} title="Current Version" value={APP_VERSION} trailing={false} /><SettingsRow icon={checking ? LoaderCircle : RefreshCw} title={checking ? 'Checking for Updates…' : 'Check for Updates'} description="Look for the latest production release." trailing={false} onClick={() => void check()} /></SettingsSection><SettingsSection title="Legal"><LegalLink title="Privacy Policy" href="/privacy" /><LegalLink title="Terms of Service" href="/terms" /><LegalLink title="Open Source Licenses" href="/licenses" /></SettingsSection><p className="text-center text-xs text-[var(--color-text-muted)] mt-9">Made for clearer money conversations.</p></SettingsPage>;
 }
 
 function LegalLink({ title, href }: { title: string; href: string }) { return <a href={href} target="_blank" rel="noreferrer" className="min-h-14 px-4 flex items-center gap-3"><span className="flex-1 text-sm font-medium">{title}</span><ExternalLink size={16} className="text-[var(--color-text-muted)]" /></a>; }
