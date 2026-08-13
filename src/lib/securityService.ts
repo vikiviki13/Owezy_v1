@@ -10,6 +10,7 @@ import type { AutoLockDuration, SecurityEvent, SecurityStatus, UnlockGrant } fro
 
 const GRANT_KEY_PREFIX = 'tab_unlock_grant_v2_';
 const ACTIVE_KEY_PREFIX = 'tab_last_active_v2_';
+const STATUS_KEY_PREFIX = 'tab_security_status_v1_';
 
 export class SecurityServiceError extends Error {
   code: string;
@@ -22,7 +23,27 @@ export class SecurityServiceError extends Error {
   }
 }
 
-type ApiErrorBody = { error?: { code?: string; message?: string; retryAfter?: number } };
+type ApiErrorBody = {
+  code?: string;
+  message?: string;
+  error?: { code?: string; message?: string; retryAfter?: number };
+};
+
+function normalizeApiError(parsed: ApiErrorBody | null) {
+  const upstreamCode = parsed?.error?.code || parsed?.code || 'network_failure';
+  if (upstreamCode === 'NOT_FOUND') {
+    return {
+      code: 'security_service_not_deployed',
+      message: 'App Lock setup is incomplete. Deploy the Supabase security function, then try again.',
+      retryAfter: 0,
+    };
+  }
+  return {
+    code: upstreamCode,
+    message: parsed?.error?.message || parsed?.message,
+    retryAfter: Number(parsed?.error?.retryAfter || 0),
+  };
+}
 
 async function invoke<T>(action: string, body: Record<string, unknown> = {}, userId?: string): Promise<T> {
   const unlockToken = userId ? getUnlockGrant(userId) : null;
@@ -35,10 +56,11 @@ async function invoke<T>(action: string, body: Record<string, unknown> = {}, use
     if (context instanceof Response) {
       try { parsed = await context.clone().json() as ApiErrorBody; } catch { /* Use the safe fallback below. */ }
     }
+    const normalized = normalizeApiError(parsed);
     throw new SecurityServiceError(
-      parsed?.error?.code || 'network_failure',
-      parsed?.error?.message || (navigator.onLine ? 'The security request could not be completed.' : "You're offline. Connect to the internet and try again."),
-      Number(parsed?.error?.retryAfter || 0),
+      normalized.code,
+      normalized.message || (navigator.onLine ? 'The security request could not be completed.' : "You're offline. Connect to the internet and try again."),
+      normalized.retryAfter,
     );
   }
   const response = data as T & ApiErrorBody;
@@ -107,8 +129,39 @@ export function clearLegacySecurityStorage() {
   sessionStorage.removeItem('tab_app_unlocked');
 }
 
+export function cacheSecurityStatus(userId: string, status: SecurityStatus) {
+  const safeStatus: SecurityStatus = { ...status, authenticators: [] };
+  localStorage.setItem(`${STATUS_KEY_PREFIX}${userId}`, JSON.stringify(safeStatus));
+}
+
+export function getCachedSecurityStatus(userId: string): SecurityStatus | null {
+  try {
+    const stored = localStorage.getItem(`${STATUS_KEY_PREFIX}${userId}`);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as Partial<SecurityStatus>;
+    if (typeof parsed.appLockEnabled !== 'boolean' || typeof parsed.pinEnabled !== 'boolean' || typeof parsed.webAuthnEnabled !== 'boolean') return null;
+    return {
+      appLockEnabled: parsed.appLockEnabled,
+      pinEnabled: parsed.pinEnabled,
+      webAuthnEnabled: parsed.webAuthnEnabled,
+      webAuthnAvailableHere: Boolean(parsed.webAuthnAvailableHere),
+      autoLockDuration: parsed.autoLockDuration || '5m',
+      preferredUnlockMethod: parsed.preferredUnlockMethod || 'pin',
+      failedPinAttempts: Number(parsed.failedPinAttempts || 0),
+      lockedUntil: parsed.lockedUntil || null,
+      grantValid: false,
+      lastVerifiedAt: parsed.lastVerifiedAt || null,
+      authenticators: [],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getSecurityStatus(userId: string) {
-  return invoke<SecurityStatus>('status', {}, userId);
+  const status = await invoke<SecurityStatus>('status', {}, userId);
+  cacheSecurityStatus(userId, status);
+  return status;
 }
 
 export async function registerAuthenticator(userId: string, deviceName = suggestedDeviceName()) {

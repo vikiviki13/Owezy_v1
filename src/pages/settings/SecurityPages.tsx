@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
-  Activity, Check, ChevronRight, Fingerprint, KeyRound, Laptop, LoaderCircle,
+  Activity, AlertTriangle, Check, ChevronRight, Fingerprint, KeyRound, Laptop, LoaderCircle,
   LockKeyhole, Pencil, Plus, Shield, ShieldCheck, Smartphone, Trash2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -30,10 +30,11 @@ const LOCK_OPTIONS: { value: AutoLockDuration; label: string; recommended?: bool
 ];
 
 export function SecuritySettings() {
-  const { status } = useSecurity();
+  const { status, serviceError } = useSecurity();
   const deviceCount = status?.authenticators.filter((item) => item.isActive).length || 0;
   const protection = !status?.appLockEnabled ? 'Off' : status.webAuthnEnabled ? 'Protected' : 'Basic';
   return <SettingsPage title="Security" description="Manage app access, verification methods, trusted devices and recent security changes.">
+    {serviceError && <SecurityServiceNotice message={serviceError.message} />}
     <SecurityStatusCard />
     <SettingsSection title="Security Status"><SettingsRow icon={LockKeyhole} title="App Lock" value={status?.appLockEnabled ? 'Enabled' : 'Off'} to="/profile/app-lock" /></SettingsSection>
     <SettingsSection title="Unlock Methods">
@@ -62,7 +63,7 @@ function SecurityStatusCard() {
 }
 
 export function AppLockSettings() {
-  const { userId, status, refresh, setAutoLockDuration } = useSecurity();
+  const { userId, status, refresh, serviceError, setAutoLockDuration } = useSecurity();
   const toast = useToast();
   const [setup, setSetup] = useState(false);
   const [reauth, setReauth] = useState(false);
@@ -86,6 +87,7 @@ export function AppLockSettings() {
 
   if (!status) return <SettingsPage title="App Lock"><div className="min-h-48 flex items-center justify-center"><LoaderCircle className="animate-spin" /></div></SettingsPage>;
   return <SettingsPage title="App Lock" description="Protect your expense, repayment and financial records when you open the app.">
+    {serviceError && <SecurityServiceNotice message={serviceError.message} />}
     <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-7">
       <div className="flex items-center gap-4"><span className={`size-12 rounded-2xl flex items-center justify-center ${status.appLockEnabled ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]'}`}><LockKeyhole size={24} /></span><div className="flex-1"><h2 className="font-bold">App Lock</h2><p className="text-xs text-[var(--color-text-muted)] mt-1">{status.appLockEnabled ? 'ON' : 'OFF'}</p></div><Switch checked={status.appLockEnabled} onCheckedChange={(checked) => checked ? setSetup(true) : setReauth(true)} aria-label="App Lock" /></div>
     </div>
@@ -104,6 +106,13 @@ export function AppLockSettings() {
       <div className="flex gap-3"><button type="button" onClick={() => setConfirmDisable(false)} className="flex-1 min-h-12 rounded-xl bg-[var(--color-surface-secondary)] font-semibold">Cancel</button><button type="button" onClick={turnOff} className="flex-1 min-h-12 rounded-xl bg-[var(--color-error)] text-white font-semibold">Turn Off</button></div>
     </BottomSheet>
   </SettingsPage>;
+}
+
+function SecurityServiceNotice({ message }: { message: string }) {
+  return <div role="alert" className="rounded-2xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 mb-5 flex gap-3">
+    <AlertTriangle className="text-[var(--color-warning)] shrink-0 mt-0.5" size={20} />
+    <div><p className="text-sm font-semibold">Security service needs setup</p><p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-1">{message}</p></div>
+  </div>;
 }
 
 function MethodRow({ icon: Icon, title, description, status, recommended, actionLabel, actionTo, onAction, busy }: { icon: typeof Fingerprint; title: string; description: string; status: string; recommended?: boolean; actionLabel?: string; actionTo?: string; onAction?: () => void; busy?: boolean }) {

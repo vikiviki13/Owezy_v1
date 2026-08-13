@@ -6,7 +6,7 @@ import { PinPad } from './PinPad';
 import { useNavigate } from 'react-router-dom';
 
 export function LockScreen() {
-  const { status, unlockWithDevice, unlockWithPin, unlockMessage, isLocked } = useSecurity();
+  const { status, unlockWithDevice, unlockWithPin, unlockMessage, isLocked, serviceError, refresh } = useSecurity();
   const navigate = useNavigate();
   const [platformAvailable, setPlatformAvailable] = useState(false);
   const [showPin, setShowPin] = useState(Boolean(status?.pinEnabled && !status?.webAuthnAvailableHere));
@@ -70,14 +70,15 @@ export function LockScreen() {
         <h1 className="text-2xl font-bold mt-5">App Locked</h1>
         <p className="text-sm text-[var(--color-text-secondary)] mt-2">Your financial records are protected.</p>
 
-        {!status && (
+        {serviceError && (
           <div className="mt-8 rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-4 text-sm text-[var(--color-text-secondary)]">
             <WifiOff className="mx-auto mb-2" size={21} />
-            Security settings could not be verified. Check your connection and reopen the app.
+            <p>{serviceError.message}</p>
+            <button type="button" onClick={() => void refresh().catch(() => undefined)} className="min-h-11 px-4 mt-2 font-semibold text-[var(--color-primary)]">Try Again</button>
           </div>
         )}
 
-        {status && !showPin && (
+        {status && !showPin && !serviceError && (
           <div className="mt-8">
             <button type="button" onClick={useDevice} disabled={!deviceUsable || working} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold flex items-center justify-center gap-2.5 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2">
               {working ? <LoaderCircle className="animate-spin" size={20} /> : <Fingerprint size={21} />}

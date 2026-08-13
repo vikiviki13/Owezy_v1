@@ -7,6 +7,7 @@ export interface SecurityContextValue {
   loading: boolean;
   isLocked: boolean;
   unlockMessage: string;
+  serviceError: { code: string; message: string } | null;
   refresh: () => Promise<SecurityStatus>;
   unlockWithPin: (pin: string) => Promise<void>;
   unlockWithDevice: () => Promise<void>;
