@@ -54,7 +54,8 @@ npm run dev
 In Supabase, open **Authentication → URL Configuration**:
 
 - Set **Site URL** to your production URL, such as `https://your-app.vercel.app`.
-- Add `http://localhost:5173` and the production URL to **Redirect URLs**.
+- Add `http://localhost:5173/reset-password` and `https://your-app.vercel.app/reset-password` to **Redirect URLs** for password recovery.
+- Keep the production origin itself in **Redirect URLs** for sign-up email confirmation.
 - If you use Netlify preview deployments, add the required Netlify preview URL pattern too.
 
 ## 5. Deploy with Vercel

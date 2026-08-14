@@ -46,10 +46,12 @@ export function AddExpense() {
   const navigate = useNavigate();
   const toast = useToast();
   const friends = listFriends();
+  const scopedFriend = preselectFriend ? friends.find((friend) => friend.id === preselectFriend) : undefined;
+  const isFriendScoped = Boolean(scopedFriend && !groupId);
 
   const groupMemberIds = groupId ? getGroupMembers(groupId).map((f) => f.id) : [];
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selected, setSelected] = useState<string[]>(preselectFriend ? [preselectFriend] : groupMemberIds);
+  const [step, setStep] = useState<1 | 2 | 3>(isFriendScoped ? 2 : 1);
+  const [selected, setSelected] = useState<string[]>(scopedFriend ? [scopedFriend.id] : groupMemberIds);
   const [search, setSearch] = useState('');
   const [addFriendOpen, setAddFriendOpen] = useState(false);
 
@@ -187,7 +189,7 @@ export function AddExpense() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top min-h-screen">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => (step === 1 ? navigate(-1) : setStep((s) => (s - 1) as 1 | 2))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => (step === 1 || (isFriendScoped && step === 2) ? navigate(-1) : setStep((s) => (s - 1) as 1 | 2))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
           <ArrowLeft size={18} />
         </button>
         <h1 className="font-semibold text-lg">Add Expense</h1>

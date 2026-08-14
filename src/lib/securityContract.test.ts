@@ -8,6 +8,8 @@ const edgeFunction = readFileSync(resolve(root, 'supabase/functions/security/ind
 const changePinFlow = readFileSync(resolve(root, 'src/components/security/ChangePinFlow.tsx'), 'utf8');
 const securityService = readFileSync(resolve(root, 'src/lib/securityService.ts'), 'utf8');
 const lockScreen = readFileSync(resolve(root, 'src/components/security/LockScreen.tsx'), 'utf8');
+const reauthentication = readFileSync(resolve(root, 'src/components/security/RequireReauthentication.tsx'), 'utf8');
+const securityPages = readFileSync(resolve(root, 'src/pages/settings/SecurityPages.tsx'), 'utf8');
 const legacyLockPath = resolve(root, 'src/lib/appLock.ts');
 
 describe('server-side security contract', () => {
@@ -62,5 +64,18 @@ describe('server-side security contract', () => {
     expect(changePinFlow).toContain("useState<ChangePinStep>('current')");
     expect(changePinFlow).toContain('Your new PIN must be different from your current PIN.');
     expect(changePinFlow).toContain("PINs don't match. Try again.");
+  });
+
+  it('requires fresh verification before disabling App Lock without deleting PIN history', () => {
+    const disableStart = edgeFunction.indexOf("if (action === 'lock/disable')");
+    const disableEnd = edgeFunction.indexOf("if (action === 'lock/touch')", disableStart);
+    const disableBlock = edgeFunction.slice(disableStart, disableEnd);
+    expect(disableBlock).toContain('requireFreshGrant');
+    expect(disableBlock).toContain('app_lock_enabled: false');
+    expect(disableBlock).not.toContain('pin_hash: null');
+    expect(securityService).toContain('clearLocalSecurityState(userId)');
+    expect(securityPages).toContain('allowRecentAuthentication={false}');
+    expect(securityPages).toContain('pinTitle="Enter your current PIN"');
+    expect(reauthentication).toContain('Incorrect PIN. Try again.');
   });
 });

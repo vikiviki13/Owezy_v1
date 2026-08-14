@@ -246,7 +246,7 @@ export async function enableAppLock(userId: string, autoLockDuration: AutoLockDu
 
 export async function disableAppLock(userId: string) {
   await invoke('lock/disable', {}, userId);
-  clearUnlockGrant(userId);
+  clearLocalSecurityState(userId);
 }
 
 export async function setAutoLock(userId: string, autoLockDuration: AutoLockDuration) {

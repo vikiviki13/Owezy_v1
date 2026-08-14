@@ -9,6 +9,7 @@ import { SecurityProvider } from './components/SecurityProvider';
 import { AppLockGuard } from './components/AppLockGuard';
 import { LockScreen } from './components/security/LockScreen';
 import { Auth } from './pages/Auth';
+import { ChangePasswordPage, ResetPasswordPage } from './pages/PasswordPages';
 import { Onboarding } from './pages/Onboarding';
 import { Home } from './pages/Home';
 import { Friends } from './pages/Friends';
@@ -30,6 +31,7 @@ import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './li
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { clearSensitiveLocalData, updateProfile } from './lib/db';
 import { clearLocalSecurityState } from './lib/securityService';
+import { isPasswordRecoveryLocation } from './lib/passwordRecovery';
 import {
   completeOnboarding,
   getOnboardingProfile,
@@ -41,6 +43,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [startupError, setStartupError] = useState('');
+  const [passwordRecovery, setPasswordRecovery] = useState(() => isPasswordRecoveryLocation(window.location));
+  const [recoverySessionValidated, setRecoverySessionValidated] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -77,7 +81,15 @@ export default function App() {
       void activate(data.session?.user || null);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+        setRecoverySessionValidated(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false);
+        setRecoverySessionValidated(false);
+      }
       void activate(session?.user || null);
     });
 
@@ -91,6 +103,11 @@ export default function App() {
   if (!isSupabaseConfigured) return <ConfigurationRequired />;
   if (loading) return <LoadingScreen />;
   if (startupError) return <StartupError message={startupError} />;
+  if (passwordRecovery) return <ResetPasswordPage recoverySessionValidated={recoverySessionValidated} onReturnToSignIn={() => {
+    setPasswordRecovery(false);
+    setRecoverySessionValidated(false);
+    if (window.location.pathname === '/reset-password') window.history.replaceState({}, '', '/');
+  }} />;
   if (!user) return <Auth />;
   return <AuthenticatedApp user={user} />;
 }
@@ -220,6 +237,7 @@ function PrivateDataApp({
             <Route path="/profile/security/devices" element={<SecurityDevices />} />
             <Route path="/profile/security/activity" element={<SecurityActivityPage />} />
             <Route path="/profile/security/change-pin" element={<ChangePinPage />} />
+            <Route path="/profile/security/change-password" element={<ChangePasswordPage />} />
             <Route path="/profile/privacy" element={<PrivacySettings />} />
             <Route path="/profile/data-storage" element={<DataStorageSettings />} />
             <Route path="/profile/export" element={<ExportDataSettings />} />

@@ -7,6 +7,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BottomSheet } from '../../components/BottomSheet';
 import { SettingsPage, SettingsRow, SettingsSection } from '../../components/SettingsUI';
 import { Switch } from '../../components/ui/switch';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { useSecurity } from '../../components/SecurityContext';
 import { SecuritySetupFlow } from '../../components/security/SecuritySetupFlow';
 import { RequireReauthentication } from '../../components/security/RequireReauthentication';
@@ -45,7 +49,7 @@ export function SecuritySettings() {
     <SettingsSection title="Auto-lock"><SettingsRow icon={Shield} title="Automatically Lock" value={lockLabel(status?.autoLockDuration)} to="/profile/app-lock" /></SettingsSection>
     <SettingsSection title="Devices"><SettingsRow icon={Laptop} title="Security Devices" value={`${deviceCount} device${deviceCount === 1 ? '' : 's'}`} to="/profile/security/devices" /></SettingsSection>
     <SettingsSection title="Activity"><SettingsRow icon={Activity} title="Security Activity" to="/profile/security/activity" /></SettingsSection>
-    <SettingsSection title="Account Security"><SettingsRow icon={KeyRound} title="Change PIN" to="/profile/security/change-pin" /><SettingsRow icon={ShieldCheck} title="Recovery Options" to="/account-recovery" /></SettingsSection>
+    <SettingsSection title="Account Security"><SettingsRow icon={KeyRound} title="Change Password" to="/profile/security/change-password" /><SettingsRow icon={KeyRound} title="Change PIN" to="/profile/security/change-pin" /><SettingsRow icon={ShieldCheck} title="Recover App PIN" to="/account-recovery" /></SettingsSection>
     <p className="text-xs text-[var(--color-text-muted)] px-1">Current protection level: {protection}. Account access remains protected separately by your Supabase sign-in session and database Row Level Security.</p>
   </SettingsPage>;
 }
@@ -69,14 +73,17 @@ export function AppLockSettings() {
   const [setup, setSetup] = useState(false);
   const [reauth, setReauth] = useState(false);
   const [confirmDisable, setConfirmDisable] = useState(false);
+  const [disabling, setDisabling] = useState(false);
   const [addingDevice, setAddingDevice] = useState(false);
   const [platformAvailable, setPlatformAvailable] = useState(false);
   useEffect(() => { void isPlatformAuthenticatorAvailable().then(setPlatformAvailable); }, []);
 
   const verifiedDisable = useCallback(() => { setReauth(false); setConfirmDisable(true); }, []);
   const turnOff = useCallback(async () => {
+    setDisabling(true);
     try { await disableAppLock(userId); await refresh(); setConfirmDisable(false); toast('App Lock turned off'); }
     catch (caught) { toast(caught instanceof Error ? caught.message : 'App Lock could not be turned off'); }
+    finally { setDisabling(false); }
   }, [refresh, toast, userId]);
 
   const addDevice = useCallback(async () => {
@@ -101,11 +108,33 @@ export function AppLockSettings() {
       <SettingsSection title="Automatically Lock">{LOCK_OPTIONS.map((option) => <button type="button" key={option.value} onClick={() => void setAutoLockDuration(option.value).then(() => toast('Auto-lock updated')).catch((caught) => toast(caught instanceof Error ? caught.message : 'Could not update auto-lock'))} className="w-full min-h-14 px-4 py-3 flex items-center gap-3 text-left"><span className={`size-5 rounded-full border-2 flex items-center justify-center ${status.autoLockDuration === option.value ? 'border-[var(--color-primary)] bg-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>{status.autoLockDuration === option.value && <Check size={12} className="text-white" strokeWidth={3} />}</span><span className="flex-1 text-sm font-medium">{option.label}</span>{option.recommended && <span className="text-xs font-semibold text-[var(--color-primary)]">Recommended</span>}</button>)}</SettingsSection>
     </>}
     {setup && <SecuritySetupFlow onCancel={() => { setSetup(false); void refresh(); }} onDone={() => { setSetup(false); void refresh(); }} />}
-    <RequireReauthentication open={reauth} purpose="turn off App Lock" onCancel={() => setReauth(false)} onVerified={verifiedDisable} />
-    <BottomSheet open={confirmDisable} onClose={() => setConfirmDisable(false)} title="Turn off App Lock?">
-      <p className="text-sm leading-6 text-[var(--color-text-secondary)] mb-5">Anyone who can access this device may be able to view your expense and repayment information.</p>
-      <div className="flex gap-3"><button type="button" onClick={() => setConfirmDisable(false)} className="flex-1 min-h-12 rounded-xl bg-[var(--color-surface-secondary)] font-semibold">Cancel</button><button type="button" onClick={turnOff} className="flex-1 min-h-12 rounded-xl bg-[var(--color-error)] text-white font-semibold">Turn Off</button></div>
-    </BottomSheet>
+    <RequireReauthentication
+      open={reauth}
+      purpose="turn off App Lock"
+      onCancel={() => setReauth(false)}
+      onVerified={verifiedDisable}
+      allowRecentAuthentication={false}
+      pinTitle="Enter your current PIN"
+    />
+    <AlertDialog open={confirmDisable} onOpenChange={(open) => { if (!disabling) setConfirmDisable(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive"><AlertTriangle /></AlertDialogMedia>
+          <AlertDialogTitle>Turn off App Lock?</AlertDialogTitle>
+          <AlertDialogDescription>Anyone with access to this device may be able to open your financial records.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={disabling}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={disabling}
+            onClick={(event) => { event.preventDefault(); void turnOff(); }}
+          >
+            {disabling ? <><LoaderCircle className="animate-spin" />Turning Off…</> : 'Turn Off App Lock'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </SettingsPage>;
 }
 
