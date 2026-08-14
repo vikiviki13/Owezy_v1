@@ -7,6 +7,7 @@ const schema = readFileSync(resolve(root, 'supabase/schema.sql'), 'utf8');
 const edgeFunction = readFileSync(resolve(root, 'supabase/functions/security/index.ts'), 'utf8');
 const changePinFlow = readFileSync(resolve(root, 'src/components/security/ChangePinFlow.tsx'), 'utf8');
 const securityService = readFileSync(resolve(root, 'src/lib/securityService.ts'), 'utf8');
+const lockScreen = readFileSync(resolve(root, 'src/components/security/LockScreen.tsx'), 'utf8');
 const legacyLockPath = resolve(root, 'src/lib/appLock.ts');
 
 describe('server-side security contract', () => {
@@ -28,6 +29,21 @@ describe('server-side security contract', () => {
     expect(edgeFunction).toContain('verifyAuthenticationResponse');
     expect(edgeFunction).toContain('requireUserVerification: true');
     expect(edgeFunction).toContain("used_at: new Date().toISOString()");
+    expect(securityService).toContain("userVerification: 'required'");
+  });
+
+  it('automatically requests device security once and supports an abortable PIN fallback', () => {
+    expect(lockScreen).toContain('shouldAutoTriggerDeviceAuthentication');
+    expect(lockScreen).toContain('automaticAttempted.current = true');
+    expect(lockScreen).toContain('cancelWebAuthnAuthentication()');
+    expect(lockScreen).toContain('Use PIN Instead');
+    expect(lockScreen).toContain('Try Device Security Again');
+    expect(securityService).toContain('WebAuthnAbortService.cancelCeremony()');
+  });
+
+  it('does not implement a fake biometric retry counter', () => {
+    expect(lockScreen).not.toMatch(/(fingerprint|face|biometric)(Attempt|Retry|Failure)Count/i);
+    expect(lockScreen).not.toContain('five biometric attempts');
   });
 
   it('has removed the legacy browser PIN verifier', () => {

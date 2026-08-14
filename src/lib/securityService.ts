@@ -3,6 +3,7 @@ import {
   platformAuthenticatorIsAvailable,
   startAuthentication,
   startRegistration,
+  WebAuthnAbortService,
   WebAuthnError,
 } from '@simplewebauthn/browser';
 import { supabase } from './supabase';
@@ -81,6 +82,10 @@ export function isWebAuthnSupported() {
 export async function isPlatformAuthenticatorAvailable() {
   if (!isWebAuthnSupported()) return false;
   try { return await platformAuthenticatorIsAvailable(); } catch { return false; }
+}
+
+export function cancelWebAuthnAuthentication() {
+  WebAuthnAbortService.cancelCeremony();
 }
 
 export function suggestedDeviceName() {
@@ -186,7 +191,9 @@ export async function authenticateWithWebAuthn(userId: string, duration: AutoLoc
   if (!navigator.onLine) throw new SecurityServiceError('offline', "You're offline. Connect to the internet to use Device Security.");
   try {
     const start = await invoke<{ options: Parameters<typeof startAuthentication>[0]['optionsJSON'] }>('webauthn/authentication-options', {}, userId);
-    const response = await startAuthentication({ optionsJSON: start.options });
+    const response = await startAuthentication({
+      optionsJSON: { ...start.options, userVerification: 'required' },
+    });
     const verified = await invoke<{ grant: UnlockGrant }>('webauthn/authentication-verify', { response }, userId);
     saveUnlockGrant(userId, verified.grant, duration);
     return verified.grant;
