@@ -1,13 +1,19 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, UserPlus } from 'lucide-react';
-import { createExpense, listFriends, getGroupMembers } from '../lib/db';
-import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
+import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, UserPlus, CalendarDays, CheckCircle2, Eye, MessageCircle } from 'lucide-react';
+import { calculateFriendBalance, createExpense, listFriends, getGroupMembers } from '../lib/db';
+import { currencySymbol, formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
 import { AddFriendForm } from '../components/AddFriendForm';
-import { BottomSheet } from '../components/BottomSheet';
+import { buildExpenseWhatsAppMessage, dateToIso, expenseDateError, expenseDateLabel, isoToDate } from '../lib/expenseDraft';
+import { shareToWhatsApp } from '../lib/share';
+import { Button } from '../components/ui/button';
+import { Calendar } from '../components/ui/calendar';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { Switch } from '../components/ui/switch';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -17,6 +23,21 @@ const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Stay', icon: <Building2 size={16} /> },
   { key: 'Other', icon: <MoreHorizontal size={16} /> },
 ];
+
+interface SavedExpenseMessage {
+  friendId: string;
+  friendName: string;
+  amount: number;
+  pendingBalance: number;
+  phone?: string;
+  text: string;
+}
+
+interface SavedExpenseResult {
+  expenseId: string;
+  total: number;
+  messages: SavedExpenseMessage[];
+}
 
 export function AddExpense() {
   const [params] = useSearchParams();
@@ -41,7 +62,9 @@ export function AddExpense() {
   const [category, setCategory] = useState<ExpenseCategory>('Food');
   const [merchant, setMerchant] = useState('');
   const [notes, setNotes] = useState('');
-  const [date] = useState(todayDate());
+  const [date, setDate] = useState(() => todayDate());
+  const [dateDialogOpen, setDateDialogOpen] = useState(false);
+  const [savedExpense, setSavedExpense] = useState<SavedExpenseResult>();
 
   const filtered = friends.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -79,25 +102,87 @@ export function AddExpense() {
     }));
     const ownerShare = splitMode === 'equal' ? ownerShareEqual : ownerCustom;
 
-    createExpense({
-      title: title.trim() || category,
-      category,
-      merchant_name: merchant.trim() || undefined,
-      total_amount: totalNum,
-      owner_share: ownerShare,
-      expense_date: date,
-      notes: notes.trim() || undefined,
-      split_mode: splitMode,
-      participants,
-    });
+    const reason = title.trim() || category;
+    try {
+      const expense = createExpense({
+        title: reason,
+        category,
+        merchant_name: merchant.trim() || undefined,
+        total_amount: totalNum,
+        owner_share: ownerShare,
+        expense_date: date,
+        notes: notes.trim() || undefined,
+        split_mode: splitMode,
+        participants,
+      });
 
-    const friendNames = selected.map((id) => friends.find((f) => f.id === id)?.name).filter(Boolean).join(', ');
-    toast(`${formatCurrency(totalNum)} added for ${friendNames}`);
-    navigate('/home');
+      const messages = participants.flatMap((participant) => {
+        const friend = friends.find((candidate) => candidate.id === participant.friend_id);
+        if (!friend) return [];
+        const pendingBalance = calculateFriendBalance(friend.id).pending;
+        return [{
+          friendId: friend.id,
+          friendName: friend.nickname?.trim() || friend.name,
+          amount: participant.share_amount,
+          pendingBalance,
+          phone: friend.whatsapp_number,
+          text: buildExpenseWhatsAppMessage({
+            friend,
+            amount: participant.share_amount,
+            reason,
+            expenseDate: date,
+            pendingBalance,
+          }),
+        }];
+      });
+
+      setSavedExpense({ expenseId: expense.id, total: totalNum, messages });
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Could not add this expense.');
+    }
   }
 
   const canProceedStep1 = selected.length > 0;
   const canProceedStep2 = totalNum > 0 && (splitMode === 'equal' || customDiff === 0);
+
+  if (savedExpense) {
+    return (
+      <div className="min-h-screen px-4 pt-10 pb-8 safe-top flex flex-col">
+        <div className="mx-auto flex max-w-sm flex-1 flex-col justify-center text-center">
+          <span className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <CheckCircle2 size={34} />
+          </span>
+          <h1 className="text-2xl font-bold">Expense Added Successfully</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {formatCurrency(savedExpense.total)} was saved with the selected expense date.
+          </p>
+
+          <div className="mt-7 flex flex-col gap-3 text-left">
+            {savedExpense.messages.map((message) => (
+              <div key={message.friendId} className="rounded-2xl border border-border bg-card p-4">
+                <p className="font-semibold"><span className="amount-tabular">{formatCurrency(message.amount)}</span> added for {message.friendName}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Pending balance: <span className="amount-tabular">{formatCurrency(message.pendingBalance)}</span></p>
+                <Button
+                  className="mt-4 w-full"
+                  disabled={!message.phone}
+                  onClick={() => shareToWhatsApp(message.text, message.phone)}
+                >
+                  <MessageCircle />
+                  {savedExpense.messages.length === 1 ? 'Send on WhatsApp' : `Send on WhatsApp — ${message.friendName}`}
+                </Button>
+                {!message.phone && <p className="mt-2 text-center text-xs text-muted-foreground">No WhatsApp number is saved for this friend.</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mx-auto mt-7 flex w-full max-w-sm flex-col gap-2">
+          <Button variant="outline" onClick={() => navigate(`/expense/${savedExpense.expenseId}`)}><Eye />View Expense</Button>
+          <Button variant="ghost" onClick={() => navigate('/home')}>Done</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-6 pb-8 safe-top min-h-screen">
@@ -169,7 +254,7 @@ export function AddExpense() {
         <div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-2">Total bill amount</p>
           <div className="flex items-center gap-1 mb-6">
-            <span className="text-3xl font-bold text-[var(--color-text-muted)]">₹</span>
+            <span className="text-3xl font-bold text-[var(--color-text-muted)]">{currencySymbol()}</span>
             <input
               autoFocus
               value={total}
@@ -181,13 +266,8 @@ export function AddExpense() {
           </div>
 
           <div className="flex items-center justify-between bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-4">
-            <span className="text-sm font-medium">Include my share</span>
-            <button
-              onClick={() => setIncludeOwner((v) => !v)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${includeOwner ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}
-            >
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${includeOwner ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </button>
+            <label htmlFor="include-owner" className="text-sm font-medium">Include my share</label>
+            <Switch id="include-owner" checked={includeOwner} onCheckedChange={setIncludeOwner} />
           </div>
 
           <div className="flex gap-2 mb-4">
@@ -291,8 +371,21 @@ export function AddExpense() {
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="input resize-none" />
           </div>
 
-          <div className="bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-6 text-sm text-[var(--color-text-secondary)]">
-            Today, now · Paid by you · {formatCurrency(totalNum)} total
+          <div className="mb-6">
+            <p className="mb-2 text-sm font-medium text-muted-foreground">Expense date</p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between rounded-xl bg-card font-medium"
+              onClick={() => setDateDialogOpen(true)}
+            >
+              <span className="flex items-center gap-2"><CalendarDays />{expenseDateLabel(date)}</span>
+              <span className="text-xs text-muted-foreground">Change</span>
+            </Button>
+          </div>
+
+          <div className="bg-secondary rounded-xl p-3 mb-6 text-sm text-muted-foreground">
+            {expenseDateLabel(date)} · Paid by you · <span className="amount-tabular">{formatCurrency(totalNum)}</span> total
           </div>
 
           <button onClick={save} className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3.5">
@@ -301,17 +394,47 @@ export function AddExpense() {
         </div>
       )}
 
-      <BottomSheet open={addFriendOpen} onClose={() => setAddFriendOpen(false)} title="Add New Friend">
-        <AddFriendForm
-          submitLabel="Save and Continue"
-          onCreated={(friend) => {
-            setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
-            setAddFriendOpen(false);
-            setStep(2);
-            toast(`${friend.name} added and selected`);
-          }}
-        />
-      </BottomSheet>
+      <Dialog open={dateDialogOpen} onOpenChange={setDateDialogOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Select expense date</DialogTitle>
+            <DialogDescription>Choose today or any earlier date. Future dates are unavailable.</DialogDescription>
+          </DialogHeader>
+          <Calendar
+            mode="single"
+            selected={isoToDate(date)}
+            defaultMonth={isoToDate(date)}
+            disabled={{ after: isoToDate(todayDate()) }}
+            onSelect={(selectedDate) => {
+              if (!selectedDate) return;
+              const nextDate = dateToIso(selectedDate);
+              if (expenseDateError(nextDate)) return;
+              setDate(nextDate);
+              setDateDialogOpen(false);
+            }}
+            className="mx-auto"
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Sheet open={addFriendOpen} onOpenChange={setAddFriendOpen}>
+        <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-3xl px-4 pb-6">
+          <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border" />
+          <SheetHeader className="px-0 pb-2 text-left">
+            <SheetTitle>Add New Friend</SheetTitle>
+            <SheetDescription>Create a friend and select them for this expense.</SheetDescription>
+          </SheetHeader>
+          <AddFriendForm
+            submitLabel="Save and Continue"
+            onCreated={(friend) => {
+              setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
+              setAddFriendOpen(false);
+              setStep(2);
+              toast(`${friend.name} added and selected`);
+            }}
+          />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

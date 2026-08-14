@@ -5,6 +5,7 @@ import {
 } from '../types';
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
+import { expenseDateError } from './expenseDraft';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -390,6 +391,8 @@ export function createExpense(input: CreateExpenseInput): Expense {
   const now = new Date().toISOString();
   const recoverable = roundCurrency(input.participants.reduce((s, p) => s + p.share_amount, 0));
   const expenseDate = input.expense_date;
+  const dateError = expenseDateError(expenseDate);
+  if (dateError) throw new Error(dateError);
   const expenseTime = input.expense_time || nowTime();
 
   const expense: Expense = {
