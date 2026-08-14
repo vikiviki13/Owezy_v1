@@ -118,9 +118,15 @@ function transactionDone(transaction: IDBTransaction): Promise<void> {
 }
 
 export function isSupported(): boolean {
-  if (typeof navigator === 'undefined') return false;
+  return contactAvailability() === 'available_on_demand';
+}
+
+export function contactAvailability(): 'available_on_demand' | 'not_available' | 'unsupported' {
+  if (typeof navigator === 'undefined') return 'unsupported';
   const contacts = (navigator as ContactsNavigator).contacts;
-  return Boolean(contacts && typeof contacts.select === 'function');
+  if (!contacts || typeof contacts.select !== 'function') return 'unsupported';
+  if (typeof window !== 'undefined' && window.isSecureContext === false) return 'not_available';
+  return 'available_on_demand';
 }
 
 export async function requestAccess(): Promise<void> {
@@ -213,6 +219,7 @@ export async function clearContactCache(): Promise<void> {
 
 export const contactService = {
   isSupported,
+  contactAvailability,
   requestAccess,
   openContactPicker,
   getLocalContacts,

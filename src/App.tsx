@@ -26,6 +26,7 @@ import { EditProfile } from './pages/settings/EditProfile';
 import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSettings } from './pages/settings/PreferencePages';
 import { ContactPrivacySettings, DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
+import { AppPermissionDetailPage, AppPermissionsPage } from './pages/settings/PermissionPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -239,6 +240,8 @@ function PrivateDataApp({
             <Route path="/profile/security/change-pin" element={<ChangePinPage />} />
             <Route path="/profile/security/change-password" element={<ChangePasswordPage />} />
             <Route path="/profile/privacy" element={<PrivacySettings />} />
+            <Route path="/profile/privacy/permissions" element={<AppPermissionsPage />} />
+            <Route path="/profile/privacy/permissions/:permissionKey" element={<AppPermissionDetailPage />} />
             <Route path="/profile/privacy/contacts" element={<ContactPrivacySettings />} />
             <Route path="/profile/data-storage" element={<DataStorageSettings />} />
             <Route path="/profile/export" element={<ExportDataSettings />} />

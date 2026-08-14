@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BellOff, Check, ChevronRight, ContactRound, Database, Download, FileJson, FileSpreadsheet, HardDrive, Smartphone, Trash2 } from 'lucide-react';
+import { Bell, BellOff, Check, ChevronRight, ContactRound, Database, Download, FileJson, FileSpreadsheet, HardDrive, ShieldCheck, Smartphone, Trash2 } from 'lucide-react';
 import { ChoiceRow, SettingsPage, SettingsRow, SettingsSection, ToggleRow } from '../../components/SettingsUI';
 import { usePreferences } from '../../components/PreferencesContext';
 import { useToast } from '../../components/ToastContext';
@@ -9,7 +9,7 @@ import { getExportData, getStorageSummary } from '../../lib/db';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
 import { APP_NAME } from '../../components/Brand';
-import { clearContactCache, getLocalContacts, isSupported as isContactImportSupported } from '../../lib/contactService';
+import { clearContactCache, contactAvailability, getLocalContacts } from '../../lib/contactService';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +20,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../../components/ui/alert-dialog';
+import { PermissionBlockedDialog, PermissionExplanationDialog } from '../../components/permissions/PermissionUI';
+import { notificationPermissionState, requestNotificationAccess } from '../../lib/permissionService';
+import { Button } from '../../components/ui/button';
 
 export function NotificationSettings() {
   const { preferences, updatePreferences } = usePreferences();
@@ -30,26 +33,78 @@ export function NotificationSettings() {
     app_updates_enabled: preferences.app_updates_enabled,
   });
   const toast = useToast();
-  const permission = typeof Notification === 'undefined' ? 'unsupported' : Notification.permission;
+  const [permission, setPermission] = useState(notificationPermissionState);
+  const [explanationOpen, setExplanationOpen] = useState(false);
+  const [blockedOpen, setBlockedOpen] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+
+  useEffect(() => {
+    const syncPermission = () => {
+      const next = notificationPermissionState();
+      setPermission(next);
+      if (next === 'blocked' || next === 'unsupported') setDraft((value) => ({ ...value, notifications_enabled: false }));
+    };
+    window.addEventListener('focus', syncPermission);
+    document.addEventListener('visibilitychange', syncPermission);
+    return () => {
+      window.removeEventListener('focus', syncPermission);
+      document.removeEventListener('visibilitychange', syncPermission);
+    };
+  }, []);
+
+  function explainNotifications() {
+    if (permission === 'unsupported') { toast('Notifications are not supported by this browser'); return; }
+    if (permission === 'blocked') { setBlockedOpen(true); return; }
+    if (permission === 'allowed') { setDraft((value) => ({ ...value, notifications_enabled: true })); return; }
+    setExplanationOpen(true);
+  }
 
   async function enableBrowserNotifications() {
-    if (typeof Notification === 'undefined') { toast('Notifications are not supported by this browser'); return; }
-    const result = await Notification.requestPermission();
-    if (result === 'granted') { setDraft((value) => ({ ...value, notifications_enabled: true })); toast('Notifications enabled'); }
-    else toast(result === 'denied' ? 'Notifications remain blocked in your browser' : 'Notification permission was not changed');
+    setRequesting(true);
+    try {
+      const next = await requestNotificationAccess();
+      setPermission(next);
+      setExplanationOpen(false);
+      if (next === 'allowed') {
+        setDraft((value) => ({ ...value, notifications_enabled: true }));
+        toast('Notifications enabled');
+      } else if (next === 'blocked') {
+        setDraft((value) => ({ ...value, notifications_enabled: false }));
+        setBlockedOpen(true);
+      }
+    } catch (caught) {
+      setExplanationOpen(false);
+      const next = notificationPermissionState();
+      setPermission(next);
+      if (next === 'blocked') setBlockedOpen(true);
+      else toast(caught instanceof Error ? caught.message : 'Notification permission could not be requested');
+    } finally {
+      setRequesting(false);
+    }
   }
   function save() { updatePreferences(draft); toast('Notification preferences updated'); }
 
   return <SettingsPage title="Notifications" description="Control the reminders and important updates you receive.">
-    {permission === 'denied' && <div className="rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 p-4 mb-6"><div className="flex gap-3"><BellOff className="text-[var(--color-warning)] shrink-0" size={20} /><div><p className="font-semibold text-sm">Notifications are blocked in your browser</p><p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-1">Allow notifications in your browser or device settings, then return here.</p><button onClick={enableBrowserNotifications} className="text-sm font-semibold text-[var(--color-primary)] mt-2 min-h-8">Enable Notifications</button></div></div></div>}
-    {permission === 'default' && <button onClick={enableBrowserNotifications} className="w-full min-h-12 rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] font-semibold mb-6">Enable browser notifications</button>}
-    <SettingsSection title="Notifications"><ToggleRow title="Allow Notifications" checked={draft.notifications_enabled} onChange={(checked) => setDraft((value) => ({ ...value, notifications_enabled: checked }))} /></SettingsSection>
+    {permission === 'blocked' && <div className="mb-6 rounded-2xl border border-destructive/20 bg-destructive/10 p-4"><div className="flex gap-3"><BellOff className="shrink-0 text-destructive" size={20} /><div><p className="font-semibold text-sm">Notifications are blocked in your browser</p><p className="mt-1 text-xs leading-5 text-muted-foreground">Enable notifications from your browser or device settings, then return here.</p><Button variant="link" className="mt-1 h-9 px-0 text-destructive" onClick={() => setBlockedOpen(true)}>How to Enable</Button></div></div></div>}
+    {permission === 'not_requested' && <Button variant="secondary" onClick={explainNotifications} className="mb-6 w-full"><Bell />Enable Notifications</Button>}
+    <SettingsSection title="Notifications"><ToggleRow title="Allow Notifications" checked={draft.notifications_enabled && permission === 'allowed'} onChange={(checked) => checked ? explainNotifications() : setDraft((value) => ({ ...value, notifications_enabled: false }))} /></SettingsSection>
     <SettingsSection title="Categories">
       <ToggleRow title="Payment Reminders" description="Notify me when I schedule a reminder for a friend." checked={draft.payment_reminders_enabled} onChange={(checked) => setDraft((value) => ({ ...value, payment_reminders_enabled: checked }))} />
       <ToggleRow title="Pending Balance Reminders" description="Remind me about long-pending balances." checked={draft.pending_balance_reminders_enabled} onChange={(checked) => setDraft((value) => ({ ...value, pending_balance_reminders_enabled: checked }))} />
       <ToggleRow title="App Updates" description="Important product information. Marketing is off by default." checked={draft.app_updates_enabled} onChange={(checked) => setDraft((value) => ({ ...value, app_updates_enabled: checked }))} />
     </SettingsSection>
-    <button onClick={save} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold">Save Preferences</button>
+    <Button onClick={save} className="w-full">Save Preferences</Button>
+    <PermissionExplanationDialog
+      open={explanationOpen}
+      onOpenChange={setExplanationOpen}
+      icon={Bell}
+      title="Stay Updated"
+      description="Allow notifications for payment reminders, pending balances and important app updates."
+      primaryLabel="Enable Notifications"
+      busy={requesting}
+      onContinue={() => void enableBrowserNotifications()}
+    />
+    <PermissionBlockedDialog open={blockedOpen} onOpenChange={setBlockedOpen} permissionName="Notifications" />
   </SettingsPage>;
 }
 
@@ -69,20 +124,14 @@ export function PaymentReminderSettings() {
   </SettingsPage>;
 }
 
-type PermissionStateLabel = 'Allowed' | 'Not Allowed' | 'Not Requested';
 export function PrivacySettings() {
-  const toast = useToast();
-  const notificationState: PermissionStateLabel = typeof Notification === 'undefined' || Notification.permission === 'default' ? 'Not Requested' : Notification.permission === 'granted' ? 'Allowed' : 'Not Allowed';
-  const permissions = [
-    ['Camera', 'Used for receipt capture.', 'Not Requested' as PermissionStateLabel],
-    ['Photos / Files', 'Used only for receipt attachments you select.', 'Not Requested' as PermissionStateLabel],
-    ['Notifications', 'Used for reminders you enable.', notificationState],
-  ];
   return <SettingsPage title="Privacy" description={`Permissions are requested only when a feature needs them. ${APP_NAME} does not request unnecessary access during onboarding.`}>
-    <SettingsSection title="Contacts">
-      <SettingsRow icon={ContactRound} title="Contacts" description="Manage device contact access and locally stored contact information." to="/profile/privacy/contacts" />
+    <SettingsSection title="Device Access">
+      <SettingsRow icon={ShieldCheck} title="App Permissions" description={`See what ${APP_NAME} can access and manage permission status on this device.`} to="/profile/privacy/permissions" />
     </SettingsSection>
-    <SettingsSection title="App Permissions">{permissions.map(([title, why, state]) => <div key={title} className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex-1"><p className="font-semibold text-sm">{title}</p><p className="text-xs leading-5 text-[var(--color-text-muted)] mt-1">{why}</p></div><span className={`text-xs font-semibold ${state === 'Allowed' ? 'text-[var(--color-success)]' : state === 'Not Allowed' ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}`}>{state}</span></div><button onClick={() => toast(title === 'Notifications' ? 'Use your browser site settings to manage this permission' : `${APP_NAME} will explain why ${title.toLowerCase()} is needed before requesting it`)} className="text-sm font-semibold text-[var(--color-primary)] mt-2 min-h-9">Manage Permission</button></div>)}</SettingsSection>
+    <SettingsSection title="Contacts">
+      <SettingsRow icon={ContactRound} title="Local Contacts" description="Manage contact information stored only on this device." to="/profile/privacy/contacts" />
+    </SettingsSection>
   </SettingsPage>;
 }
 
@@ -114,10 +163,11 @@ export function ContactPrivacySettings() {
     }
   }
 
-  const supported = isContactImportSupported();
+  const contactState = contactAvailability();
+  const contactStateLabel = contactState === 'available_on_demand' ? 'Available on demand' : contactState === 'not_available' ? 'Not available' : 'Not supported';
   return <SettingsPage title="Contacts" description={`${APP_NAME} uses your device contacts only to help you find and add friends. Contact information stays on your device unless you explicitly add someone as a friend.`}>
     <SettingsSection title="Contact Access">
-      <SettingsRow icon={ContactRound} title="Contact Access" description="Requested only after you tap Import from Contacts." value={supported ? 'Available' : 'Not available'} trailing={false} />
+      <SettingsRow icon={ContactRound} title="Contact Access" description="Requested only after you tap Import from Contacts." value={contactStateLabel} trailing={false} />
       <SettingsRow icon={HardDrive} title="Local Contacts Cache" description="Only contacts you previously chose are searchable offline." value={contactCount === undefined ? 'Loading…' : `${contactCount} contact${contactCount === 1 ? '' : 's'}`} trailing={false} />
     </SettingsSection>
     <SettingsSection title="Local Data">

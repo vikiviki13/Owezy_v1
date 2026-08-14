@@ -17,6 +17,7 @@ import { useToast } from '../ToastContext';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../ui/sheet';
+import { APP_NAME } from '../Brand';
 
 type Stage = 'permission' | 'browse' | 'numbers' | 'existing' | 'denied' | 'unsupported';
 
@@ -155,9 +156,16 @@ export function ContactImportFlow({
           <div className="py-4 text-center">
             <span className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"><ContactRound size={31} /></span>
             <SheetHeader className="px-0 pt-5">
-              <SheetTitle className="text-xl font-bold">Find friends from your contacts</SheetTitle>
-              <SheetDescription className="text-sm leading-6">Allow Owezy to access contacts you choose so you can add friends faster. Your contacts aren't uploaded to your account unless you add someone as a friend.</SheetDescription>
+              <SheetTitle className="text-xl font-bold">Find Friends from Contacts</SheetTitle>
+              <SheetDescription className="text-sm leading-6">Choose people from your device contacts so you can add them faster. {APP_NAME} won't upload your contact list. Only people you add as friends are saved to your account.</SheetDescription>
             </SheetHeader>
+            <div className="mt-5 space-y-3 rounded-2xl bg-secondary p-4 text-left">
+              {[
+                'Your full contact list is not uploaded',
+                `Only selected contacts are shown to ${APP_NAME}`,
+                'Only confirmed friends are stored in your account',
+              ].map((point) => <p key={point} className="flex gap-2 text-sm leading-5"><Check className="mt-0.5 size-4 shrink-0 text-success" />{point}</p>)}
+            </div>
             {message && <p role="status" className="mt-3 text-sm text-muted-foreground">{message}</p>}
             <Button className="mt-6 w-full" disabled={busy} onClick={() => void openPhoneContacts()}>
               {busy ? <LoaderCircle className="animate-spin" /> : <ShieldCheck />}Continue
