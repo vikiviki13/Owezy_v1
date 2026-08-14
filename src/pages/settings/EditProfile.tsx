@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { BadgeCheck, Camera, Image, Trash2 } from 'lucide-react';
-import { BottomSheet } from '../../components/BottomSheet';
 import { SettingsPage } from '../../components/SettingsUI';
 import { Avatar } from '../../components/Avatar';
 import { useToast } from '../../components/ToastContext';
 import { getProfile, updateProfile } from '../../lib/db';
 import { supabase } from '../../lib/supabase';
+import { PermissionBlockedDialog, PermissionExplanationDialog } from '../../components/permissions/PermissionUI';
+import { cameraPermissionState, PermissionRequestError, requestCameraAccess } from '../../lib/permissionService';
+import { Button } from '../../components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../../components/ui/sheet';
+import { CameraCaptureDialog } from '../../components/permissions/CameraCaptureDialog';
 
 export function EditProfile() {
   const original = getProfile();
@@ -14,6 +18,10 @@ export function EditProfile() {
   const [phone, setPhone] = useState((original.phone || '').replace(/^\+91\s?/, ''));
   const [avatar, setAvatar] = useState(original.avatar_url || '');
   const [photoOpen, setPhotoOpen] = useState(false);
+  const [cameraExplanationOpen, setCameraExplanationOpen] = useState(false);
+  const [cameraBlockedOpen, setCameraBlockedOpen] = useState(false);
+  const [requestingCamera, setRequestingCamera] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [saving, setSaving] = useState(false);
   const [verified, setVerified] = useState(true);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -21,6 +29,7 @@ export function EditProfile() {
   const toast = useToast();
 
   useEffect(() => { void supabase.auth.getUser().then(({ data }) => setVerified(Boolean(data.user?.email_confirmed_at))); }, []);
+  useEffect(() => () => cameraStream?.getTracks().forEach((track) => track.stop()), [cameraStream]);
   const changed = name.trim() !== original.full_name || email.trim() !== (original.email || '') || phone.trim() !== (original.phone || '').replace(/^\+91\s?/, '') || avatar !== (original.avatar_url || '');
   const valid = name.trim().length > 0 && (!email || /^\S+@\S+\.\S+$/.test(email));
 
@@ -30,6 +39,34 @@ export function EditProfile() {
     const reader = new FileReader();
     reader.onload = () => { setAvatar(String(reader.result)); setPhotoOpen(false); };
     reader.readAsDataURL(file);
+  }
+
+  async function continueToCamera() {
+    setRequestingCamera(true);
+    try {
+      const stream = await requestCameraAccess('user');
+      setCameraStream(stream);
+      setCameraExplanationOpen(false);
+    } catch (caught) {
+      setCameraExplanationOpen(false);
+      if (caught instanceof PermissionRequestError && caught.code === 'blocked') setCameraBlockedOpen(true);
+      else if (caught instanceof PermissionRequestError && caught.code === 'unsupported') cameraRef.current?.click();
+      else toast(caught instanceof Error ? caught.message : 'Camera access could not be requested');
+    } finally {
+      setRequestingCamera(false);
+    }
+  }
+
+  async function openCameraFlow() {
+    setPhotoOpen(false);
+    const state = await cameraPermissionState();
+    if (state === 'blocked') setCameraBlockedOpen(true);
+    else setCameraExplanationOpen(true);
+  }
+
+  function closeCamera() {
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    setCameraStream(null);
   }
 
   async function save() {
@@ -66,11 +103,33 @@ export function EditProfile() {
 
       <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => readPhoto(e.target.files?.[0])} />
       <input ref={cameraRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => readPhoto(e.target.files?.[0])} />
-      <BottomSheet open={photoOpen} onClose={() => setPhotoOpen(false)} title="Profile Photo">
-        <button onClick={() => cameraRef.current?.click()} className="w-full min-h-14 flex items-center gap-3 border-b border-[var(--color-border)]"><Camera size={19} /> <span className="font-medium">Take Photo</span></button>
-        <button onClick={() => galleryRef.current?.click()} className="w-full min-h-14 flex items-center gap-3 border-b border-[var(--color-border)]"><Image size={19} /> <span className="font-medium">Choose Photo</span></button>
-        <button onClick={() => { setAvatar(''); setPhotoOpen(false); }} disabled={!avatar} className="w-full min-h-14 flex items-center gap-3 text-[var(--color-error)] disabled:opacity-40"><Trash2 size={19} /> <span className="font-medium">Remove Photo</span></button>
-      </BottomSheet>
+      <Sheet open={photoOpen} onOpenChange={setPhotoOpen}>
+        <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-6">
+          <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
+          <SheetHeader className="px-0 text-left"><SheetTitle>Profile Photo</SheetTitle><SheetDescription>Take a new photo or choose one from this device.</SheetDescription></SheetHeader>
+          <div className="grid gap-2">
+            <Button variant="ghost" className="justify-start" onClick={() => void openCameraFlow()}><Camera />Take Photo</Button>
+            <Button variant="ghost" className="justify-start" onClick={() => galleryRef.current?.click()}><Image />Choose Photo</Button>
+            <Button variant="ghost" className="justify-start text-destructive" onClick={() => { setAvatar(''); setPhotoOpen(false); }} disabled={!avatar}><Trash2 />Remove Photo</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+      <PermissionExplanationDialog
+        open={cameraExplanationOpen}
+        onOpenChange={setCameraExplanationOpen}
+        icon={Camera}
+        title="Allow Camera Access"
+        description="Owezy needs camera access to take photos of bills, receipts or profile pictures."
+        busy={requestingCamera}
+        onContinue={() => void continueToCamera()}
+      />
+      <PermissionBlockedDialog open={cameraBlockedOpen} onOpenChange={setCameraBlockedOpen} permissionName="Camera" />
+      <CameraCaptureDialog
+        open={Boolean(cameraStream)}
+        stream={cameraStream}
+        onOpenChange={(open) => { if (!open) closeCamera(); }}
+        onCaptured={(dataUrl) => { setAvatar(dataUrl); closeCamera(); }}
+      />
     </SettingsPage>
   );
 }

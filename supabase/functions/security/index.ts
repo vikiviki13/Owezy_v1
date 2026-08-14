@@ -166,16 +166,19 @@ async function recordEvent(
   });
 }
 
-async function issueGrant(admin: ReturnType<typeof adminClient>, userId: string, method: 'device' | 'pin' | 'recovery') {
+type GrantMethod = 'device' | 'pin' | 'recovery' | 'pin_change';
+
+async function issueGrant(admin: ReturnType<typeof adminClient>, userId: string, method: GrantMethod) {
   const token = randomToken();
   const now = new Date();
+  const expiresIn = method === 'pin_change' ? REAUTH_WINDOW_MS : GRANT_TTL_MS;
   const { error } = await admin.from('app_unlock_sessions').insert({
     user_id: userId,
     token_hash: await sha256(token),
     authentication_method: method,
     last_active_at: now.toISOString(),
     last_verified_at: now.toISOString(),
-    expires_at: new Date(now.getTime() + GRANT_TTL_MS).toISOString(),
+    expires_at: new Date(now.getTime() + expiresIn).toISOString(),
   });
   if (error) throw new HttpError(500, 'grant_failed', 'The app could not be unlocked.');
   return { token, lastVerifiedAt: now.toISOString() };
@@ -185,7 +188,7 @@ async function getGrant(
   admin: ReturnType<typeof adminClient>,
   userId: string,
   token: unknown,
-  options: { requireFresh?: boolean; applyAutoLock?: boolean } = {},
+  options: { requireFresh?: boolean; applyAutoLock?: boolean; authenticationMethod?: GrantMethod } = {},
 ) {
   if (typeof token !== 'string' || token.length < 32) return null;
   const profile = await ensureProfile(admin, userId);
@@ -197,6 +200,9 @@ async function getGrant(
     .is('revoked_at', null)
     .maybeSingle();
   if (error || !data) return null;
+  if (options.authenticationMethod) {
+    if (data.authentication_method !== options.authenticationMethod) return null;
+  } else if (data.authentication_method === 'pin_change') return null;
   const now = Date.now();
   if (new Date(data.expires_at).getTime() <= now) return null;
   if (options.applyAutoLock) {
@@ -211,6 +217,22 @@ async function requireFreshGrant(admin: ReturnType<typeof adminClient>, userId: 
   const grant = await getGrant(admin, userId, token, { requireFresh: true });
   if (!grant) throw new HttpError(401, 'reauthentication_required', 'Verify your identity again to continue.');
   return grant;
+}
+
+async function requirePinChangeGrant(admin: ReturnType<typeof adminClient>, userId: string, token: unknown) {
+  const grant = await getGrant(admin, userId, token, { requireFresh: true, authenticationMethod: 'pin_change' });
+  if (!grant) throw new HttpError(401, 'pin_change_verification_required', 'Enter your current PIN again before changing it.');
+  return grant;
+}
+
+async function ensurePinIsDifferent(profile: Record<string, unknown>, pin: string) {
+  if (typeof profile.pin_salt !== 'string' || typeof profile.pin_hash !== 'string') {
+    throw new HttpError(400, 'pin_not_configured', 'App PIN is not set up.');
+  }
+  const candidate = await hashPin(pin, profile.pin_salt, profile.pin_hash_config);
+  if (constantTimeEqual(candidate.hash, profile.pin_hash)) {
+    throw new HttpError(400, 'pin_unchanged', 'Your new PIN must be different from your current PIN.');
+  }
 }
 
 async function verifyPin(
@@ -338,9 +360,40 @@ Deno.serve(async (request) => {
       return reply({ ok: true, grant });
     }
 
+    if (action === 'pin/change/verify') {
+      await verifyPin(admin, user.id, body.currentPin);
+      await admin.from('app_unlock_sessions').update({ revoked_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('authentication_method', 'pin_change')
+        .is('revoked_at', null);
+      const grant = await issueGrant(admin, user.id, 'pin_change');
+      return reply({ ok: true, grant });
+    }
+
+    if (action === 'pin/change/check') {
+      await requirePinChangeGrant(admin, user.id, body.changeToken);
+      const pin = validatePin(body.newPin);
+      const profile = await ensureProfile(admin, user.id);
+      await ensurePinIsDifferent(profile, pin);
+      return reply({ ok: true });
+    }
+
     if (action === 'pin/change') {
-      await requireFreshGrant(admin, user.id, unlockToken);
-      const pin = validatePin(body.pin);
+      const changeGrant = await requirePinChangeGrant(admin, user.id, body.changeToken);
+      await verifyPin(admin, user.id, body.currentPin);
+      const pin = validatePin(body.newPin);
+      const profile = await ensureProfile(admin, user.id);
+      await ensurePinIsDifferent(profile, pin);
+      const consumedAt = new Date().toISOString();
+      const { data: consumedGrant, error: consumeError } = await admin.from('app_unlock_sessions')
+        .update({ revoked_at: consumedAt })
+        .eq('id', changeGrant.id)
+        .is('revoked_at', null)
+        .select('id')
+        .maybeSingle();
+      if (consumeError || !consumedGrant) {
+        throw new HttpError(401, 'pin_change_verification_required', 'Enter your current PIN again before changing it.');
+      }
       const material = await hashPin(pin);
       const now = new Date().toISOString();
       const { error } = await admin.from('security_profiles').update({
@@ -353,8 +406,10 @@ Deno.serve(async (request) => {
         updated_at: now,
       }).eq('user_id', user.id);
       if (error) throw new HttpError(500, 'pin_save_failed', 'The PIN could not be changed.');
+      await admin.from('app_unlock_sessions').update({ revoked_at: now }).eq('user_id', user.id).is('revoked_at', null);
       await recordEvent(admin, user.id, 'pin_changed');
-      return reply({ ok: true });
+      const grant = await issueGrant(admin, user.id, 'pin');
+      return reply({ ok: true, grant, autoLockDuration: profile.auto_lock_duration });
     }
 
     if (action === 'pin/recover') {
@@ -387,11 +442,11 @@ Deno.serve(async (request) => {
         .eq('rp_id', rpID)
         .eq('is_active', true);
       const options = await generateRegistrationOptions({
-        rpName: 'Tab Expense Tracker',
+        rpName: 'Owezy Expense Tracker',
         rpID,
         userID: encoder.encode(user.id),
         userName: user.email || user.id,
-        userDisplayName: user.user_metadata?.full_name || user.email || 'Tab user',
+        userDisplayName: user.user_metadata?.full_name || user.email || 'Owezy user',
         attestationType: 'none',
         supportedAlgorithmIDs: [-7, -257],
         excludeCredentials: (credentials || []).map((item) => ({ id: item.credential_id, transports: item.transports || [] })),

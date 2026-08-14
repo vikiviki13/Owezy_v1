@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Wallet, Users, Share2 } from 'lucide-react';
-import { updateProfile } from '../lib/db';
+import { LoaderCircle, Wallet, Users, Share2 } from 'lucide-react';
 
 const SLIDES = [
   { icon: Wallet, title: 'You pay.', body: 'Cover the bill at dinner, on a trip, wherever — record it in seconds.' },
@@ -8,14 +7,23 @@ const SLIDES = [
   { icon: Share2, title: 'Record repayments and share statements.', body: 'Send a clean summary over WhatsApp whenever you like.' },
 ];
 
-export function Onboarding({ onDone }: { onDone: () => void }) {
+export function Onboarding({ onDone }: { onDone: (name: string) => Promise<void> }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [finishing, setFinishing] = useState(false);
+  const [error, setError] = useState('');
 
-  function finish() {
-    updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR' });
-    onDone();
+  async function finish() {
+    if (finishing) return;
+    setFinishing(true);
+    setError('');
+    try {
+      await onDone(name);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not finish onboarding. Please try again.');
+      setFinishing(false);
+    }
   }
 
   if (showProfile) {
@@ -30,13 +38,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="Your name"
             className="input mb-3"
-            onKeyDown={(e) => e.key === 'Enter' && finish()}
+            onKeyDown={(e) => { if (e.key === 'Enter') void finish(); }}
           />
           <p className="text-sm text-[var(--color-text-secondary)] mb-6">Default currency: <span className="font-medium text-[var(--color-text-primary)]">INR ₹</span></p>
-          <button onClick={finish} className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3.5 mb-2">
-            Get Started
+          {error && <p role="alert" className="text-sm text-[var(--color-error)] mb-4">{error}</p>}
+          <button onClick={() => void finish()} disabled={finishing} className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3.5 mb-2 flex items-center justify-center gap-2 disabled:opacity-60">
+            {finishing && <LoaderCircle size={17} className="animate-spin" />} Get Started
           </button>
-          <button onClick={finish} className="w-full text-sm text-[var(--color-text-muted)] font-medium py-2">Skip for now</button>
+          <button onClick={() => void finish()} disabled={finishing} className="w-full text-sm text-[var(--color-text-muted)] font-medium py-2 disabled:opacity-60">Skip for now</button>
         </div>
       </div>
     );

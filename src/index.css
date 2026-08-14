@@ -1,36 +1,189 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-@theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+/* ============================================================
+   Semantic tokens — "Owezy" palette (see design.md §4)
+   Light mode
+   ============================================================ */
+:root {
+  /* surfaces & text */
+  --background: #fbfaf7;
+  --foreground: #1c1917;
+  --card: #ffffff;
+  --card-foreground: #1c1917;
+  --popover: #ffffff;
+  --popover-foreground: #1c1917;
 
-  /* light mode tokens */
-  --color-primary: #059669;
-  --color-primary-hover: #047857;
-  --color-primary-soft: #ecfdf5;
-  --color-bg: #fbfaf7;
-  --color-surface: #ffffff;
-  --color-surface-secondary: #f4f2ec;
-  --color-border: #e7e3d8;
-  --color-text-primary: #1c1917;
-  --color-text-secondary: #57534e;
-  --color-text-muted: #a8a29e;
-  --color-success: #059669;
-  --color-warning: #d97706;
-  --color-error: #dc2626;
-  --color-info: #0284c7;
+  /* brand accent */
+  --primary: #059669;
+  --primary-foreground: #ffffff;
+
+  /* warm neutral surfaces */
+  --secondary: #f4f2ec;
+  --secondary-foreground: #1c1917;
+  --muted: #f4f2ec;
+  --muted-foreground: #a8a29e;
+
+  /* emerald tint (active nav, icon chips, selected pills) */
+  --accent: #ecfdf5;
+  --accent-foreground: #047857;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --border: #e7e3d8;
+  --input: #e7e3d8;
+  --ring: #059669;
+
+  /* Owezy legacy / extra semantics (kept for existing code) */
+  --text-secondary: #57534e;
+  --text-muted: #a8a29e;
+  --primary-hover: #047857;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #0284c7;
+
+  /* radius scale (buttons 12px, cards 16px, heroes/sheets 24px) */
+  --radius: 0.75rem;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* charts (emerald-forward palette) */
+  --chart-1: #059669;
+  --chart-2: #10b981;
+  --chart-3: #d97706;
+  --chart-4: #0284c7;
+  --chart-5: #e11d48;
+
+  /* sidebar */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1c1917;
+  --sidebar-primary: #059669;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ecfdf5;
+  --sidebar-accent-foreground: #047857;
+  --sidebar-border: #e7e3d8;
+  --sidebar-ring: #059669;
 }
 
+/* ============================================================
+   Dark mode
+   ============================================================ */
 .dark {
-  --color-primary: #10b981;
-  --color-primary-hover: #34d399;
-  --color-primary-soft: #052e23;
-  --color-bg: #14120f;
-  --color-surface: #1c1a16;
-  --color-surface-secondary: #26221c;
-  --color-border: #34302a;
-  --color-text-primary: #f5f4f0;
-  --color-text-secondary: #b8b3a8;
-  --color-text-muted: #756e63;
+  --background: #14120f;
+  --foreground: #f5f4f0;
+  --card: #1c1a16;
+  --card-foreground: #f5f4f0;
+  --popover: #1c1a16;
+  --popover-foreground: #f5f4f0;
+
+  --primary: #10b981;
+  --primary-foreground: #14120f;
+
+  --secondary: #26221c;
+  --secondary-foreground: #f5f4f0;
+  --muted: #26221c;
+  --muted-foreground: #b8b3a8;
+
+  --accent: #052e23;
+  --accent-foreground: #34d399;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --border: #34302a;
+  --input: #34302a;
+  --ring: #10b981;
+
+  --text-secondary: #b8b3a8;
+  --text-muted: #756e63;
+  --primary-hover: #34d399;
+  --success: #10b981;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #38bdf8;
+
+  --chart-1: #34d399;
+  --chart-2: #6ee7b7;
+  --chart-3: #fbbf24;
+  --chart-4: #38bdf8;
+  --chart-5: #fb7185;
+
+  --sidebar: #1c1a16;
+  --sidebar-foreground: #f5f4f0;
+  --sidebar-primary: #10b981;
+  --sidebar-primary-foreground: #14120f;
+  --sidebar-accent: #052e23;
+  --sidebar-accent-foreground: #34d399;
+  --sidebar-border: #34302a;
+  --sidebar-ring: #10b981;
+}
+
+/* ============================================================
+   @theme inline — maps semantic vars to Tailwind utilities.
+   Includes shadcn utilities (bg-background, bg-card, bg-primary,
+   text-muted-foreground, rounded-lg…) and Owezy legacy utilities
+   (bg-bg, bg-surface, text-text-secondary…).
+   ============================================================ */
+@theme inline {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Owezy legacy utilities — keep existing var(--color-*) classes working */
+  --color-bg: var(--background);
+  --color-surface: var(--card);
+  --color-surface-secondary: var(--secondary);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-soft: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-info: var(--info);
 }
 
 html, body, #root {
@@ -48,7 +201,7 @@ body {
 /* Best-effort app-switcher privacy cover. Browser PWAs cannot promise native
    screenshot blocking, so sensitive content is obscured as the page hides. */
 html.privacy-mode body::after {
-  content: "Tab\A Your financial records are protected";
+  content: "Owezy\A Your financial records are protected";
   white-space: pre;
   position: fixed;
   inset: 0;

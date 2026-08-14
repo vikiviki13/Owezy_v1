@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, Check, ContactRound, UserPlus } from 'lucide-react';
 import { calculateFriendBalance, listExpensesForFriend, listFriends, recordRepayment, getExpenseParticipants } from '../lib/db';
 import { formatCurrency } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { PaymentMethod } from '../types';
+import { AddFriendForm } from '../components/AddFriendForm';
+import { ContactImportFlow, type ImportedFriendDraft } from '../components/contacts/ContactImportFlow';
+import { Button } from '../components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
 
 const METHODS: PaymentMethod[] = ['UPI', 'Cash', 'Bank Transfer', 'Card', 'Other'];
 
@@ -23,6 +27,9 @@ export function RecordRepayment() {
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [pickerOpen, setPickerOpen] = useState(!friendId);
+  const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [contactImportOpen, setContactImportOpen] = useState(false);
+  const [contactDraft, setContactDraft] = useState<ImportedFriendDraft>();
 
   const balance = friendId ? calculateFriendBalance(friendId) : null;
   const pendingExpenses = friendId ? listExpensesForFriend(friendId).filter((e) => e.status !== 'settled') : [];
@@ -57,6 +64,10 @@ export function RecordRepayment() {
           <h1 className="font-semibold text-lg">Record Repayment</h1>
         </div>
         <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who paid you back?</p>
+        <div className="mb-4 grid gap-2">
+          <Button variant="outline" onClick={() => { setContactDraft(undefined); setAddFriendOpen(true); }}><UserPlus />Add Friend</Button>
+          <Button variant="outline" onClick={() => setContactImportOpen(true)}><ContactRound />Import from Contacts</Button>
+        </div>
         <div className="flex flex-col gap-1">
           {friends.map((f) => {
             const b = calculateFriendBalance(f.id);
@@ -73,6 +84,46 @@ export function RecordRepayment() {
             );
           })}
         </div>
+        <Sheet open={addFriendOpen} onOpenChange={setAddFriendOpen}>
+          <SheetContent side="bottom" className="max-h-[94dvh] overflow-y-auto rounded-t-3xl px-5 pb-8">
+            <SheetHeader className="text-left">
+              <SheetTitle>Add Friend</SheetTitle>
+              <SheetDescription>Review the details before adding this contact to your friends.</SheetDescription>
+            </SheetHeader>
+            <div className="pt-5">
+              <AddFriendForm
+                initialContact={contactDraft}
+                onExistingFriendSelected={(existing) => {
+                  setFriendId(existing.id);
+                  setAddFriendOpen(false);
+                  setPickerOpen(false);
+                }}
+                onCreated={(created) => {
+                  setFriendId(created.id);
+                  setAddFriendOpen(false);
+                  setPickerOpen(false);
+                  toast(`${created.name} added and selected`);
+                }}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+        <ContactImportFlow
+          open={contactImportOpen}
+          onOpenChange={setContactImportOpen}
+          onContactSelected={(draft) => {
+            setContactDraft(draft);
+            setAddFriendOpen(true);
+          }}
+          onExistingFriendSelected={(existing) => {
+            setFriendId(existing.id);
+            setPickerOpen(false);
+          }}
+          onAddManually={() => {
+            setContactDraft(undefined);
+            setAddFriendOpen(true);
+          }}
+        />
       </div>
     );
   }

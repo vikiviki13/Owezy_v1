@@ -2,9 +2,10 @@ import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
+import { APP_NAME, BrandLogo } from './Brand';
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: Home },
+  { to: '/home', label: 'Home', icon: Home },
   { to: '/friends', label: 'Friends', icon: Users },
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/groups', label: 'Groups', icon: LayoutGrid },
@@ -23,8 +24,8 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 sticky top-0 h-screen">
         <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white font-bold">T</div>
-          <span className="font-bold text-lg">Tab</span>
+          <BrandLogo size={32} />
+          <span className="font-bold text-lg">{APP_NAME}</span>
         </div>
         {!isSubPage && <button
           onClick={() => setQuickOpen(true)}
@@ -37,7 +38,7 @@ export function Shell({ children }: { children: ReactNode }) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/home'}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]'
@@ -70,7 +71,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/'}
+                end={item.to === '/home'}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-0.5 py-2.5 flex-1 text-[11px] font-medium transition-colors ${
                     isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'

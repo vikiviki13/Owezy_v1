@@ -1,28 +1,35 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, UserPlus, Users2 } from 'lucide-react';
-import { createFriend, listFriendBalances, onDBChange } from '../lib/db';
+import { ContactRound, Search, Plus, Users2 } from 'lucide-react';
+import { listFriendBalances, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
+import { AddFriendForm } from '../components/AddFriendForm';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { ContactImportFlow, type ImportedFriendDraft } from '../components/contacts/ContactImportFlow';
 
-type Tab = 'all' | 'pending' | 'settled';
+type Tab = 'all' | 'pending' | 'settled' | 'archived';
 
 export function Friends() {
   const [, setTick] = useState(0);
   const [tab, setTab] = useState<Tab>('all');
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [contactImportOpen, setContactImportOpen] = useState(false);
+  const [contactDraft, setContactDraft] = useState<ImportedFriendDraft>();
   const navigate = useNavigate();
   useEffect(() => onDBChange(() => setTick((t) => t + 1)), []);
 
-  let balances = listFriendBalances();
+  let balances = listFriendBalances(tab === 'archived');
+  if (tab === 'archived') balances = balances.filter((b) => b.friend.is_archived);
   if (tab === 'pending') balances = balances.filter((b) => b.pending > 0);
   if (tab === 'settled') balances = balances.filter((b) => b.pending <= 0);
-  if (query.trim()) balances = balances.filter((b) => b.friend.name.toLowerCase().includes(query.toLowerCase()));
+  if (query.trim()) balances = balances.filter((b) => `${b.friend.name} ${b.friend.nickname || ''}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="px-4 pt-6 safe-top">
@@ -43,8 +50,8 @@ export function Friends() {
         />
       </div>
 
-      <div className="flex gap-2 mb-5">
-        {(['all', 'pending', 'settled'] as Tab[]).map((t) => (
+      <div className="flex gap-2 mb-5 overflow-x-auto">
+        {(['all', 'pending', 'settled', 'archived'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -63,9 +70,10 @@ export function Friends() {
           title={query ? 'No friends match your search.' : 'No friends yet.'}
           subtitle="Add a friend to start tracking shared expenses."
           action={
-            <button onClick={() => setAddOpen(true)} className="text-sm font-medium text-white bg-[var(--color-primary)] px-4 py-2 rounded-xl">
-              Add Friend
-            </button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => setAddOpen(true)}><Plus />Add Friend</Button>
+              <Button variant="outline" onClick={() => setContactImportOpen(true)}><ContactRound />Import from Contacts</Button>
+            </div>
           }
         />
       ) : (
@@ -76,7 +84,7 @@ export function Friends() {
               onClick={() => navigate(`/friends/${b.friend.id}`)}
               className="flex items-center gap-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-3.5 text-left"
             >
-              <Avatar name={b.friend.name} size={46} />
+              <Avatar name={b.friend.name} src={b.friend.avatar_url} size={46} />
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{b.friend.name}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
@@ -85,65 +93,44 @@ export function Friends() {
               </div>
               <div className="text-right shrink-0">
                 <p className="font-semibold amount-tabular">{formatCurrency(Math.abs(b.pending))}</p>
-                <StatusBadge status={b.status} />
+                {b.friend.is_archived ? <Badge variant="secondary">Archived</Badge> : <StatusBadge status={b.status} />}
               </div>
             </button>
           ))}
         </div>
       )}
 
-      <AddFriendSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddFriendSheet open={addOpen} onClose={() => { setAddOpen(false); setContactDraft(undefined); }} initialContact={contactDraft} />
+      <ContactImportFlow
+        open={contactImportOpen}
+        onOpenChange={setContactImportOpen}
+        onContactSelected={(draft) => { setContactDraft(draft); setContactImportOpen(false); setAddOpen(true); }}
+        onExistingFriendSelected={(friend) => { setContactImportOpen(false); navigate(`/friends/${friend.id}`); }}
+        onAddManually={() => setAddOpen(true)}
+      />
     </div>
   );
 }
 
-function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [nickname, setNickname] = useState('');
+function AddFriendSheet({ open, onClose, initialContact }: { open: boolean; onClose: () => void; initialContact?: ImportedFriendDraft }) {
   const navigate = useNavigate();
   const toast = useToast();
 
-  function save() {
-    if (!name.trim()) return;
-    const friend = createFriend({ name: name.trim(), phone: phone.trim() || undefined, nickname: nickname.trim() || undefined, whatsapp_number: phone.trim() || undefined });
-    toast(`${friend.name} added`);
-    setName(''); setPhone(''); setNickname('');
-    onClose();
-    navigate(`/friends/${friend.id}`);
-  }
-
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add Friend">
-      <div className="flex flex-col gap-4">
-        <Field label="Name" required>
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Arun Kumar" className="input" />
-        </Field>
-        <Field label="Nickname">
-          <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Optional" className="input" />
-        </Field>
-        <Field label="Phone / WhatsApp">
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 98765 43210" className="input" inputMode="tel" />
-        </Field>
-        <button
-          onClick={save}
-          disabled={!name.trim()}
-          className="mt-2 flex items-center justify-center gap-2 bg-[var(--color-primary)] disabled:opacity-40 text-white font-medium rounded-xl py-3"
-        >
-          <UserPlus size={17} /> Add Friend
-        </button>
-      </div>
-    </BottomSheet>
-  );
-}
-
-export function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-[var(--color-text-secondary)]">
-        {label} {required && <span className="text-[var(--color-error)]">*</span>}
-      </span>
-      {children}
-    </label>
+    <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-3xl px-4 pb-6">
+        <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
+        <SheetHeader className="px-0 text-left"><SheetTitle>Add Friend</SheetTitle><SheetDescription>Review the details before adding this friend.</SheetDescription></SheetHeader>
+        <AddFriendForm
+          initialContact={initialContact}
+          onExistingFriendSelected={(friend) => { onClose(); navigate(`/friends/${friend.id}`); }}
+          onCreated={(friend) => {
+            toast(`${friend.name} added`);
+            onClose();
+            navigate(`/friends/${friend.id}`);
+          }}
+        />
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -5,6 +5,11 @@ import { describe, expect, it } from 'vitest';
 const root = resolve(import.meta.dirname, '../..');
 const schema = readFileSync(resolve(root, 'supabase/schema.sql'), 'utf8');
 const edgeFunction = readFileSync(resolve(root, 'supabase/functions/security/index.ts'), 'utf8');
+const changePinFlow = readFileSync(resolve(root, 'src/components/security/ChangePinFlow.tsx'), 'utf8');
+const securityService = readFileSync(resolve(root, 'src/lib/securityService.ts'), 'utf8');
+const lockScreen = readFileSync(resolve(root, 'src/components/security/LockScreen.tsx'), 'utf8');
+const reauthentication = readFileSync(resolve(root, 'src/components/security/RequireReauthentication.tsx'), 'utf8');
+const securityPages = readFileSync(resolve(root, 'src/pages/settings/SecurityPages.tsx'), 'utf8');
 const legacyLockPath = resolve(root, 'src/lib/appLock.ts');
 
 describe('server-side security contract', () => {
@@ -26,9 +31,51 @@ describe('server-side security contract', () => {
     expect(edgeFunction).toContain('verifyAuthenticationResponse');
     expect(edgeFunction).toContain('requireUserVerification: true');
     expect(edgeFunction).toContain("used_at: new Date().toISOString()");
+    expect(securityService).toContain("userVerification: 'required'");
+  });
+
+  it('automatically requests device security once and supports an abortable PIN fallback', () => {
+    expect(lockScreen).toContain('shouldAutoTriggerDeviceAuthentication');
+    expect(lockScreen).toContain('automaticAttempted.current = true');
+    expect(lockScreen).toContain('cancelWebAuthnAuthentication()');
+    expect(lockScreen).toContain('Use PIN Instead');
+    expect(lockScreen).toContain('Try Device Security Again');
+    expect(securityService).toContain('WebAuthnAbortService.cancelCeremony()');
+  });
+
+  it('does not implement a fake biometric retry counter', () => {
+    expect(lockScreen).not.toMatch(/(fingerprint|face|biometric)(Attempt|Retry|Failure)Count/i);
+    expect(lockScreen).not.toContain('five biometric attempts');
   });
 
   it('has removed the legacy browser PIN verifier', () => {
     expect(() => readFileSync(legacyLockPath, 'utf8')).toThrow();
+  });
+
+  it('requires a one-purpose current-PIN grant before changing the PIN', () => {
+    expect(edgeFunction).toContain("if (action === 'pin/change/verify')");
+    expect(edgeFunction).toContain("authenticationMethod: 'pin_change'");
+    expect(edgeFunction).toContain("data.authentication_method === 'pin_change'");
+    expect(edgeFunction).toContain("body.changeToken");
+    expect(edgeFunction).toContain("'pin_unchanged'");
+    expect(schema).toContain("'pin_change'");
+    expect(securityService).toContain("return result.grant.token");
+    expect(changePinFlow).toContain('Enter your current PIN');
+    expect(changePinFlow).toContain("useState<ChangePinStep>('current')");
+    expect(changePinFlow).toContain('Your new PIN must be different from your current PIN.');
+    expect(changePinFlow).toContain("PINs don't match. Try again.");
+  });
+
+  it('requires fresh verification before disabling App Lock without deleting PIN history', () => {
+    const disableStart = edgeFunction.indexOf("if (action === 'lock/disable')");
+    const disableEnd = edgeFunction.indexOf("if (action === 'lock/touch')", disableStart);
+    const disableBlock = edgeFunction.slice(disableStart, disableEnd);
+    expect(disableBlock).toContain('requireFreshGrant');
+    expect(disableBlock).toContain('app_lock_enabled: false');
+    expect(disableBlock).not.toContain('pin_hash: null');
+    expect(securityService).toContain('clearLocalSecurityState(userId)');
+    expect(securityPages).toContain('allowRecentAuthentication={false}');
+    expect(securityPages).toContain('pinTitle="Enter your current PIN"');
+    expect(reauthentication).toContain('Incorrect PIN. Try again.');
   });
 });

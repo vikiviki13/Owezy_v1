@@ -4,6 +4,7 @@ import { autoLockMilliseconds, shouldAutoLock } from '../lib/securityPolicy';
 import {
   authenticateWithWebAuthn,
   clearLegacySecurityStorage,
+  getCachedSecurityStatus,
   getLastActive,
   getSecurityStatus,
   lockApp,
@@ -13,6 +14,7 @@ import {
   touchUnlockSession,
   verifyPin,
 } from '../lib/securityService';
+import { resolveFailedSecurityBootstrap } from '../lib/securityBootstrap';
 import { SecurityContext } from './SecurityContext';
 import { releaseSensitiveMemory } from '../lib/db';
 
@@ -21,16 +23,30 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
   const [loading, setLoading] = useState(true);
   const [isLocked, setLocked] = useState(true);
   const [unlockMessage, setUnlockMessage] = useState('');
+  const [serviceError, setServiceError] = useState<{ code: string; message: string } | null>(null);
   const timer = useRef<number | undefined>(undefined);
   const lastServerTouch = useRef(0);
 
   const refresh = useCallback(async () => {
-    const next = await getSecurityStatus(userId);
-    setStatus(next);
-    const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
-    setLocked(next.appLockEnabled && (!next.grantValid || locallyExpired));
-    setLoading(false);
-    return next;
+    try {
+      const next = await getSecurityStatus(userId);
+      setServiceError(null);
+      setStatus(next);
+      const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
+      setLocked(next.appLockEnabled && (!next.grantValid || locallyExpired));
+      setLoading(false);
+      return next;
+    } catch (caught) {
+      const error = caught instanceof SecurityServiceError
+        ? caught
+        : new SecurityServiceError('security_status_failed', 'Security settings could not be verified.');
+      const fallback = resolveFailedSecurityBootstrap(error.code, getCachedSecurityStatus(userId));
+      setServiceError({ code: error.code, message: error.message });
+      setStatus(fallback.status);
+      setLocked(fallback.isLocked);
+      setLoading(false);
+      throw error;
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -40,12 +56,22 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     getSecurityStatus(userId)
       .then((next) => {
         if (!active) return;
+        setServiceError(null);
         setStatus(next);
         const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
         setLocked(next.appLockEnabled && (!next.grantValid || locallyExpired));
         if (locallyExpired) void lockApp(userId);
       })
-      .catch(() => { if (active) setLocked(true); })
+      .catch((caught) => {
+        if (!active) return;
+        const error = caught instanceof SecurityServiceError
+          ? caught
+          : new SecurityServiceError('security_status_failed', 'Security settings could not be verified.');
+        const fallback = resolveFailedSecurityBootstrap(error.code, getCachedSecurityStatus(userId));
+        setServiceError({ code: error.code, message: error.message });
+        setStatus(fallback.status);
+        setLocked(fallback.isLocked);
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [userId]);
@@ -143,13 +169,14 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     loading,
     isLocked,
     unlockMessage,
+    serviceError,
     refresh,
     unlockWithPin,
     unlockWithDevice,
     lock,
     setAutoLockDuration,
     markVerified,
-  }), [isLocked, loading, lock, markVerified, refresh, setAutoLockDuration, status, unlockMessage, unlockWithDevice, unlockWithPin, userId]);
+  }), [isLocked, loading, lock, markVerified, refresh, serviceError, setAutoLockDuration, status, unlockMessage, unlockWithDevice, unlockWithPin, userId]);
 
   return <SecurityContext.Provider value={value}>{children}</SecurityContext.Provider>;
 }

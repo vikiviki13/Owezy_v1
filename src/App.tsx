@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AlertCircle, CloudOff, LoaderCircle, Wallet } from 'lucide-react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Navigate, Routes, Route } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
 import { PreferencesProvider } from './components/PreferencesProvider';
@@ -9,10 +9,12 @@ import { SecurityProvider } from './components/SecurityProvider';
 import { AppLockGuard } from './components/AppLockGuard';
 import { LockScreen } from './components/security/LockScreen';
 import { Auth } from './pages/Auth';
+import { ChangePasswordPage, ResetPasswordPage } from './pages/PasswordPages';
 import { Onboarding } from './pages/Onboarding';
 import { Home } from './pages/Home';
 import { Friends } from './pages/Friends';
 import { FriendDetail } from './pages/FriendDetail';
+import { ClearFriendData, EditFriend, ManageFriend } from './pages/ManageFriend';
 import { AddExpense } from './pages/AddExpense';
 import { RecordRepayment } from './pages/RecordRepayment';
 import { ExpenseDetail } from './pages/ExpenseDetail';
@@ -22,18 +24,28 @@ import { Groups } from './pages/Groups';
 import { Profile } from './pages/Profile';
 import { EditProfile } from './pages/settings/EditProfile';
 import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSettings } from './pages/settings/PreferencePages';
-import { DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
+import { ContactPrivacySettings, DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
+import { AppPermissionDetailPage, AppPermissionsPage } from './pages/settings/PermissionPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { clearSensitiveLocalData } from './lib/db';
+import { clearSensitiveLocalData, updateProfile } from './lib/db';
 import { clearLocalSecurityState } from './lib/securityService';
+import { isPasswordRecoveryLocation } from './lib/passwordRecovery';
+import {
+  completeOnboarding,
+  getOnboardingProfile,
+  onboardingDestination,
+  type OnboardingProfile,
+} from './lib/onboardingProfile';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
   const [startupError, setStartupError] = useState('');
+  const [passwordRecovery, setPasswordRecovery] = useState(() => isPasswordRecoveryLocation(window.location));
+  const [recoverySessionValidated, setRecoverySessionValidated] = useState(false);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -70,7 +82,15 @@ export default function App() {
       void activate(data.session?.user || null);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setPasswordRecovery(true);
+        setRecoverySessionValidated(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false);
+        setRecoverySessionValidated(false);
+      }
       void activate(session?.user || null);
     });
 
@@ -84,11 +104,40 @@ export default function App() {
   if (!isSupabaseConfigured) return <ConfigurationRequired />;
   if (loading) return <LoadingScreen />;
   if (startupError) return <StartupError message={startupError} />;
+  if (passwordRecovery) return <ResetPasswordPage recoverySessionValidated={recoverySessionValidated} onReturnToSignIn={() => {
+    setPasswordRecovery(false);
+    setRecoverySessionValidated(false);
+    if (window.location.pathname === '/reset-password') window.history.replaceState({}, '', '/');
+  }} />;
   if (!user) return <Auth />;
   return <AuthenticatedApp user={user} />;
 }
 
 function AuthenticatedApp({ user }: { user: User }) {
+  const [onboardingProfile, setOnboardingProfile] = useState<OnboardingProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    setProfileLoading(true);
+    setProfileError('');
+    setOnboardingProfile(null);
+    void getOnboardingProfile(user.id)
+      .then((profile) => { if (active) setOnboardingProfile(profile); })
+      .catch((caught) => {
+        if (active) setProfileError(caught instanceof Error ? caught.message : 'Could not load your profile.');
+      })
+      .finally(() => { if (active) setProfileLoading(false); });
+    return () => { active = false; };
+  }, [user.id]);
+
+  const finishOnboarding = useCallback(async (name: string) => {
+    updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR' });
+    const profile = await completeOnboarding(user.id);
+    setOnboardingProfile(profile);
+  }, [user.id]);
+
   return (
     <ToastProvider>
       <SecurityProvider userId={user.id}>
@@ -96,7 +145,7 @@ function AuthenticatedApp({ user }: { user: User }) {
           <Routes>
             <Route path="/unlock" element={<LockScreen />} />
             <Route path="/account-recovery" element={<AccountRecoveryPage />} />
-            <Route path="*" element={<AppLockGuard><PrivateDataApp user={user} /></AppLockGuard>} />
+            <Route path="*" element={<AppLockGuard><PrivateDataApp user={user} onboardingProfile={onboardingProfile} profileLoading={profileLoading} profileError={profileError} onFinishOnboarding={finishOnboarding} /></AppLockGuard>} />
           </Routes>
         </HashRouter>
       </SecurityProvider>
@@ -104,10 +153,19 @@ function AuthenticatedApp({ user }: { user: User }) {
   );
 }
 
-function PrivateDataApp({ user }: { user: User }) {
-  const userId = user.id;
-  const onboardingKey = `tab_onboarded_v2_${userId}`;
-  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(onboardingKey) === '1');
+function PrivateDataApp({
+  user,
+  onboardingProfile,
+  profileLoading,
+  profileError,
+  onFinishOnboarding,
+}: {
+  user: User;
+  onboardingProfile: OnboardingProfile | null;
+  profileLoading: boolean;
+  profileError: string;
+  onFinishOnboarding: (name: string) => Promise<void>;
+}) {
   const [syncError, setSyncError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
@@ -132,15 +190,15 @@ function PrivateDataApp({ user }: { user: User }) {
     };
   }, []);
 
-  if (dataLoading) return <LoadingScreen />;
+  if (dataLoading || profileLoading) return <LoadingScreen />;
+  if (profileError) return <StartupError message={profileError} />;
   if (dataError) return <StartupError message={dataError} />;
-  if (!onboarded) {
-    return (
-      <Onboarding onDone={() => {
-        localStorage.setItem(onboardingKey, '1');
-        setOnboarded(true);
-      }} />
-    );
+  if (!onboardingProfile) return <StartupError message="Your profile could not be loaded." />;
+  if (!onboardingProfile.onboardingCompleted) {
+    return <Routes>
+      <Route path="/onboarding" element={<Onboarding onDone={onFinishOnboarding} />} />
+      <Route path="*" element={<Navigate to="/onboarding" replace />} />
+    </Routes>;
   }
 
   return (
@@ -153,9 +211,14 @@ function PrivateDataApp({ user }: { user: User }) {
       <PreferencesProvider>
             <Shell>
             <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<Navigate to={onboardingDestination(true)} replace />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/onboarding" element={<Navigate to="/home" replace />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/friends/:id" element={<FriendDetail />} />
+            <Route path="/friends/:id/manage" element={<ManageFriend />} />
+            <Route path="/friends/:id/edit" element={<EditFriend />} />
+            <Route path="/friends/:id/clear-data" element={<ClearFriendData />} />
             <Route path="/add-expense" element={<AddExpense />} />
             <Route path="/record-repayment" element={<RecordRepayment />} />
             <Route path="/expense/:id" element={<ExpenseDetail />} />
@@ -175,12 +238,17 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/security/devices" element={<SecurityDevices />} />
             <Route path="/profile/security/activity" element={<SecurityActivityPage />} />
             <Route path="/profile/security/change-pin" element={<ChangePinPage />} />
+            <Route path="/profile/security/change-password" element={<ChangePasswordPage />} />
             <Route path="/profile/privacy" element={<PrivacySettings />} />
+            <Route path="/profile/privacy/permissions" element={<AppPermissionsPage />} />
+            <Route path="/profile/privacy/permissions/:permissionKey" element={<AppPermissionDetailPage />} />
+            <Route path="/profile/privacy/contacts" element={<ContactPrivacySettings />} />
             <Route path="/profile/data-storage" element={<DataStorageSettings />} />
             <Route path="/profile/export" element={<ExportDataSettings />} />
             <Route path="/profile/install" element={<InstallAppSettings />} />
             <Route path="/profile/help" element={<HelpSupport />} />
             <Route path="/profile/about" element={<AboutSettings />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             </Shell>
       </PreferencesProvider>

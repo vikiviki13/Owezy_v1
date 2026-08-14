@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import {
-  Activity, Check, ChevronRight, Fingerprint, KeyRound, Laptop, LoaderCircle,
+  Activity, AlertTriangle, Check, ChevronRight, Fingerprint, KeyRound, Laptop, LoaderCircle,
   LockKeyhole, Pencil, Plus, Shield, ShieldCheck, Smartphone, Trash2,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BottomSheet } from '../../components/BottomSheet';
 import { SettingsPage, SettingsRow, SettingsSection } from '../../components/SettingsUI';
 import { Switch } from '../../components/ui/switch';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import { useSecurity } from '../../components/SecurityContext';
 import { SecuritySetupFlow } from '../../components/security/SecuritySetupFlow';
 import { RequireReauthentication } from '../../components/security/RequireReauthentication';
 import { PinCreationFlow } from '../../components/security/PinCreationFlow';
+import { ChangePinFlow } from '../../components/security/ChangePinFlow';
 import { useToast } from '../../components/ToastContext';
 import {
-  changePin, disableAppLock, isPlatformAuthenticatorAvailable, listSecurityEvents,
+  disableAppLock, isPlatformAuthenticatorAvailable, listSecurityEvents,
   recoverPin, registerAuthenticator, removeAuthenticator, renameAuthenticator,
   SecurityServiceError,
 } from '../../lib/securityService';
@@ -30,10 +35,11 @@ const LOCK_OPTIONS: { value: AutoLockDuration; label: string; recommended?: bool
 ];
 
 export function SecuritySettings() {
-  const { status } = useSecurity();
+  const { status, serviceError } = useSecurity();
   const deviceCount = status?.authenticators.filter((item) => item.isActive).length || 0;
   const protection = !status?.appLockEnabled ? 'Off' : status.webAuthnEnabled ? 'Protected' : 'Basic';
   return <SettingsPage title="Security" description="Manage app access, verification methods, trusted devices and recent security changes.">
+    {serviceError && <SecurityServiceNotice message={serviceError.message} />}
     <SecurityStatusCard />
     <SettingsSection title="Security Status"><SettingsRow icon={LockKeyhole} title="App Lock" value={status?.appLockEnabled ? 'Enabled' : 'Off'} to="/profile/app-lock" /></SettingsSection>
     <SettingsSection title="Unlock Methods">
@@ -43,7 +49,7 @@ export function SecuritySettings() {
     <SettingsSection title="Auto-lock"><SettingsRow icon={Shield} title="Automatically Lock" value={lockLabel(status?.autoLockDuration)} to="/profile/app-lock" /></SettingsSection>
     <SettingsSection title="Devices"><SettingsRow icon={Laptop} title="Security Devices" value={`${deviceCount} device${deviceCount === 1 ? '' : 's'}`} to="/profile/security/devices" /></SettingsSection>
     <SettingsSection title="Activity"><SettingsRow icon={Activity} title="Security Activity" to="/profile/security/activity" /></SettingsSection>
-    <SettingsSection title="Account Security"><SettingsRow icon={KeyRound} title="Change PIN" to="/profile/security/change-pin" /><SettingsRow icon={ShieldCheck} title="Recovery Options" to="/account-recovery" /></SettingsSection>
+    <SettingsSection title="Account Security"><SettingsRow icon={KeyRound} title="Change Password" to="/profile/security/change-password" /><SettingsRow icon={KeyRound} title="Change PIN" to="/profile/security/change-pin" /><SettingsRow icon={ShieldCheck} title="Recover App PIN" to="/account-recovery" /></SettingsSection>
     <p className="text-xs text-[var(--color-text-muted)] px-1">Current protection level: {protection}. Account access remains protected separately by your Supabase sign-in session and database Row Level Security.</p>
   </SettingsPage>;
 }
@@ -62,19 +68,22 @@ function SecurityStatusCard() {
 }
 
 export function AppLockSettings() {
-  const { userId, status, refresh, setAutoLockDuration } = useSecurity();
+  const { userId, status, refresh, serviceError, setAutoLockDuration } = useSecurity();
   const toast = useToast();
   const [setup, setSetup] = useState(false);
   const [reauth, setReauth] = useState(false);
   const [confirmDisable, setConfirmDisable] = useState(false);
+  const [disabling, setDisabling] = useState(false);
   const [addingDevice, setAddingDevice] = useState(false);
   const [platformAvailable, setPlatformAvailable] = useState(false);
   useEffect(() => { void isPlatformAuthenticatorAvailable().then(setPlatformAvailable); }, []);
 
   const verifiedDisable = useCallback(() => { setReauth(false); setConfirmDisable(true); }, []);
   const turnOff = useCallback(async () => {
+    setDisabling(true);
     try { await disableAppLock(userId); await refresh(); setConfirmDisable(false); toast('App Lock turned off'); }
     catch (caught) { toast(caught instanceof Error ? caught.message : 'App Lock could not be turned off'); }
+    finally { setDisabling(false); }
   }, [refresh, toast, userId]);
 
   const addDevice = useCallback(async () => {
@@ -86,6 +95,7 @@ export function AppLockSettings() {
 
   if (!status) return <SettingsPage title="App Lock"><div className="min-h-48 flex items-center justify-center"><LoaderCircle className="animate-spin" /></div></SettingsPage>;
   return <SettingsPage title="App Lock" description="Protect your expense, repayment and financial records when you open the app.">
+    {serviceError && <SecurityServiceNotice message={serviceError.message} />}
     <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-7">
       <div className="flex items-center gap-4"><span className={`size-12 rounded-2xl flex items-center justify-center ${status.appLockEnabled ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]'}`}><LockKeyhole size={24} /></span><div className="flex-1"><h2 className="font-bold">App Lock</h2><p className="text-xs text-[var(--color-text-muted)] mt-1">{status.appLockEnabled ? 'ON' : 'OFF'}</p></div><Switch checked={status.appLockEnabled} onCheckedChange={(checked) => checked ? setSetup(true) : setReauth(true)} aria-label="App Lock" /></div>
     </div>
@@ -98,12 +108,41 @@ export function AppLockSettings() {
       <SettingsSection title="Automatically Lock">{LOCK_OPTIONS.map((option) => <button type="button" key={option.value} onClick={() => void setAutoLockDuration(option.value).then(() => toast('Auto-lock updated')).catch((caught) => toast(caught instanceof Error ? caught.message : 'Could not update auto-lock'))} className="w-full min-h-14 px-4 py-3 flex items-center gap-3 text-left"><span className={`size-5 rounded-full border-2 flex items-center justify-center ${status.autoLockDuration === option.value ? 'border-[var(--color-primary)] bg-[var(--color-primary)]' : 'border-[var(--color-border)]'}`}>{status.autoLockDuration === option.value && <Check size={12} className="text-white" strokeWidth={3} />}</span><span className="flex-1 text-sm font-medium">{option.label}</span>{option.recommended && <span className="text-xs font-semibold text-[var(--color-primary)]">Recommended</span>}</button>)}</SettingsSection>
     </>}
     {setup && <SecuritySetupFlow onCancel={() => { setSetup(false); void refresh(); }} onDone={() => { setSetup(false); void refresh(); }} />}
-    <RequireReauthentication open={reauth} purpose="turn off App Lock" onCancel={() => setReauth(false)} onVerified={verifiedDisable} />
-    <BottomSheet open={confirmDisable} onClose={() => setConfirmDisable(false)} title="Turn off App Lock?">
-      <p className="text-sm leading-6 text-[var(--color-text-secondary)] mb-5">Anyone who can access this device may be able to view your expense and repayment information.</p>
-      <div className="flex gap-3"><button type="button" onClick={() => setConfirmDisable(false)} className="flex-1 min-h-12 rounded-xl bg-[var(--color-surface-secondary)] font-semibold">Cancel</button><button type="button" onClick={turnOff} className="flex-1 min-h-12 rounded-xl bg-[var(--color-error)] text-white font-semibold">Turn Off</button></div>
-    </BottomSheet>
+    <RequireReauthentication
+      open={reauth}
+      purpose="turn off App Lock"
+      onCancel={() => setReauth(false)}
+      onVerified={verifiedDisable}
+      allowRecentAuthentication={false}
+      pinTitle="Enter your current PIN"
+    />
+    <AlertDialog open={confirmDisable} onOpenChange={(open) => { if (!disabling) setConfirmDisable(open); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive"><AlertTriangle /></AlertDialogMedia>
+          <AlertDialogTitle>Turn off App Lock?</AlertDialogTitle>
+          <AlertDialogDescription>Anyone with access to this device may be able to open your financial records.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={disabling}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={disabling}
+            onClick={(event) => { event.preventDefault(); void turnOff(); }}
+          >
+            {disabling ? <><LoaderCircle className="animate-spin" />Turning Off…</> : 'Turn Off App Lock'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </SettingsPage>;
+}
+
+function SecurityServiceNotice({ message }: { message: string }) {
+  return <div role="alert" className="rounded-2xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 p-4 mb-5 flex gap-3">
+    <AlertTriangle className="text-[var(--color-warning)] shrink-0 mt-0.5" size={20} />
+    <div><p className="text-sm font-semibold">Security service needs setup</p><p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-1">{message}</p></div>
+  </div>;
 }
 
 function MethodRow({ icon: Icon, title, description, status, recommended, actionLabel, actionTo, onAction, busy }: { icon: typeof Fingerprint; title: string; description: string; status: string; recommended?: boolean; actionLabel?: string; actionTo?: string; onAction?: () => void; busy?: boolean }) {
@@ -147,15 +186,21 @@ export function SecurityActivityPage() {
 }
 
 export function ChangePinPage() {
-  const { userId, refresh } = useSecurity();
+  const { userId, status, loading, refresh } = useSecurity();
   const navigate = useNavigate();
   const toast = useToast();
-  const [verified, setVerified] = useState(false);
-  const [reauth, setReauth] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const allow = useCallback(() => { setReauth(false); setVerified(true); }, []);
-  const save = useCallback(async (pin: string) => { setBusy(true); try { await changePin(userId, pin); await refresh(); toast('PIN changed successfully'); navigate('/profile/security'); } catch (caught) { toast(caught instanceof Error ? caught.message : 'PIN could not be changed'); } finally { setBusy(false); } }, [navigate, refresh, toast, userId]);
-  return <SettingsPage title="Change PIN" description="Fresh verification is required before changing your App PIN.">{verified && <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5"><PinCreationFlow title="Create New PIN" busy={busy} onConfirmed={save} /></div>}<RequireReauthentication open={reauth} purpose="change your App PIN" onCancel={() => navigate(-1)} onVerified={allow} /></SettingsPage>;
+  useEffect(() => {
+    if (!loading && status && !status.pinEnabled) navigate('/profile/app-lock', { replace: true });
+  }, [loading, navigate, status]);
+  const changed = useCallback(async () => {
+    await refresh();
+    toast('PIN changed successfully');
+    navigate('/profile/app-lock', { replace: true });
+  }, [navigate, refresh, toast]);
+  if (loading || !status || !status.pinEnabled) {
+    return <SettingsPage title="Change PIN"><div className="min-h-48 flex items-center justify-center"><LoaderCircle className="animate-spin" /></div></SettingsPage>;
+  }
+  return <SettingsPage title="Change PIN" description="Change your App PIN securely."><div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5"><ChangePinFlow userId={userId} onChanged={changed} onForgot={() => navigate('/account-recovery')} /></div></SettingsPage>;
 }
 
 export function AccountRecoveryPage() {

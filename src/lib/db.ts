@@ -5,6 +5,7 @@ import {
 } from '../types';
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
+import { expenseDateError } from './expenseDraft';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -243,6 +244,103 @@ export function updateFriend(id: string, patch: Partial<Friend>) {
   if (idx === -1) return;
   db.friends[idx] = { ...db.friends[idx], ...patch, updated_at: new Date().toISOString() };
   persist();
+  return db.friends[idx];
+}
+
+export function friendHasFinancialHistory(friendId: string): boolean {
+  const db = load();
+  return db.expenseParticipants.some((participant) => participant.friend_id === friendId)
+    || db.repayments.some((repayment) => repayment.friend_id === friendId);
+}
+
+export function archiveFriend(friendId: string) {
+  return updateFriend(friendId, { is_archived: true });
+}
+
+export function restoreFriend(friendId: string) {
+  return updateFriend(friendId, { is_archived: false });
+}
+
+export interface FriendDataClearSummary {
+  expensesRemoved: number;
+  participationsRemoved: number;
+  repaymentsRemoved: number;
+  attachmentsRemoved: number;
+}
+
+function clearFriendFinancialDataFromStore(db: DB, friendId: string): FriendDataClearSummary {
+  const linkedExpenseIds = new Set(
+    db.expenseParticipants
+      .filter((participant) => participant.friend_id === friendId)
+      .map((participant) => participant.expense_id),
+  );
+  const participationsRemoved = db.expenseParticipants.filter((participant) => participant.friend_id === friendId).length;
+  const repaymentsRemoved = db.repayments.filter((repayment) => repayment.friend_id === friendId).length;
+
+  db.expenseParticipants = db.expenseParticipants.filter((participant) => participant.friend_id !== friendId);
+  db.repayments = db.repayments.filter((repayment) => repayment.friend_id !== friendId);
+
+  const orphanedExpenseIds = new Set(
+    [...linkedExpenseIds].filter((expenseId) => !db.expenseParticipants.some((participant) => participant.expense_id === expenseId)),
+  );
+  const orphanedItemIds = new Set(
+    db.expenseItems.filter((item) => orphanedExpenseIds.has(item.expense_id)).map((item) => item.id),
+  );
+  const attachmentsRemoved = db.attachments.filter((attachment) => orphanedExpenseIds.has(attachment.expense_id)).length;
+
+  db.expenses = db.expenses.filter((expense) => !orphanedExpenseIds.has(expense.id));
+  db.expenseItems = db.expenseItems.filter((item) => !orphanedExpenseIds.has(item.expense_id));
+  db.expenseItemAssignments = db.expenseItemAssignments.filter(
+    (assignment) => assignment.friend_id !== friendId && !orphanedItemIds.has(assignment.expense_item_id),
+  );
+  db.expenseAdjustments = db.expenseAdjustments.filter((adjustment) => !orphanedExpenseIds.has(adjustment.expense_id));
+  db.attachments = db.attachments.filter((attachment) => !orphanedExpenseIds.has(attachment.expense_id));
+  db.repayments = db.repayments.map((repayment) => (
+    repayment.expense_id && orphanedExpenseIds.has(repayment.expense_id)
+      ? { ...repayment, expense_id: undefined }
+      : repayment
+  ));
+
+  linkedExpenseIds.forEach((expenseId) => {
+    if (orphanedExpenseIds.has(expenseId)) return;
+    const expense = db.expenses.find((item) => item.id === expenseId);
+    if (!expense) return;
+    expense.recoverable_amount = roundCurrency(
+      db.expenseParticipants
+        .filter((participant) => participant.expense_id === expenseId)
+        .reduce((total, participant) => total + participant.share_amount, 0),
+    );
+    recomputeExpenseStatus(expenseId);
+  });
+
+  return {
+    expensesRemoved: orphanedExpenseIds.size,
+    participationsRemoved,
+    repaymentsRemoved,
+    attachmentsRemoved,
+  };
+}
+
+export function clearFriendFinancialData(friendId: string): FriendDataClearSummary {
+  const db = load();
+  const summary = clearFriendFinancialDataFromStore(db, friendId);
+  persist();
+  return summary;
+}
+
+export type DeleteFriendResult = 'deleted' | 'has-history' | 'not-found';
+
+export function deleteFriendProfile(friendId: string, options: { clearFinancialData?: boolean } = {}): DeleteFriendResult {
+  const db = load();
+  if (!db.friends.some((friend) => friend.id === friendId)) return 'not-found';
+  if (friendHasFinancialHistory(friendId) && !options.clearFinancialData) return 'has-history';
+
+  if (options.clearFinancialData) clearFriendFinancialDataFromStore(db, friendId);
+  db.groupMembers = db.groupMembers.filter((member) => member.friend_id !== friendId);
+  db.expenseItemAssignments = db.expenseItemAssignments.filter((assignment) => assignment.friend_id !== friendId);
+  db.friends = db.friends.filter((friend) => friend.id !== friendId);
+  persist();
+  return 'deleted';
 }
 
 // ---------------------------------------------------------------------------
@@ -293,6 +391,8 @@ export function createExpense(input: CreateExpenseInput): Expense {
   const now = new Date().toISOString();
   const recoverable = roundCurrency(input.participants.reduce((s, p) => s + p.share_amount, 0));
   const expenseDate = input.expense_date;
+  const dateError = expenseDateError(expenseDate);
+  if (dateError) throw new Error(dateError);
   const expenseTime = input.expense_time || nowTime();
 
   const expense: Expense = {
@@ -390,6 +490,7 @@ interface RecordRepaymentInput {
   notes?: string;
   repayment_date?: string;
   repayment_time?: string;
+  is_settlement?: boolean;
 }
 export function recordRepayment(input: RecordRepaymentInput): Repayment {
   const db = load();
@@ -402,7 +503,8 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
     friend_id: input.friend_id,
     expense_id: input.expense_id,
     amount: roundCurrency(input.amount),
-    payment_method: input.payment_method || 'UPI',
+    payment_method: input.payment_method,
+    is_settlement: input.is_settlement,
     transaction_reference: input.transaction_reference,
     repayment_date: repaymentDate,
     repayment_time: repaymentTime,
@@ -459,6 +561,24 @@ export function listAllRepayments(): Repayment[] {
   return [...load().repayments].sort((a, b) => (b.repayment_date + b.repayment_time).localeCompare(a.repayment_date + a.repayment_time));
 }
 
+export function clearAllDues(input: {
+  friend_id: string;
+  settlement_date?: string;
+  payment_method?: Repayment['payment_method'];
+  notes?: string;
+}): Repayment | undefined {
+  const balance = calculateFriendBalance(input.friend_id);
+  if (balance.pending <= 0) return undefined;
+  return recordRepayment({
+    friend_id: input.friend_id,
+    amount: balance.pending,
+    repayment_date: input.settlement_date,
+    payment_method: input.payment_method,
+    notes: input.notes,
+    is_settlement: true,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Calculation helpers — spec'd names, pure functions over the store.
 // Balances are ALWAYS derived from expenses + repayments, never cached.
@@ -485,8 +605,8 @@ export function calculateFriendBalance(friendId: string): FriendBalance {
   };
 }
 
-export function listFriendBalances(): FriendBalance[] {
-  return listFriends()
+export function listFriendBalances(includeArchived = false): FriendBalance[] {
+  return listFriends(includeArchived)
     .map((f) => calculateFriendBalance(f.id))
     .sort((a, b) => b.pending - a.pending);
 }
@@ -519,7 +639,7 @@ export function friendLedger(friendId: string): LedgerEntry[] {
     return { kind: 'expense' as const, date: e.expense_date, time: e.expense_time, title: e.title, amount: part.share_amount, refId: e.id, status: part.status, sortKey: e.expense_date + e.expense_time + '_1' };
   });
   const repayments = listRepaymentsForFriend(friendId).map((r) => ({
-    kind: 'repayment' as const, date: r.repayment_date, time: r.repayment_time, title: 'Payment received', amount: r.amount, refId: r.id, status: undefined, sortKey: r.repayment_date + r.repayment_time + '_0',
+    kind: 'repayment' as const, date: r.repayment_date, time: r.repayment_time, title: r.is_settlement ? 'Dues cleared' : 'Payment received', amount: r.amount, refId: r.id, status: undefined, sortKey: r.repayment_date + r.repayment_time + '_0',
   }));
   const merged = [...expenses, ...repayments].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   let running = 0;

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Receipt, HandCoins, Share2, Phone } from 'lucide-react';
+import { ArrowLeft, Receipt, HandCoins, Share2, Phone, MoreHorizontal } from 'lucide-react';
 import { calculateFriendBalance, friendLedger, getFriend, listExpensesForFriend, listRepaymentsForFriend, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort, formatTime, formatTimestamp } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 
 type Tab = 'overview' | 'transactions' | 'repayments';
 
@@ -31,11 +33,17 @@ export function FriendDetail() {
         <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
           <ArrowLeft size={18} />
         </button>
-        <Avatar name={friend.name} size={40} />
+        <Avatar name={friend.name} src={friend.avatar_url} size={40} />
         <div className="flex-1 min-w-0">
-          <h1 className="font-semibold truncate">{friend.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="font-semibold truncate">{friend.name}</h1>
+            {friend.is_archived && <Badge variant="secondary">Archived</Badge>}
+          </div>
           {friend.phone && <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1"><Phone size={11} /> {friend.phone}</p>}
         </div>
+        <Button variant="outline" size="icon-lg" onClick={() => navigate(`/friends/${friend.id}/manage`)} aria-label={`Manage ${friend.name}`} className="rounded-full">
+          <MoreHorizontal />
+        </Button>
       </div>
 
       <div className="px-4">
@@ -47,8 +55,8 @@ export function FriendDetail() {
             {formatCurrency(Math.abs(balance.pending))}
           </p>
           <div className="grid grid-cols-3 gap-2 mt-4">
-            <ActionBtn icon={<Receipt size={16} />} label="Add Expense" onClick={() => navigate(`/add-expense?friend=${friend.id}`)} />
-            <ActionBtn icon={<HandCoins size={16} />} label="Repayment" onClick={() => navigate(`/record-repayment?friend=${friend.id}`)} />
+            <ActionBtn icon={<Receipt size={16} />} label="Add Expense" onClick={() => navigate(`/add-expense?friend=${friend.id}`)} disabled={friend.is_archived} />
+            <ActionBtn icon={<HandCoins size={16} />} label="Repayment" onClick={() => navigate(`/record-repayment?friend=${friend.id}`)} disabled={friend.is_archived} />
             <ActionBtn icon={<Share2 size={16} />} label="Statement" onClick={() => navigate(`/statement/${friend.id}`)} />
           </div>
         </div>
@@ -108,7 +116,7 @@ export function FriendDetail() {
               {repayments.map((r) => (
                 <div key={r.id} className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
                   <div>
-                    <p className="font-medium">{r.payment_method}</p>
+                    <p className="font-medium">{r.is_settlement ? 'Dues cleared' : r.payment_method || 'Payment received'}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">{r.occurred_at ? formatTimestamp(r.occurred_at) : `${formatDateShort(r.repayment_date)} · ${formatTime(r.repayment_time)}`}</p>
                   </div>
                   <p className="font-semibold amount-tabular text-[var(--color-primary)]">+{formatCurrency(r.amount)}</p>
@@ -122,9 +130,9 @@ export function FriendDetail() {
   );
 }
 
-function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function ActionBtn({ icon, label, onClick, disabled = false }: { icon: React.ReactNode; label: string; onClick: () => void; disabled?: boolean }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1.5 bg-[var(--color-surface-secondary)] rounded-xl py-3 hover:opacity-80 transition-opacity">
+    <button onClick={onClick} disabled={disabled} className="flex flex-col items-center gap-1.5 bg-[var(--color-surface-secondary)] rounded-xl py-3 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed">
       <span className="text-[var(--color-primary)]">{icon}</span>
       <span className="text-[11px] font-medium text-center leading-tight px-1">{label}</span>
     </button>

@@ -9,11 +9,15 @@ export function RequireReauthentication({
   purpose,
   onVerified,
   onCancel,
+  allowRecentAuthentication = true,
+  pinTitle = 'Enter App PIN',
 }: {
   open: boolean;
   purpose: string;
   onVerified: () => void | Promise<void>;
   onCancel: () => void;
+  allowRecentAuthentication?: boolean;
+  pinTitle?: string;
 }) {
   const { userId, status, unlockWithDevice, unlockWithPin } = useSecurity();
   const [checking, setChecking] = useState(false);
@@ -23,8 +27,12 @@ export function RequireReauthentication({
 
   useEffect(() => {
     if (!open) return;
-    setMethod(status?.webAuthnAvailableHere ? 'choose' : 'pin');
+    setMethod(status?.webAuthnEnabled && status.webAuthnAvailableHere ? 'choose' : 'pin');
     setMessage('');
+    if (!allowRecentAuthentication) {
+      setChecking(false);
+      return;
+    }
     setChecking(true);
     let active = true;
     void hasRecentAuthentication(userId)
@@ -32,7 +40,7 @@ export function RequireReauthentication({
       .catch(() => undefined)
       .finally(() => { if (active) setChecking(false); });
     return () => { active = false; };
-  }, [onVerified, open, status?.webAuthnAvailableHere, userId]);
+  }, [allowRecentAuthentication, onVerified, open, status?.webAuthnAvailableHere, status?.webAuthnEnabled, userId]);
 
   useEffect(() => {
     if (!open) return;
@@ -53,7 +61,11 @@ export function RequireReauthentication({
   const pin = useCallback(async (value: string) => {
     setWorking(true); setMessage('');
     try { await unlockWithPin(value); await onVerified(); }
-    catch (caught) { setMessage(caught instanceof Error ? caught.message : 'Incorrect PIN.'); }
+    catch (caught) {
+      setMessage(caught instanceof SecurityServiceError && caught.code === 'pin_incorrect'
+        ? 'Incorrect PIN. Try again.'
+        : caught instanceof Error ? caught.message : 'Incorrect PIN. Try again.');
+    }
     finally { setWorking(false); }
   }, [onVerified, unlockWithPin]);
 
@@ -73,7 +85,7 @@ export function RequireReauthentication({
             {status?.pinEnabled && <button type="button" onClick={() => { setMethod('pin'); setMessage(''); }} className="w-full min-h-12 mt-2 text-sm font-semibold text-[var(--color-primary)]"><KeyRound size={17} className="inline mr-2" />Use App PIN</button>}
           </div>
         ) : (
-          <PinPad title="Enter App PIN" description="Use your 6-digit PIN to continue." disabled={working} error={message} onComplete={pin} />
+          <PinPad title={pinTitle} description="Use your 6-digit App PIN to continue." disabled={working} error={message} onComplete={pin} />
         )}
       </div>
     </div>

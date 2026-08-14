@@ -6,7 +6,7 @@ import { formatCurrency } from '../lib/utils';
 import { AvatarGroup } from '../components/Avatar';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
-import { Field } from './Friends';
+import { FormField } from '../components/AddFriendForm';
 import { useToast } from '../components/ToastContext';
 
 export function Groups() {
@@ -84,9 +84,9 @@ function CreateGroupSheet({ open, onClose }: { open: boolean; onClose: () => voi
   return (
     <BottomSheet open={open} onClose={onClose} title="Create Group">
       <div className="flex flex-col gap-4">
-        <Field label="Group name" required>
+        <FormField label="Group name" required>
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Office Friends" className="input" />
-        </Field>
+        </FormField>
         <div>
           <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Members</p>
           {friends.length === 0 ? (
