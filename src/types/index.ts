@@ -158,7 +158,8 @@ export interface Repayment {
   friend_id: UUID;
   expense_id?: UUID;
   amount: number;
-  payment_method: PaymentMethod;
+  payment_method?: PaymentMethod;
+  is_settlement?: boolean;
   transaction_reference?: string;
   repayment_date: string;
   repayment_time: string;

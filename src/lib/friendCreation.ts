@@ -3,7 +3,7 @@ import {
   type CountryCode,
 } from 'libphonenumber-js/min';
 import type { Friend } from '../types';
-import { createFriend, listFriends } from './db';
+import { createFriend, listFriends, updateFriend } from './db';
 
 export interface FriendFormValues {
   avatarUrl: string;
@@ -27,8 +27,8 @@ export interface ValidatedFriendDetails {
   avatarUrl?: string;
   name: string;
   nickname?: string;
-  whatsappNumber: string;
-  phoneNumber: string;
+  whatsappNumber?: string;
+  phoneNumber?: string;
   email?: string;
   notes?: string;
 }
@@ -48,6 +48,7 @@ function normalizedExistingWhatsApp(friend: Friend, defaultCountry: CountryCode)
 export function validateFriendDetails(
   values: FriendFormValues,
   existingFriends: Friend[],
+  options: { excludeFriendId?: string; requireWhatsApp?: boolean } = {},
 ): { errors: FriendFormErrors; details: ValidatedFriendDetails | null } {
   const errors: FriendFormErrors = {};
   const name = values.name.trim().replace(/\s+/g, ' ');
@@ -55,10 +56,11 @@ export function validateFriendDetails(
   else if (name.length > 80) errors.name = 'Name must be 80 characters or fewer.';
 
   const whatsappNumber = normalizePhoneNumber(values.whatsappNumber, values.whatsappCountry);
-  if (!values.whatsappNumber.trim()) errors.whatsappNumber = 'WhatsApp number is required.';
-  else if (!whatsappNumber) errors.whatsappNumber = 'Enter a valid WhatsApp number for the selected country.';
+  if (!values.whatsappNumber.trim()) {
+    if (options.requireWhatsApp !== false) errors.whatsappNumber = 'WhatsApp number is required.';
+  } else if (!whatsappNumber) errors.whatsappNumber = 'Enter a valid WhatsApp number for the selected country.';
   else {
-    const duplicate = existingFriends.find((friend) => normalizedExistingWhatsApp(friend, values.whatsappCountry) === whatsappNumber);
+    const duplicate = existingFriends.find((friend) => friend.id !== options.excludeFriendId && normalizedExistingWhatsApp(friend, values.whatsappCountry) === whatsappNumber);
     if (duplicate) errors.whatsappNumber = `This WhatsApp number already belongs to ${duplicate.name}.`;
   }
 
@@ -71,15 +73,15 @@ export function validateFriendDetails(
   const email = values.email.trim().toLowerCase();
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Enter a valid email address.';
 
-  if (Object.keys(errors).length > 0 || !whatsappNumber) return { errors, details: null };
+  if (Object.keys(errors).length > 0 || (options.requireWhatsApp !== false && !whatsappNumber)) return { errors, details: null };
   return {
     errors,
     details: {
       avatarUrl: values.avatarUrl || undefined,
       name,
       nickname: values.nickname.trim() || undefined,
-      whatsappNumber,
-      phoneNumber: phoneNumber || whatsappNumber,
+      whatsappNumber: whatsappNumber || undefined,
+      phoneNumber: phoneNumber || whatsappNumber || undefined,
       email: email || undefined,
       notes: values.notes.trim() || undefined,
     },
@@ -109,4 +111,21 @@ export function createFriendFromDetails(values: FriendFormValues): Friend {
     notes: details.notes,
     avatar_url: details.avatarUrl,
   });
+}
+
+export function updateFriendFromDetails(friendId: string, values: FriendFormValues): Friend {
+  const validation = validateFriendDetails(values, listFriends(true), { excludeFriendId: friendId, requireWhatsApp: false });
+  if (!validation.details) throw new FriendCreationError(validation.errors);
+  const details = validation.details;
+  const updated = updateFriend(friendId, {
+    name: details.name,
+    nickname: details.nickname,
+    whatsapp_number: details.whatsappNumber,
+    phone: details.phoneNumber,
+    email: details.email,
+    notes: details.notes,
+    avatar_url: details.avatarUrl,
+  });
+  if (!updated) throw new Error('Friend not found.');
+  return updated;
 }

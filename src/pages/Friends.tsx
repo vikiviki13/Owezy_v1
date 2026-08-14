@@ -9,8 +9,9 @@ import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
 import { AddFriendForm } from '../components/AddFriendForm';
+import { Badge } from '../components/ui/badge';
 
-type Tab = 'all' | 'pending' | 'settled';
+type Tab = 'all' | 'pending' | 'settled' | 'archived';
 
 export function Friends() {
   const [, setTick] = useState(0);
@@ -20,10 +21,11 @@ export function Friends() {
   const navigate = useNavigate();
   useEffect(() => onDBChange(() => setTick((t) => t + 1)), []);
 
-  let balances = listFriendBalances();
+  let balances = listFriendBalances(tab === 'archived');
+  if (tab === 'archived') balances = balances.filter((b) => b.friend.is_archived);
   if (tab === 'pending') balances = balances.filter((b) => b.pending > 0);
   if (tab === 'settled') balances = balances.filter((b) => b.pending <= 0);
-  if (query.trim()) balances = balances.filter((b) => b.friend.name.toLowerCase().includes(query.toLowerCase()));
+  if (query.trim()) balances = balances.filter((b) => `${b.friend.name} ${b.friend.nickname || ''}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <div className="px-4 pt-6 safe-top">
@@ -44,8 +46,8 @@ export function Friends() {
         />
       </div>
 
-      <div className="flex gap-2 mb-5">
-        {(['all', 'pending', 'settled'] as Tab[]).map((t) => (
+      <div className="flex gap-2 mb-5 overflow-x-auto">
+        {(['all', 'pending', 'settled', 'archived'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -86,7 +88,7 @@ export function Friends() {
               </div>
               <div className="text-right shrink-0">
                 <p className="font-semibold amount-tabular">{formatCurrency(Math.abs(b.pending))}</p>
-                <StatusBadge status={b.status} />
+                {b.friend.is_archived ? <Badge variant="secondary">Archived</Badge> : <StatusBadge status={b.status} />}
               </div>
             </button>
           ))}

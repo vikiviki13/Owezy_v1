@@ -13,6 +13,7 @@ import { Onboarding } from './pages/Onboarding';
 import { Home } from './pages/Home';
 import { Friends } from './pages/Friends';
 import { FriendDetail } from './pages/FriendDetail';
+import { ClearFriendData, EditFriend, ManageFriend } from './pages/ManageFriend';
 import { AddExpense } from './pages/AddExpense';
 import { RecordRepayment } from './pages/RecordRepayment';
 import { ExpenseDetail } from './pages/ExpenseDetail';
@@ -197,6 +198,9 @@ function PrivateDataApp({
             <Route path="/onboarding" element={<Navigate to="/home" replace />} />
             <Route path="/friends" element={<Friends />} />
             <Route path="/friends/:id" element={<FriendDetail />} />
+            <Route path="/friends/:id/manage" element={<ManageFriend />} />
+            <Route path="/friends/:id/edit" element={<EditFriend />} />
+            <Route path="/friends/:id/clear-data" element={<ClearFriendData />} />
             <Route path="/add-expense" element={<AddExpense />} />
             <Route path="/record-repayment" element={<RecordRepayment />} />
             <Route path="/expense/:id" element={<ExpenseDetail />} />

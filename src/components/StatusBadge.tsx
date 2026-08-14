@@ -1,19 +1,12 @@
-import { ExpenseStatus } from '../types';
+import type { ExpenseStatus } from '../types';
+import { Badge } from './ui/badge';
 
-const STYLES: Record<ExpenseStatus, { bg: string; fg: string; label: string }> = {
-  pending: { bg: '#fef3c7', fg: '#92400e', label: 'Pending' },
-  partial: { bg: '#dbeafe', fg: '#1e40af', label: 'Partial' },
-  settled: { bg: 'var(--color-primary-soft)', fg: 'var(--color-primary-hover)', label: 'Settled' },
+const styles: Record<ExpenseStatus, string> = {
+  pending: 'text-warning',
+  partial: 'text-info',
+  settled: 'text-success',
 };
 
 export function StatusBadge({ status }: { status: ExpenseStatus }) {
-  const s = STYLES[status];
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-      style={{ background: s.bg, color: s.fg }}
-    >
-      {s.label}
-    </span>
-  );
+  return <Badge variant="secondary" className={styles[status]}>{status[0].toUpperCase() + status.slice(1)}</Badge>;
 }

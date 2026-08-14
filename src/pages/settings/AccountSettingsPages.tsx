@@ -110,7 +110,7 @@ export function ExportDataSettings() {
       const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
       const rows = [['type', 'title', 'friend_or_method', 'amount', 'currency', 'date', 'notes']];
       expenses.forEach((e) => rows.push(['expense', e.title, e.category, String(e.recoverable_amount), e.currency, e.expense_date, e.notes || '']));
-      repayments.forEach((r) => rows.push(['repayment', 'Payment', r.payment_method, String(r.amount), data.preferences.currency_code, r.repayment_date, r.notes || '']));
+      repayments.forEach((r) => rows.push(['repayment', r.is_settlement ? 'Dues cleared' : 'Payment', r.payment_method || '', String(r.amount), data.preferences.currency_code, r.repayment_date, r.notes || '']));
       content = rows.map((row) => row.map(quote).join(',')).join('\n'); mime = 'text/csv';
     }
     const url = URL.createObjectURL(new Blob([content], { type: mime })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `tab-data-${new Date().toISOString().slice(0, 10)}.${format}`; anchor.click(); URL.revokeObjectURL(url); toast('Your export is ready');
