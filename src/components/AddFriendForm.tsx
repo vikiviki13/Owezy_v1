@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   getCountries,
   getCountryCallingCode,
@@ -22,11 +22,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-
-type ContactRecord = { name?: string[]; tel?: string[]; email?: string[] };
-type ContactsNavigator = Navigator & {
-  contacts?: { select: (properties: string[], options: { multiple: boolean }) => Promise<ContactRecord[]> };
-};
+import { ContactImportFlow, type ImportedFriendDraft } from './contacts/ContactImportFlow';
 
 const regionNames = typeof Intl.DisplayNames === 'function'
   ? new Intl.DisplayNames(['en'], { type: 'region' })
@@ -69,25 +65,33 @@ function valuesForFriend(friend?: Friend): FriendFormValues {
 export function AddFriendForm({
   onCreated,
   submitLabel = 'Add Friend',
+  onExistingFriendSelected,
+  initialContact,
 }: {
   onCreated: (friend: Friend) => void;
   submitLabel?: string;
+  onExistingFriendSelected?: (friend: Friend) => void;
+  initialContact?: ImportedFriendDraft;
 }) {
-  return <FriendForm onSaved={onCreated} submitLabel={submitLabel} />;
+  return <FriendForm onSaved={onCreated} submitLabel={submitLabel} onExistingFriendSelected={onExistingFriendSelected} initialContact={initialContact} />;
 }
 
 export function FriendForm({
   friend,
   onSaved,
   submitLabel = friend ? 'Save Changes' : 'Add Friend',
+  onExistingFriendSelected,
+  initialContact,
 }: {
   friend?: Friend;
   onSaved: (friend: Friend) => void;
   submitLabel?: string;
+  onExistingFriendSelected?: (friend: Friend) => void;
+  initialContact?: ImportedFriendDraft;
 }) {
   const [values, setValues] = useState<FriendFormValues>(() => valuesForFriend(friend));
   const [saving, setSaving] = useState(false);
-  const [importing, setImporting] = useState(false);
+  const [contactImportOpen, setContactImportOpen] = useState(false);
   const [submittedErrors, setSubmittedErrors] = useState<FriendFormErrors>({});
   const [formError, setFormError] = useState('');
   const avatarInput = useRef<HTMLInputElement>(null);
@@ -114,35 +118,24 @@ export function FriendForm({
     reader.readAsDataURL(file);
   }
 
-  async function importContact() {
-    const contacts = (navigator as ContactsNavigator).contacts;
-    if (!contacts?.select) {
-      setFormError('Contact import is not supported by this browser. You can enter the details manually.');
-      return;
-    }
-    setImporting(true);
-    setFormError('');
-    try {
-      const [contact] = await contacts.select(['name', 'tel', 'email'], { multiple: false });
-      if (!contact) return;
-      const importedPhone = contact.tel?.[0]?.trim() || '';
-      const parsed = importedPhone
-        ? parsePhoneNumberFromString(importedPhone, values.whatsappCountry)
-        : undefined;
-      setValues((current) => ({
+  const applyImportedContact = useCallback((contact: ImportedFriendDraft) => {
+    setValues((current) => {
+      const parsed = parsePhoneNumberFromString(contact.whatsappNumber, current.whatsappCountry);
+      return {
         ...current,
-        name: contact.name?.[0]?.trim() || current.name,
-        email: contact.email?.[0]?.trim() || current.email,
+        name: contact.name || current.name,
+        email: contact.email || current.email,
         whatsappCountry: parsed?.country || current.whatsappCountry,
-        whatsappNumber: parsed?.formatNational() || importedPhone || current.whatsappNumber,
-      }));
-    } catch (caught) {
-      if (caught instanceof DOMException && caught.name === 'AbortError') return;
-      setFormError('Could not import that contact. You can enter the details manually.');
-    } finally {
-      setImporting(false);
-    }
-  }
+        whatsappNumber: parsed?.number || contact.whatsappNumber,
+      };
+    });
+    setSubmittedErrors({});
+    setFormError('');
+  }, []);
+
+  useEffect(() => {
+    if (initialContact) applyImportedContact(initialContact);
+  }, [applyImportedContact, initialContact]);
 
   function save() {
     if (!validation.details || saving) {
@@ -165,7 +158,7 @@ export function FriendForm({
 
   const visibleErrors = { ...validation.errors, ...submittedErrors };
 
-  return (
+  return <>
     <form onSubmit={(event) => { event.preventDefault(); save(); }} className="flex flex-col gap-5">
       <div className="flex flex-col items-center pt-1">
         <Button type="button" variant="ghost" onClick={() => avatarInput.current?.click()} className="relative size-auto rounded-full p-0" aria-label="Choose friend avatar">
@@ -179,11 +172,11 @@ export function FriendForm({
         <Input ref={avatarInput} type="file" accept="image/*" className="hidden" onChange={(event) => readAvatar(event.target.files?.[0])} />
       </div>
 
-      <Button type="button" variant="secondary" onClick={() => void importContact()} disabled={importing} className="min-h-12 rounded-xl font-semibold">
-        {importing ? <LoaderCircle className="animate-spin" /> : <ContactRound />} Import from Contacts
+      <Button type="button" variant="secondary" onClick={() => setContactImportOpen(true)} className="min-h-12 rounded-xl font-semibold">
+        <ContactRound /> Import from Contacts
       </Button>
 
-      <FormField label="Name" required error={values.name ? visibleErrors.name : undefined}>
+      <FormField label="Full Name" required error={values.name ? visibleErrors.name : undefined}>
         <Input autoFocus value={values.name} onChange={(event) => patch('name', event.target.value)} maxLength={80} autoComplete="name" placeholder="e.g. Arun Kumar" className="min-h-12 rounded-xl" />
       </FormField>
 
@@ -222,7 +215,13 @@ export function FriendForm({
         {saving ? <LoaderCircle className="animate-spin" /> : friend ? <Save /> : <UserPlus />} {saving ? 'Saving…' : submitLabel}
       </Button>
     </form>
-  );
+    <ContactImportFlow
+      open={contactImportOpen}
+      onOpenChange={setContactImportOpen}
+      onContactSelected={applyImportedContact}
+      onExistingFriendSelected={onExistingFriendSelected}
+    />
+  </>;
 }
 
 export function FormField({

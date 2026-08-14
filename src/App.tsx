@@ -24,7 +24,7 @@ import { Groups } from './pages/Groups';
 import { Profile } from './pages/Profile';
 import { EditProfile } from './pages/settings/EditProfile';
 import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSettings } from './pages/settings/PreferencePages';
-import { DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
+import { ContactPrivacySettings, DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './lib/cloudData';
@@ -239,6 +239,7 @@ function PrivateDataApp({
             <Route path="/profile/security/change-pin" element={<ChangePinPage />} />
             <Route path="/profile/security/change-password" element={<ChangePasswordPage />} />
             <Route path="/profile/privacy" element={<PrivacySettings />} />
+            <Route path="/profile/privacy/contacts" element={<ContactPrivacySettings />} />
             <Route path="/profile/data-storage" element={<DataStorageSettings />} />
             <Route path="/profile/export" element={<ExportDataSettings />} />
             <Route path="/profile/install" element={<InstallAppSettings />} />

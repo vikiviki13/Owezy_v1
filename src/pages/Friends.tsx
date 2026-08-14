@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Users2 } from 'lucide-react';
+import { ContactRound, Search, Plus, Users2 } from 'lucide-react';
 import { listFriendBalances, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
-import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
 import { AddFriendForm } from '../components/AddFriendForm';
 import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
+import { ContactImportFlow, type ImportedFriendDraft } from '../components/contacts/ContactImportFlow';
 
 type Tab = 'all' | 'pending' | 'settled' | 'archived';
 
@@ -18,6 +20,8 @@ export function Friends() {
   const [tab, setTab] = useState<Tab>('all');
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [contactImportOpen, setContactImportOpen] = useState(false);
+  const [contactDraft, setContactDraft] = useState<ImportedFriendDraft>();
   const navigate = useNavigate();
   useEffect(() => onDBChange(() => setTick((t) => t + 1)), []);
 
@@ -66,9 +70,10 @@ export function Friends() {
           title={query ? 'No friends match your search.' : 'No friends yet.'}
           subtitle="Add a friend to start tracking shared expenses."
           action={
-            <button onClick={() => setAddOpen(true)} className="text-sm font-medium text-white bg-[var(--color-primary)] px-4 py-2 rounded-xl">
-              Add Friend
-            </button>
+            <div className="flex flex-col gap-2">
+              <Button onClick={() => setAddOpen(true)}><Plus />Add Friend</Button>
+              <Button variant="outline" onClick={() => setContactImportOpen(true)}><ContactRound />Import from Contacts</Button>
+            </div>
           }
         />
       ) : (
@@ -95,22 +100,37 @@ export function Friends() {
         </div>
       )}
 
-      <AddFriendSheet open={addOpen} onClose={() => setAddOpen(false)} />
+      <AddFriendSheet open={addOpen} onClose={() => { setAddOpen(false); setContactDraft(undefined); }} initialContact={contactDraft} />
+      <ContactImportFlow
+        open={contactImportOpen}
+        onOpenChange={setContactImportOpen}
+        onContactSelected={(draft) => { setContactDraft(draft); setContactImportOpen(false); setAddOpen(true); }}
+        onExistingFriendSelected={(friend) => { setContactImportOpen(false); navigate(`/friends/${friend.id}`); }}
+        onAddManually={() => setAddOpen(true)}
+      />
     </div>
   );
 }
 
-function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function AddFriendSheet({ open, onClose, initialContact }: { open: boolean; onClose: () => void; initialContact?: ImportedFriendDraft }) {
   const navigate = useNavigate();
   const toast = useToast();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add Friend">
-      <AddFriendForm onCreated={(friend) => {
-        toast(`${friend.name} added`);
-        onClose();
-        navigate(`/friends/${friend.id}`);
-      }} />
-    </BottomSheet>
+    <Sheet open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose(); }}>
+      <SheetContent side="bottom" className="max-h-[92dvh] overflow-y-auto rounded-t-3xl px-4 pb-6">
+        <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
+        <SheetHeader className="px-0 text-left"><SheetTitle>Add Friend</SheetTitle><SheetDescription>Review the details before adding this friend.</SheetDescription></SheetHeader>
+        <AddFriendForm
+          initialContact={initialContact}
+          onExistingFriendSelected={(friend) => { onClose(); navigate(`/friends/${friend.id}`); }}
+          onCreated={(friend) => {
+            toast(`${friend.name} added`);
+            onClose();
+            navigate(`/friends/${friend.id}`);
+          }}
+        />
+      </SheetContent>
+    </Sheet>
   );
 }

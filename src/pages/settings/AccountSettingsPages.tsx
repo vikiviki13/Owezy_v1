@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BellOff, Check, ChevronRight, Database, Download, FileJson, FileSpreadsheet, HardDrive, Smartphone, Trash2 } from 'lucide-react';
-import { ChoiceRow, SettingsPage, SettingsSection, ToggleRow } from '../../components/SettingsUI';
+import { BellOff, Check, ChevronRight, ContactRound, Database, Download, FileJson, FileSpreadsheet, HardDrive, Smartphone, Trash2 } from 'lucide-react';
+import { ChoiceRow, SettingsPage, SettingsRow, SettingsSection, ToggleRow } from '../../components/SettingsUI';
 import { usePreferences } from '../../components/PreferencesContext';
 import { useToast } from '../../components/ToastContext';
 import { useSecurity } from '../../components/SecurityContext';
@@ -9,6 +9,17 @@ import { getExportData, getStorageSummary } from '../../lib/db';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
 import { APP_NAME } from '../../components/Brand';
+import { clearContactCache, getLocalContacts, isSupported as isContactImportSupported } from '../../lib/contactService';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 
 export function NotificationSettings() {
   const { preferences, updatePreferences } = usePreferences();
@@ -63,12 +74,69 @@ export function PrivacySettings() {
   const toast = useToast();
   const notificationState: PermissionStateLabel = typeof Notification === 'undefined' || Notification.permission === 'default' ? 'Not Requested' : Notification.permission === 'granted' ? 'Allowed' : 'Not Allowed';
   const permissions = [
-    ['Contact Access', 'Used only when you choose Import Contacts.', 'Not Requested' as PermissionStateLabel],
     ['Camera', 'Used for receipt capture.', 'Not Requested' as PermissionStateLabel],
     ['Photos / Files', 'Used only for receipt attachments you select.', 'Not Requested' as PermissionStateLabel],
     ['Notifications', 'Used for reminders you enable.', notificationState],
   ];
-  return <SettingsPage title="Privacy" description={`Permissions are requested only when a feature needs them. ${APP_NAME} does not request unnecessary access during onboarding.`}><SettingsSection title="App Permissions">{permissions.map(([title, why, state]) => <div key={title} className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex-1"><p className="font-semibold text-sm">{title}</p><p className="text-xs leading-5 text-[var(--color-text-muted)] mt-1">{why}</p></div><span className={`text-xs font-semibold ${state === 'Allowed' ? 'text-[var(--color-success)]' : state === 'Not Allowed' ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}`}>{state}</span></div><button onClick={() => toast(title === 'Notifications' ? 'Use your browser site settings to manage this permission' : `${APP_NAME} will explain why ${title.toLowerCase()} is needed before requesting it`)} className="text-sm font-semibold text-[var(--color-primary)] mt-2 min-h-9">Manage Permission</button></div>)}</SettingsSection></SettingsPage>;
+  return <SettingsPage title="Privacy" description={`Permissions are requested only when a feature needs them. ${APP_NAME} does not request unnecessary access during onboarding.`}>
+    <SettingsSection title="Contacts">
+      <SettingsRow icon={ContactRound} title="Contacts" description="Manage device contact access and locally stored contact information." to="/profile/privacy/contacts" />
+    </SettingsSection>
+    <SettingsSection title="App Permissions">{permissions.map(([title, why, state]) => <div key={title} className="px-4 py-4"><div className="flex items-center gap-3"><div className="flex-1"><p className="font-semibold text-sm">{title}</p><p className="text-xs leading-5 text-[var(--color-text-muted)] mt-1">{why}</p></div><span className={`text-xs font-semibold ${state === 'Allowed' ? 'text-[var(--color-success)]' : state === 'Not Allowed' ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}`}>{state}</span></div><button onClick={() => toast(title === 'Notifications' ? 'Use your browser site settings to manage this permission' : `${APP_NAME} will explain why ${title.toLowerCase()} is needed before requesting it`)} className="text-sm font-semibold text-[var(--color-primary)] mt-2 min-h-9">Manage Permission</button></div>)}</SettingsSection>
+  </SettingsPage>;
+}
+
+export function ContactPrivacySettings() {
+  const toast = useToast();
+  const [contactCount, setContactCount] = useState<number>();
+  const [clearConfirmationOpen, setClearConfirmationOpen] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void getLocalContacts()
+      .then((contacts) => { if (active) setContactCount(contacts.length); })
+      .catch(() => { if (active) setContactCount(0); });
+    return () => { active = false; };
+  }, []);
+
+  async function clearLocalContacts() {
+    setClearing(true);
+    try {
+      await clearContactCache();
+      setContactCount(0);
+      setClearConfirmationOpen(false);
+      toast('Local contact cache cleared. Your friends were not deleted.');
+    } catch {
+      toast('Local contact cache could not be cleared on this device.');
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  const supported = isContactImportSupported();
+  return <SettingsPage title="Contacts" description={`${APP_NAME} uses your device contacts only to help you find and add friends. Contact information stays on your device unless you explicitly add someone as a friend.`}>
+    <SettingsSection title="Contact Access">
+      <SettingsRow icon={ContactRound} title="Contact Access" description="Requested only after you tap Import from Contacts." value={supported ? 'Available' : 'Not available'} trailing={false} />
+      <SettingsRow icon={HardDrive} title="Local Contacts Cache" description="Only contacts you previously chose are searchable offline." value={contactCount === undefined ? 'Loading…' : `${contactCount} contact${contactCount === 1 ? '' : 's'}`} trailing={false} />
+    </SettingsSection>
+    <SettingsSection title="Local Data">
+      <SettingsRow icon={Trash2} title="Clear Local Contact Cache" description="Remove imported contact information stored only on this device." onClick={() => setClearConfirmationOpen(true)} danger disabled={!contactCount} trailing={false} />
+    </SettingsSection>
+    <p className="rounded-2xl bg-secondary p-4 text-xs leading-5 text-muted-foreground">Friends you've already added won't be deleted. Clearing this cache does not affect expenses, repayments, or other financial history.</p>
+    <AlertDialog open={clearConfirmationOpen} onOpenChange={setClearConfirmationOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear local contact cache?</AlertDialogTitle>
+          <AlertDialogDescription>This removes imported contact information stored on this device. Friends you've already added won't be deleted.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={clearing}>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={clearing} onClick={(event) => { event.preventDefault(); void clearLocalContacts(); }}>{clearing ? 'Clearing…' : 'Clear Local Contact Cache'}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </SettingsPage>;
 }
 
 export function DataStorageSettings() {

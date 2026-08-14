@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, UserPlus, CalendarDays, CheckCircle2, Eye, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, UserPlus, CalendarDays, CheckCircle2, ContactRound, Eye, MessageCircle } from 'lucide-react';
 import { calculateFriendBalance, createExpense, listFriends, getGroupMembers } from '../lib/db';
 import { currencySymbol, formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
@@ -14,6 +14,7 @@ import { Calendar } from '../components/ui/calendar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet';
 import { Switch } from '../components/ui/switch';
+import { ContactImportFlow, type ImportedFriendDraft } from '../components/contacts/ContactImportFlow';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -54,6 +55,8 @@ export function AddExpense() {
   const [selected, setSelected] = useState<string[]>(scopedFriend ? [scopedFriend.id] : groupMemberIds);
   const [search, setSearch] = useState('');
   const [addFriendOpen, setAddFriendOpen] = useState(false);
+  const [contactImportOpen, setContactImportOpen] = useState(false);
+  const [contactDraft, setContactDraft] = useState<ImportedFriendDraft>();
 
   const [total, setTotal] = useState('');
   const [includeOwner, setIncludeOwner] = useState(true);
@@ -240,6 +243,9 @@ export function AddExpense() {
             <button onClick={() => setAddFriendOpen(true)} className="w-full min-h-12 rounded-xl bg-[var(--color-surface-secondary)] border border-[var(--color-border)] font-semibold text-sm flex items-center justify-center gap-2">
               <UserPlus size={18} /> Add New Friend
             </button>
+            <Button type="button" variant="outline" className="mt-2 w-full" onClick={() => setContactImportOpen(true)}>
+              <ContactRound />Import from Contacts
+            </Button>
           </div>
 
           <button
@@ -419,7 +425,7 @@ export function AddExpense() {
         </DialogContent>
       </Dialog>
 
-      <Sheet open={addFriendOpen} onOpenChange={setAddFriendOpen}>
+      <Sheet open={addFriendOpen} onOpenChange={(open) => { setAddFriendOpen(open); if (!open) setContactDraft(undefined); }}>
         <SheetContent side="bottom" className="max-h-[90dvh] overflow-y-auto rounded-t-3xl px-4 pb-6">
           <span aria-hidden="true" className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border" />
           <SheetHeader className="px-0 pb-2 text-left">
@@ -427,16 +433,37 @@ export function AddExpense() {
             <SheetDescription>Create a friend and select them for this expense.</SheetDescription>
           </SheetHeader>
           <AddFriendForm
+            initialContact={contactDraft}
             submitLabel="Save and Continue"
+            onExistingFriendSelected={(friend) => {
+              setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
+              setAddFriendOpen(false);
+              setContactDraft(undefined);
+              setStep(2);
+              toast(`${friend.name} selected`);
+            }}
             onCreated={(friend) => {
               setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
               setAddFriendOpen(false);
+              setContactDraft(undefined);
               setStep(2);
               toast(`${friend.name} added and selected`);
             }}
           />
         </SheetContent>
       </Sheet>
+      <ContactImportFlow
+        open={contactImportOpen}
+        onOpenChange={setContactImportOpen}
+        onContactSelected={(draft) => { setContactDraft(draft); setContactImportOpen(false); setAddFriendOpen(true); }}
+        onExistingFriendSelected={(friend) => {
+          setSelected((current) => current.includes(friend.id) ? current : [...current, friend.id]);
+          setContactImportOpen(false);
+          setStep(2);
+          toast(`${friend.name} selected`);
+        }}
+        onAddManually={() => setAddFriendOpen(true)}
+      />
     </div>
   );
 }
