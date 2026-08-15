@@ -1,13 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Check, ContactRound, LoaderCircle, X, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal } from 'lucide-react';
-import { createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
+import { ArrowLeft, Search, Check, ContactRound, LoaderCircle, X, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, CalendarDays, CheckCircle2, Eye, MessageCircle } from 'lucide-react';
+import { calculateFriendBalance, createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
 import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
 import { consumeExpenseContactHandoff, createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
 import { useSecurity } from '../components/SecurityContext';
+import { buildExpenseWhatsAppMessage, expenseDateError, expenseDateLabel, shiftIsoDate } from '../lib/expenseDraft';
+import { shareToWhatsApp } from '../lib/share';
+import { BottomSheet } from '../components/BottomSheet';
+import { ExpenseCalendar } from '../components/ExpenseCalendar';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -17,6 +21,21 @@ const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Stay', icon: <Building2 size={16} /> },
   { key: 'Other', icon: <MoreHorizontal size={16} /> },
 ];
+
+interface SavedExpenseMessage {
+  friendId: string;
+  friendName: string;
+  amount: number;
+  pendingBalance: number;
+  phone?: string;
+  text: string;
+}
+
+interface SavedExpenseResult {
+  expenseId: string;
+  total: number;
+  messages: SavedExpenseMessage[];
+}
 
 export function AddExpense() {
   const [params] = useSearchParams();
@@ -54,7 +73,10 @@ export function AddExpense() {
   const [category, setCategory] = useState<ExpenseCategory>('Food');
   const [merchant, setMerchant] = useState('');
   const [notes, setNotes] = useState('');
-  const [date] = useState(todayDate());
+  const [date, setDate] = useState(() => todayDate());
+  const [dateSheetOpen, setDateSheetOpen] = useState(false);
+  const [dateSheetMode, setDateSheetMode] = useState<'quick' | 'calendar'>('quick');
+  const [savedExpense, setSavedExpense] = useState<SavedExpenseResult>();
 
   const filtered = orderedFriends.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
 
@@ -115,25 +137,98 @@ export function AddExpense() {
     }));
     const ownerShare = splitMode === 'equal' ? ownerShareEqual : ownerCustom;
 
-    createExpense({
-      title: title.trim() || category,
-      category,
-      merchant_name: merchant.trim() || undefined,
-      total_amount: totalNum,
-      owner_share: ownerShare,
-      expense_date: date,
-      notes: notes.trim() || undefined,
-      split_mode: splitMode,
-      participants,
-    });
+    const reason = title.trim() || category;
+    try {
+      const expense = createExpense({
+        title: reason,
+        category,
+        merchant_name: merchant.trim() || undefined,
+        total_amount: totalNum,
+        owner_share: ownerShare,
+        expense_date: date,
+        notes: notes.trim() || undefined,
+        split_mode: splitMode,
+        participants,
+      });
 
-    const friendNames = selected.map((id) => friends.find((f) => f.id === id)?.name).filter(Boolean).join(', ');
-    toast(`${formatCurrency(totalNum)} added for ${friendNames}`);
-    navigate('/');
+      const messages = participants.flatMap((participant) => {
+        const friend = friends.find((candidate) => candidate.id === participant.friend_id);
+        if (!friend) return [];
+        const pendingBalance = calculateFriendBalance(friend.id).pending;
+        return [{
+          friendId: friend.id,
+          friendName: friend.nickname?.trim() || friend.name,
+          amount: participant.share_amount,
+          pendingBalance,
+          phone: friend.whatsapp_number || friend.whatsapp_e164 || friend.phone || friend.phone_number,
+          text: buildExpenseWhatsAppMessage({
+            friend,
+            amount: participant.share_amount,
+            reason,
+            expenseDate: date,
+            pendingBalance,
+          }),
+        }];
+      });
+
+      setSavedExpense({ expenseId: expense.id, total: totalNum, messages });
+    } catch (caught) {
+      toast(caught instanceof Error ? caught.message : 'Could not add this expense.');
+    }
+  }
+
+  function chooseDate(nextDate: string) {
+    if (expenseDateError(nextDate)) return;
+    setDate(nextDate);
+    setDateSheetOpen(false);
+    setDateSheetMode('quick');
   }
 
   const canProceedStep1 = selected.length > 0;
   const canProceedStep2 = totalNum > 0 && (splitMode === 'equal' || customDiff === 0);
+
+  if (savedExpense) {
+    return (
+      <div className="min-h-screen px-4 pt-10 pb-8 safe-top flex flex-col">
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center text-center">
+          <span className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+            <CheckCircle2 size={34} />
+          </span>
+          <h1 className="text-2xl font-bold">Expense Added Successfully</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
+            {formatCurrency(savedExpense.total)} was saved for {expenseDateLabel(date)}.
+          </p>
+
+          <div className="mt-7 flex flex-col gap-3 text-left">
+            {savedExpense.messages.map((message) => (
+              <div key={message.friendId} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+                <p className="font-semibold"><span className="amount-tabular">{formatCurrency(message.amount)}</span> added for {message.friendName}</p>
+                <p className="mt-1 text-xs text-[var(--color-text-muted)]">Pending balance: <span className="amount-tabular">{formatCurrency(message.pendingBalance)}</span></p>
+                <button
+                  onClick={() => shareToWhatsApp(message.text, message.phone)}
+                  disabled={!message.phone}
+                  className="mt-4 w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] text-white font-medium rounded-xl py-3 disabled:opacity-40"
+                >
+                  <MessageCircle size={16} />
+                  {savedExpense.messages.length === 1 ? 'Send on WhatsApp' : `Send on WhatsApp — ${message.friendName}`}
+                </button>
+                {!message.phone && <p className="mt-2 text-center text-xs text-[var(--color-text-muted)]">No WhatsApp number is saved for this friend.</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mx-auto mt-7 flex w-full max-w-sm flex-col gap-2">
+          <button onClick={() => navigate(`/expense/${savedExpense.expenseId}`)} className="w-full flex items-center justify-center gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] font-medium py-3.5">
+            <Eye size={16} /> View Expense
+          </button>
+          <button onClick={() => navigate('/')} className="w-full rounded-xl py-3.5 text-[var(--color-text-secondary)] font-medium">
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-4 pt-6 pb-8 safe-top min-h-screen">
@@ -344,8 +439,20 @@ export function AddExpense() {
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="input resize-none" />
           </div>
 
+          <div className="mb-6">
+            <p className="mb-2 text-sm font-medium text-[var(--color-text-secondary)]">Expense date</p>
+            <button
+              type="button"
+              onClick={() => setDateSheetOpen(true)}
+              className="w-full flex items-center justify-between rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3.5 font-medium"
+            >
+              <span className="flex items-center gap-2"><CalendarDays size={16} className="text-[var(--color-text-secondary)]" />{expenseDateLabel(date)}</span>
+              <span className="text-xs text-[var(--color-text-muted)]">Change</span>
+            </button>
+          </div>
+
           <div className="bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-6 text-sm text-[var(--color-text-secondary)]">
-            Today, now · Paid by you · {formatCurrency(totalNum)} total
+            {expenseDateLabel(date)} · Paid by you · {formatCurrency(totalNum)} total
           </div>
 
           <button onClick={save} className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3.5">
@@ -353,6 +460,39 @@ export function AddExpense() {
           </button>
         </div>
       )}
+
+      <BottomSheet open={dateSheetOpen} onClose={() => { setDateSheetOpen(false); setDateSheetMode('quick'); }} title="Expense date">
+        <div className="flex flex-col gap-2">
+          {(['today', 'yesterday', 'custom'] as const).map((option) => {
+            const value = option === 'today' ? todayDate() : option === 'yesterday' ? shiftIsoDate(todayDate(), -1) : undefined;
+            const label = option === 'today' ? 'Today' : option === 'yesterday' ? 'Yesterday' : 'Select Date';
+            const isActive = value ? date === value : false;
+            return (
+              <button
+                key={option}
+                type="button"
+                onClick={() => option === 'custom' ? setDateSheetMode('calendar') : chooseDate(value!)}
+                className={`w-full flex items-center justify-between rounded-xl border px-4 py-3.5 font-medium text-left
+                  ${isActive ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}
+              >
+                {label}
+                {isActive && <Check size={16} />}
+              </button>
+            );
+          })}
+          {dateSheetMode === 'calendar' && (
+            <div className="mt-2 border-t border-[var(--color-border)] pt-4">
+              <ExpenseCalendar
+                selected={date}
+                onSelect={(nextDate) => {
+                  if (expenseDateError(nextDate)) return;
+                  chooseDate(nextDate);
+                }}
+              />
+            </div>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

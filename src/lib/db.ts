@@ -1,10 +1,11 @@
 import {
   Attachment, Expense, ExpenseAdjustment, ExpenseItem, ExpenseItemAssignment,
   ExpenseParticipant, Friend, FriendBalance, Group, GroupMember, LedgerEntry,
-  Profile, Repayment, UserPreferences,
+  Profile, Repayment, UserPreferences, PaymentMethod,
 } from '../types';
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
+import { expenseDateError } from './expenseDraft';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -270,6 +271,57 @@ export function updateFriend(id: string, patch: Partial<Friend>) {
   persist();
 }
 
+export function archiveFriend(id: string, archived = true) {
+  updateFriend(id, { is_archived: archived });
+}
+
+// Settles a friend's complete outstanding balance by recording a repayment
+// equal to the pending amount. Old expenses stay untouched and visible in
+// history — this only creates the settlement transaction.
+export function clearFriendDues(friendId: string, input: { repayment_date?: string; payment_method?: PaymentMethod; notes?: string } = {}): Repayment | undefined {
+  const pending = calculateFriendBalance(friendId).pending;
+  if (pending <= 0) return undefined;
+  return recordRepayment({
+    friend_id: friendId,
+    amount: pending,
+    payment_method: input.payment_method || 'Other',
+    repayment_date: input.repayment_date,
+    notes: input.notes,
+  });
+}
+
+// Permanently removes a friend's financial history. Expenses the friend was
+// the only participant of are deleted entirely (with items, adjustments,
+// attachments); expenses shared with others only drop this friend's
+// participant share. All repayments for the friend are removed.
+export function clearFriendData(friendId: string) {
+  const db = load();
+  const friendExpenseIds = new Set(db.expenseParticipants.filter((p) => p.friend_id === friendId).map((p) => p.expense_id));
+  const expenseIdsToDelete = new Set<string>();
+  friendExpenseIds.forEach((expenseId) => {
+    const otherParticipants = db.expenseParticipants.some((p) => p.expense_id === expenseId && p.friend_id !== friendId);
+    if (!otherParticipants) expenseIdsToDelete.add(expenseId);
+  });
+
+  const deletedItemIds = new Set(db.expenseItems.filter((i) => expenseIdsToDelete.has(i.expense_id)).map((i) => i.id));
+  db.expenseItems = db.expenseItems.filter((i) => !expenseIdsToDelete.has(i.expense_id));
+  db.expenseItemAssignments = db.expenseItemAssignments.filter((a) => !deletedItemIds.has(a.expense_item_id) && a.friend_id !== friendId);
+  db.expenseAdjustments = db.expenseAdjustments.filter((a) => !expenseIdsToDelete.has(a.expense_id));
+  db.expenses = db.expenses.filter((e) => !expenseIdsToDelete.has(e.id));
+  db.expenseParticipants = db.expenseParticipants.filter((p) => !expenseIdsToDelete.has(p.expense_id) && p.friend_id !== friendId);
+  db.attachments = db.attachments.filter((a) => !expenseIdsToDelete.has(a.expense_id));
+  db.repayments = db.repayments.filter((r) => r.friend_id !== friendId);
+  db.groupMembers = db.groupMembers.filter((m) => m.friend_id !== friendId);
+  persist();
+}
+
+export function deleteFriend(id: string) {
+  clearFriendData(id);
+  const db = load();
+  db.friends = db.friends.filter((f) => f.id !== id);
+  persist();
+}
+
 // ---------------------------------------------------------------------------
 // Groups
 // ---------------------------------------------------------------------------
@@ -318,6 +370,8 @@ export function createExpense(input: CreateExpenseInput): Expense {
   const now = new Date().toISOString();
   const recoverable = roundCurrency(input.participants.reduce((s, p) => s + p.share_amount, 0));
   const expenseDate = input.expense_date;
+  const dateError = expenseDateError(expenseDate);
+  if (dateError) throw new Error(dateError);
   const expenseTime = input.expense_time || nowTime();
 
   const expense: Expense = {

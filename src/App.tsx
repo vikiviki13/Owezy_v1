@@ -14,6 +14,7 @@ import { Home } from './pages/Home';
 import { Friends } from './pages/Friends';
 import { ContactImport } from './pages/ContactImport';
 import { FriendDetail } from './pages/FriendDetail';
+import { ManageFriend } from './pages/ManageFriend';
 import { AddExpense } from './pages/AddExpense';
 import { RecordRepayment } from './pages/RecordRepayment';
 import { ExpenseDetail } from './pages/ExpenseDetail';
@@ -203,6 +204,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/friends" element={<Friends />} />
             <Route path="/friends/import" element={<ContactImport />} />
             <Route path="/friends/:id" element={<FriendDetail />} />
+            <Route path="/friends/:id/manage" element={<ManageFriend />} />
             <Route path="/add-expense" element={<AddExpense />} />
             <Route path="/record-repayment" element={<RecordRepayment />} />
             <Route path="/expense/:id" element={<ExpenseDetail />} />

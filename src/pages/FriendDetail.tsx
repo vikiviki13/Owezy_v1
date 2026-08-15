@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Receipt, HandCoins, Share2, Phone } from 'lucide-react';
+import { ArrowLeft, Receipt, HandCoins, Share2, Phone, MoreHorizontal } from 'lucide-react';
 import { calculateFriendBalance, friendLedger, getFriend, listExpensesForFriend, listRepaymentsForFriend, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort, formatTime, formatTimestamp } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
@@ -36,6 +36,13 @@ export function FriendDetail() {
           <h1 className="font-semibold truncate">{friend.name}</h1>
           {friend.phone && <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1"><Phone size={11} /> {friend.phone}</p>}
         </div>
+        <button
+          onClick={() => navigate(`/friends/${friend.id}/manage`)}
+          className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center"
+          aria-label="Manage friend"
+        >
+          <MoreHorizontal size={18} />
+        </button>
       </div>
 
       <div className="px-4">
