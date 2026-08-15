@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Bell, CalendarDays, ChevronRight, CircleHelp, Database, Download, Fingerprint,
-  Languages, LogOut, Moon, ReceiptText, ShieldCheck, Smartphone, WalletCards, Info,
+  Languages, LogOut, Moon, ReceiptText, Share2, ShieldCheck, Smartphone, WalletCards, Info,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
@@ -84,6 +84,7 @@ export function Profile() {
       </SettingsSection>
 
       <SettingsSection title={t('appData')}>
+        <SettingsRow icon={Share2} title="Share App" to="/profile/share" />
         <SettingsRow icon={Smartphone} title="Install App" to="/profile/install" />
         <SettingsRow icon={Download} title="Export Data" to="/profile/export" />
         <SettingsRow icon={CircleHelp} title="Help & Support" to="/profile/help" />

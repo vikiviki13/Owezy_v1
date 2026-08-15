@@ -61,3 +61,73 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Share App
+// ---------------------------------------------------------------------------
+
+export const APP_URL = 'https://share-gilt-three.vercel.app';
+
+// Referral codes are designed but not yet enabled. When enabled, pass the
+// user's referral code to buildAppShareUrl and it will append ?ref=USER123.
+const REFERRALS_ENABLED = false;
+
+export function buildAppShareUrl(referralCode?: string): string {
+  if (REFERRALS_ENABLED && referralCode) return `${APP_URL}?ref=${encodeURIComponent(referralCode)}`;
+  return APP_URL;
+}
+
+export const APP_SHARE_SUBJECT = 'Check out Owezy';
+export const APP_SHARE_SHORT_TEXT = 'Track shared expenses and repayments with friends.';
+
+export function buildAppShareMessage(url = buildAppShareUrl()): string {
+  return [
+    'Hey! 👋',
+    '',
+    "I've been using Owezy to track shared expenses, repayments, and pending balances with friends.",
+    '',
+    "It's simple, clean, and makes splitting bills super easy.",
+    '',
+    'Download Owezy here:',
+    url,
+    '',
+    "Let's keep our expenses organized!",
+  ].join('\n');
+}
+
+export function openShareUrl(url: string) {
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+export function buildWhatsAppShareUrl(text: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+export function buildTelegramShareUrl(text: string, url: string): string {
+  return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+}
+
+export function buildSmsShareUrl(text: string): string {
+  return `sms:?&body=${encodeURIComponent(text)}`;
+}
+
+export function buildEmailShareUrl(subject: string, text: string): string {
+  return `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
+}
+
+export type NativeShareResult = 'shared' | 'cancelled' | 'failed' | 'unsupported';
+
+export async function shareAppNatively(title: string, text: string, url: string): Promise<NativeShareResult> {
+  if (!navigator.share) return 'unsupported';
+  try {
+    await navigator.share({ title, text, url });
+    return 'shared';
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') return 'cancelled';
+    return 'failed';
+  }
+}
+
+export async function copyAppLink(): Promise<boolean> {
+  return copyToClipboard(buildAppShareUrl());
+}

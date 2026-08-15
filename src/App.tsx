@@ -27,6 +27,7 @@ import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSetting
 import { DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
+import { ShareAppSettings } from './pages/settings/ShareAppPage';
 import { clearCloudRuntimeState, initializeCloudData, LegacyDataChoiceRequired, stopCloudData, type LegacyMigrationDecision } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { clearSensitiveLocalData } from './lib/db';
@@ -231,6 +232,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/install" element={<InstallAppSettings />} />
             <Route path="/profile/help" element={<HelpSupport />} />
             <Route path="/profile/about" element={<AboutSettings />} />
+            <Route path="/profile/share" element={<ShareAppSettings />} />
             </Routes>
             </Shell>
             <AppUpdatePrompt />

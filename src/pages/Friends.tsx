@@ -65,12 +65,23 @@ export function Friends() {
       {balances.length === 0 ? (
         <EmptyState
           icon={Users2}
-          title={query ? 'No friends match your search.' : 'No friends yet.'}
-          subtitle="Add a friend to start tracking shared expenses."
+          title={query ? 'No friends match your search.' : 'Invite Friends'}
+          subtitle={query ? 'Try a different name.' : 'Share Owezy with your friends so you can easily manage expenses together.'}
           action={
-            <button onClick={() => setAddOpen(true)} className="text-sm font-medium text-white bg-[var(--color-primary)] px-4 py-2 rounded-xl">
-              Add Friend
-            </button>
+            query ? (
+              <button onClick={() => setAddOpen(true)} className="text-sm font-medium text-white bg-[var(--color-primary)] px-4 py-2 rounded-xl">
+                Add Friend
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2 w-52">
+                <button onClick={() => navigate('/profile/share')} className="text-sm font-medium text-white bg-[var(--color-primary)] px-4 py-2 rounded-xl">
+                  Share App
+                </button>
+                <button onClick={() => setAddOpen(true)} className="text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-surface-secondary)] px-4 py-2 rounded-xl">
+                  Add Friend
+                </button>
+              </div>
+            )
           }
         />
       ) : (

@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X } from 'lucide-react';
+import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X, Share2 } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
 
 const NAV_ITEMS = [
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/groups', label: 'Groups', icon: LayoutGrid },
   { to: '/profile', label: 'Profile', icon: User },
+  { to: '/profile/share', label: 'Share', icon: Share2 },
 ];
 
 export function Shell({ children }: { children: ReactNode }) {
