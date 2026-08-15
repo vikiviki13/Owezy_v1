@@ -78,7 +78,7 @@ export function Auth() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Owezy</h1>
-            <p className="text-sm text-[var(--color-text-muted)]">Friend expense tracker</p>
+            <p className="text-sm text-[var(--color-text-muted)]">You Pay, We Remember.</p>
           </div>
         </div>
 
