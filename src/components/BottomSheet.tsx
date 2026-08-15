@@ -34,7 +34,7 @@ export function BottomSheet({
         {title && (
           <div className="flex items-center justify-between px-5 pt-3 pb-2">
             <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
-            <button onClick={onClose} className="p-1.5 rounded-full hover:bg-[var(--color-surface-secondary)]">
+            <button onClick={onClose} className="size-11 rounded-full hover:bg-[var(--color-surface-secondary)] grid place-items-center" aria-label="Close">
               <X size={20} className="text-[var(--color-text-secondary)]" />
             </button>
           </div>

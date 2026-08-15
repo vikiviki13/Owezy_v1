@@ -56,6 +56,8 @@ export interface Friend {
   nickname?: string;
   phone?: string;
   whatsapp_number?: string;
+  phone_number?: string;
+  whatsapp_e164?: string;
   email?: string;
   avatar_url?: string;
   notes?: string;

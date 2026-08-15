@@ -6,6 +6,7 @@ import { useToast } from '../../components/ToastContext';
 import { useSecurity } from '../../components/SecurityContext';
 import { RequireReauthentication } from '../../components/security/RequireReauthentication';
 import { getExportData, getStorageSummary } from '../../lib/db';
+import { clearContactImportDraft } from '../../lib/contactImport';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
 
@@ -76,6 +77,7 @@ export function DataStorageSettings() {
   const size = summary.bytes < 1024 * 1024 ? `${(summary.bytes / 1024).toFixed(1)} KB` : `${(summary.bytes / 1024 / 1024).toFixed(1)} MB`;
   async function clearCache() {
     if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map((key) => caches.delete(key))); }
+    await clearContactImportDraft();
     toast('Cached data cleared. Your financial records are safe.');
   }
   return <SettingsPage title="Data & Storage" description="See what is stored on this device and safely manage temporary files.">

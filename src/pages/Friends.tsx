@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, Plus, UserPlus, Users2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { ContactRound, LoaderCircle, Search, Plus, UserPlus, Users2 } from 'lucide-react';
 import { createFriend, listFriendBalances, onDBChange } from '../lib/db';
 import { formatCurrency, formatDateShort } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
@@ -8,6 +8,7 @@ import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
+import { createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
 
 type Tab = 'all' | 'pending' | 'settled';
 
@@ -17,9 +18,12 @@ export function Friends() {
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   useEffect(() => onDBChange(() => setTick((t) => t + 1)), []);
 
   let balances = listFriendBalances();
+  const newFriendIds = new Set((params.get('new') || '').split(',').filter(Boolean));
+  if (newFriendIds.size) balances = [...balances].sort((a, b) => Number(newFriendIds.has(b.friend.id)) - Number(newFriendIds.has(a.friend.id)));
   if (tab === 'pending') balances = balances.filter((b) => b.pending > 0);
   if (tab === 'settled') balances = balances.filter((b) => b.pending <= 0);
   if (query.trim()) balances = balances.filter((b) => b.friend.name.toLowerCase().includes(query.toLowerCase()));
@@ -28,7 +32,7 @@ export function Friends() {
     <div className="px-4 pt-6 safe-top">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Friends</h1>
-        <button onClick={() => setAddOpen(true)} className="w-9 h-9 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center">
+        <button onClick={() => setAddOpen(true)} className="w-11 h-11 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center" aria-label="Add friend">
           <Plus size={18} />
         </button>
       </div>
@@ -101,6 +105,8 @@ function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [nickname, setNickname] = useState('');
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pickerError, setPickerError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -113,9 +119,41 @@ function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void 
     navigate(`/friends/${friend.id}`);
   }
 
+  async function importContacts() {
+    setPickerBusy(true);
+    setPickerError('');
+    try {
+      const contacts = await pickDeviceContacts();
+      if (!contacts.length) return;
+      const draft = createContactImportDraft(contacts, 'friends');
+      await saveContactImportDraft(draft);
+      onClose();
+      navigate('/friends/import?from=friends');
+    } catch (caught) {
+      setPickerError(caught instanceof Error ? caught.message : 'Contacts could not be opened.');
+    } finally {
+      setPickerBusy(false);
+    }
+  }
+
   return (
     <BottomSheet open={open} onClose={onClose} title="Add Friend">
       <div className="flex flex-col gap-4">
+        <button
+          onClick={() => void importContacts()}
+          disabled={pickerBusy}
+          className="min-h-14 flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-left disabled:opacity-50"
+        >
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+            {pickerBusy ? <LoaderCircle size={20} className="animate-spin" /> : <ContactRound size={20} />}
+          </span>
+          <span className="flex-1">
+            <span className="block font-semibold">Import from Contacts</span>
+            <span className="block text-xs leading-5 text-[var(--color-text-muted)]">Select and review multiple contacts</span>
+          </span>
+        </button>
+        {pickerError && <p role="alert" className="text-sm leading-5 text-[var(--color-error)]">{pickerError}</p>}
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]"><span className="h-px flex-1 bg-[var(--color-border)]" />or add manually<span className="h-px flex-1 bg-[var(--color-border)]" /></div>
         <Field label="Name" required>
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Arun Kumar" className="input" />
         </Field>

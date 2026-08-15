@@ -30,6 +30,43 @@ create policy "Users can delete their own app data"
 on public.app_data for delete to authenticated
 using ((select auth.uid()) = user_id);
 
+-- Confirmed contact imports are written as individual friend records. Device
+-- contact drafts never enter this table; the client sends only reviewed fields.
+create table if not exists public.friends (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  nickname text,
+  whatsapp_e164 text not null,
+  phone_number text not null,
+  email text,
+  created_at timestamptz not null default now(),
+  constraint friends_name_not_blank check (length(btrim(name)) > 0),
+  constraint friends_whatsapp_e164 check (whatsapp_e164 ~ '^\+[1-9][0-9]{7,14}$'),
+  constraint friends_owner_whatsapp_unique unique (owner_id, whatsapp_e164)
+);
+
+alter table public.friends enable row level security;
+revoke all on table public.friends from anon;
+grant select, insert, update, delete on table public.friends to authenticated;
+
+drop policy if exists "Users can read their own friends" on public.friends;
+create policy "Users can read their own friends" on public.friends
+for select to authenticated using ((select auth.uid()) = owner_id);
+
+drop policy if exists "Users can insert their own friends" on public.friends;
+create policy "Users can insert their own friends" on public.friends
+for insert to authenticated with check ((select auth.uid()) = owner_id);
+
+drop policy if exists "Users can update their own friends" on public.friends;
+create policy "Users can update their own friends" on public.friends
+for update to authenticated using ((select auth.uid()) = owner_id)
+with check ((select auth.uid()) = owner_id);
+
+drop policy if exists "Users can delete their own friends" on public.friends;
+create policy "Users can delete their own friends" on public.friends
+for delete to authenticated using ((select auth.uid()) = owner_id);
+
 -- Normalized preference schema for clients that move preferences out of the
 -- synced app_data document. The current PWA keeps the same fields inside
 -- app_data so settings and domain records sync atomically.

@@ -16,7 +16,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   usePreferences();
-  const isSubPage = location.pathname.startsWith('/profile/');
+  const isSubPage = location.pathname.startsWith('/profile/') || location.pathname === '/friends/import';
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
