@@ -22,6 +22,8 @@ const KEY = 'tab_db_session_v2';
 const LEGACY_KEY = 'tab_db_v1';
 
 interface DB {
+  rev: number;
+  updated_at: string;
   profile: Profile;
   preferences: UserPreferences;
   friends: Friend[];
@@ -41,6 +43,8 @@ const OWNER_ID = 'local-user';
 function emptyDB(): DB {
   const now = new Date().toISOString();
   return {
+    rev: 0,
+    updated_at: now,
     profile: {
       id: OWNER_ID,
       full_name: 'Viki',
@@ -72,6 +76,8 @@ function load(): DB {
   } catch {
     cache = emptyDB();
   }
+  cache.rev = typeof cache.rev === 'number' ? cache.rev : 0;
+  cache.updated_at = cache.updated_at || new Date().toISOString();
   cache.preferences = { ...defaultPreferences(cache.profile.id), ...(cache.preferences || {}) };
   setPreferenceSnapshot(cache.preferences);
   return cache;
@@ -79,6 +85,8 @@ function load(): DB {
 
 function persist() {
   if (!cache) return;
+  cache.rev = (cache.rev || 0) + 1;
+  cache.updated_at = new Date().toISOString();
   localStorage.setItem(KEY, JSON.stringify(cache));
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
 }

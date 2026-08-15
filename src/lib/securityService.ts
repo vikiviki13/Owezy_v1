@@ -235,7 +235,7 @@ export async function verifyAccountPassword(
 
 export async function readPrivateData<T>(userId: string) {
   const result = await invoke<{ data: T | null; updatedAt: string | null }>('data/read', {}, userId);
-  return result.data;
+  return result;
 }
 
 export async function writePrivateData(userId: string, data: Record<string, unknown>) {

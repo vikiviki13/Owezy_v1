@@ -20,7 +20,7 @@ const APP_DATA_ARRAY_KEYS = [
   'friends', 'groups', 'groupMembers', 'expenses', 'expenseParticipants',
   'expenseItems', 'expenseItemAssignments', 'expenseAdjustments', 'repayments', 'attachments',
 ] as const;
-const APP_DATA_KEYS = new Set(['profile', 'preferences', ...APP_DATA_ARRAY_KEYS]);
+const APP_DATA_KEYS = new Set(['profile', 'preferences', 'rev', 'updated_at', ...APP_DATA_ARRAY_KEYS]);
 
 class HttpError extends Error {
   constructor(public status: number, public code: string, message: string, public details?: Record<string, unknown>) {

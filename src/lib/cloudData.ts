@@ -15,12 +15,16 @@ export class LegacyDataChoiceRequired extends Error {
 }
 
 type StoredData = Record<string, unknown> & {
+  rev?: number;
+  updated_at?: string;
   profile: Record<string, unknown>;
 };
 
 let activeUserId: string | null = null;
 let syncHandler: (() => void) | null = null;
 let onlineHandler: (() => void) | null = null;
+let focusHandler: (() => void) | null = null;
+let retryTimer: number | undefined = undefined;
 let pendingSync: Promise<void> = Promise.resolve();
 let lastSyncError: Error | null = null;
 
@@ -31,6 +35,8 @@ function emptyData(user: User): StoredData {
     : '';
 
   return {
+    rev: 0,
+    updated_at: now,
     profile: {
       id: user.id,
       full_name: metadataName || user.email?.split('@')[0] || 'You',
@@ -68,6 +74,10 @@ function prepareData(value: unknown, user: User): StoredData {
   return {
     ...fallback,
     ...stored,
+    rev: typeof stored.rev === 'number' ? stored.rev : 0,
+    updated_at: typeof stored.updated_at === 'string' && stored.updated_at
+      ? stored.updated_at
+      : typeof storedProfile.updated_at === 'string' ? storedProfile.updated_at : fallback.updated_at,
     profile: {
       ...fallback.profile,
       ...storedProfile,
@@ -99,6 +109,9 @@ function queueUpload() {
     return;
   }
 
+  window.clearTimeout(retryTimer);
+  retryTimer = undefined;
+
   pendingSync = pendingSync
     .then(async () => {
       await upload(userId, snapshot);
@@ -108,6 +121,10 @@ function queueUpload() {
     .catch((caught: unknown) => {
       lastSyncError = caught instanceof Error ? caught : new Error('Cloud sync failed.');
       window.dispatchEvent(new CustomEvent('tab-cloud-sync-error', { detail: lastSyncError.message }));
+      // Keep retrying in the background so a temporary failure (offline,
+      // expired unlock grant, transient server error) self-heals without
+      // any user action or data loss.
+      retryTimer = window.setTimeout(() => { if (activeUserId) queueUpload(); }, 30_000);
     });
 }
 
@@ -116,15 +133,43 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
   lastSyncError = null;
 
   let data: StoredData;
+  let recovered = false;
   try {
-    const storedData = await readPrivateData<StoredData>(user.id);
+    const result = await readPrivateData<StoredData>(user.id);
+    const storedData = result.data;
+
+    // The local runtime copy may be newer than the server copy (a previous
+    // sync failed, so the server still holds older data). Compare the write
+    // revisions and keep whichever is newer — never let a stale server
+    // snapshot clobber freshly saved local changes.
+    const cachedRaw = localStorage.getItem(RUNTIME_DB_KEY);
+    let cachedData: StoredData | null = null;
+    if (cachedRaw) {
+      try {
+        const parsed = JSON.parse(cachedRaw) as StoredData;
+        cachedData = prepareData(parsed, user);
+      } catch {
+        cachedData = null;
+      }
+    }
 
     if (storedData) {
-      data = prepareData(storedData, user);
-      // A confirmed server copy supersedes plaintext persistence used by older
-      // releases, so remove that residual shared-browser copy immediately.
-      localStorage.removeItem(LEGACY_DB_KEY);
-      localStorage.removeItem('tab_legacy_migrated_v1');
+      const localNewer = cachedData && (cachedData.rev || 0) > (prepareData(storedData, user).rev || 0);
+      if (localNewer) {
+        data = cachedData!;
+        recovered = true;
+      } else {
+        data = prepareData(storedData, user);
+        // A confirmed server copy supersedes plaintext persistence used by older
+        // releases, so remove that residual shared-browser copy immediately.
+        localStorage.removeItem(LEGACY_DB_KEY);
+        localStorage.removeItem('tab_legacy_migrated_v1');
+      }
+    } else if (cachedData) {
+      // No server copy yet (first ever sync never succeeded). Keep the local
+      // copy instead of discarding it, and upload it below.
+      data = cachedData;
+      recovered = true;
     } else {
       const legacy = localStorage.getItem(LEGACY_DB_KEY);
       if (legacy && !legacyDecision) throw new LegacyDataChoiceRequired();
@@ -170,13 +215,20 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
   window.addEventListener('tab-db-changed', syncHandler);
   onlineHandler = () => { if (activeUserId) queueUpload(); };
   window.addEventListener('online', onlineHandler);
+  focusHandler = () => { if (activeUserId) queueUpload(); };
+  window.addEventListener('focus', focusHandler);
+  if (recovered) queueUpload();
 }
 
 export function stopCloudData() {
   if (syncHandler) window.removeEventListener('tab-db-changed', syncHandler);
   if (onlineHandler) window.removeEventListener('online', onlineHandler);
+  if (focusHandler) window.removeEventListener('focus', focusHandler);
+  window.clearTimeout(retryTimer);
+  retryTimer = undefined;
   syncHandler = null;
   onlineHandler = null;
+  focusHandler = null;
   activeUserId = null;
 }
 

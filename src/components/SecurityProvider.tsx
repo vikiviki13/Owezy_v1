@@ -16,11 +16,14 @@ import {
   verifyPin,
 } from '../lib/securityService';
 import { SecurityContext } from './SecurityContext';
-import { clearLegacyLocalData, clearSensitiveLocalData } from '../lib/db';
+import { clearLegacyLocalData } from '../lib/db';
 import { clearContactImportDraft } from '../lib/contactImport';
 
 function clearLockedData() {
-  clearSensitiveLocalData();
+  // Keep the runtime DB in place: wiping it on every lock destroyed
+  // unsynced changes whenever cloud sync had failed (the server still held
+  // older data). The lock screen still gates the UI; the data stays intact
+  // until the user signs out or syncs.
   clearLegacyLocalData();
 }
 
@@ -143,6 +146,9 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     setUnlockMessage('Verified');
     setStatus((current) => current ? { ...current, grantValid: true, lastVerifiedAt: new Date().toISOString(), failedPinAttempts: 0, lockedUntil: null } : current);
     setLocked(false);
+    // A fresh unlock grant is now valid server-side: retry any changes that
+    // failed to sync while the app was locked so nothing stays behind.
+    window.dispatchEvent(new CustomEvent('tab-db-changed'));
   }, [status, userId]);
 
   const unlockWithDevice = useCallback(async () => {
@@ -152,6 +158,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     setUnlockMessage('Verified');
     setStatus((current) => current ? { ...current, grantValid: true, lastVerifiedAt: new Date().toISOString() } : current);
     setLocked(false);
+    window.dispatchEvent(new CustomEvent('tab-db-changed'));
   }, [status, userId]);
 
   const setAutoLockDuration = useCallback(async (duration: AutoLockDuration) => {
