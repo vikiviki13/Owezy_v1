@@ -17,7 +17,8 @@ import { defaultPreferences, setPreferenceSnapshot } from './preferences';
 // no component or page needs to change.
 // ---------------------------------------------------------------------------
 
-const KEY = 'tab_db_v1';
+const KEY = 'tab_db_session_v2';
+const LEGACY_KEY = 'tab_db_v1';
 
 interface DB {
   profile: Profile;
@@ -65,7 +66,7 @@ let cache: DB | null = null;
 function load(): DB {
   if (cache) return cache;
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = sessionStorage.getItem(KEY);
     cache = raw ? (JSON.parse(raw) as DB) : emptyDB();
   } catch {
     cache = emptyDB();
@@ -77,7 +78,7 @@ function load(): DB {
 
 function persist() {
   if (!cache) return;
-  localStorage.setItem(KEY, JSON.stringify(cache));
+  sessionStorage.setItem(KEY, JSON.stringify(cache));
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
 }
 
@@ -88,9 +89,14 @@ export function resetDB() {
 
 export function clearSensitiveLocalData() {
   cache = null;
-  localStorage.removeItem(KEY);
+  sessionStorage.removeItem(KEY);
   setPreferenceSnapshot(defaultPreferences());
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
+}
+
+export function clearLegacyLocalData() {
+  localStorage.removeItem(LEGACY_KEY);
+  localStorage.removeItem('tab_legacy_migrated_v1');
 }
 
 export function releaseSensitiveMemory() {

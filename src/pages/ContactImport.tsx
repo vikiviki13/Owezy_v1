@@ -39,6 +39,7 @@ import {
   type FriendImportSuccess,
 } from '../lib/friendImportService';
 import { listFriends } from '../lib/db';
+import { useSecurity } from '../components/SecurityContext';
 
 type Phase = 'select' | 'review' | 'saving' | 'result' | 'success';
 type ReviewFilter = 'all' | 'ready' | 'already' | 'attention';
@@ -49,6 +50,7 @@ function plural(count: number, singular: string, pluralValue = `${singular}s`) {
 
 export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDraft } = {}) {
   const navigate = useNavigate();
+  const { userId } = useSecurity();
   const [params] = useSearchParams();
   const routeOrigin: ContactImportOrigin = params.get('from') === 'expense' ? 'expense' : 'friends';
   const [origin, setOrigin] = useState<ContactImportOrigin>(initialDraft?.origin || routeOrigin);
@@ -70,7 +72,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
   useEffect(() => {
     if (initialDraft) return;
     let active = true;
-    void loadContactImportDraft()
+    void loadContactImportDraft(userId)
       .then((stored) => {
         if (!active) return;
         if (stored) {
@@ -78,12 +80,13 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
           setOrigin(stored.origin);
           setExpenseBaseIds(stored.expenseFriendIds);
         } else {
-          setDraft({ version: 1, origin: routeOrigin, expenseFriendIds: [], items: [], savedAt: new Date().toISOString() });
+          const now = Date.now();
+          setDraft({ version: 2, ownerUserId: userId, origin: routeOrigin, expenseFriendIds: [], items: [], savedAt: new Date(now).toISOString(), expiresAt: new Date(now + 30 * 60_000).toISOString() });
         }
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [initialDraft, routeOrigin]);
+  }, [initialDraft, routeOrigin, userId]);
 
   useEffect(() => {
     if (!draft?.items.length || phase === 'success') return;
@@ -130,7 +133,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
     try {
       const contacts = await pickDeviceContacts();
       if (!contacts.length) return;
-      const next = createContactImportDraft(contacts, origin, expenseBaseIds);
+      const next = createContactImportDraft(contacts, origin, userId, expenseBaseIds);
       setDraft((current) => ({
         ...next,
         items: [...(current?.items || []), ...next.items],
@@ -140,17 +143,17 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
     } finally {
       setPickerBusy(false);
     }
-  }, [expenseBaseIds, origin]);
+  }, [expenseBaseIds, origin, userId]);
 
   const continueToExpense = useCallback((newFriends = completed) => {
     if (!newFriends.length) return;
     const newFriendIds = newFriends.map((result) => result.friend.id);
-    saveExpenseContactHandoff({
+    saveExpenseContactHandoff(userId, {
       selectedFriendIds: Array.from(new Set([...expenseBaseIds, ...newFriendIds])),
       newFriendIds,
     });
     navigate('/add-expense?contactImport=1', { replace: true });
-  }, [completed, expenseBaseIds, navigate]);
+  }, [completed, expenseBaseIds, navigate, userId]);
 
   useEffect(() => {
     if (phase !== 'success' || origin !== 'expense' || !completed.length) return;
@@ -189,9 +192,9 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
 
     setLastFailures([]);
     setDraft((value) => value ? { ...value, items: [] } : value);
-    await clearContactImportDraft();
+    await clearContactImportDraft(userId);
     setPhase('success');
-  }, [completed]);
+  }, [completed, userId]);
 
   function requestImport() {
     if (selectedCount > 20) {
@@ -209,10 +212,11 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
   function finishFriends(destination: 'friends' | 'expense' | 'done') {
     const ids = completed.map((entry) => entry.friend.id);
     if (destination === 'expense') {
-      saveExpenseContactHandoff({ selectedFriendIds: ids, newFriendIds: ids });
+      saveExpenseContactHandoff(userId, { selectedFriendIds: ids, newFriendIds: ids });
       navigate('/add-expense?contactImport=1');
       return;
     }
+    void clearContactImportDraft(userId);
     navigate(destination === 'friends' && ids.length ? `/friends?new=${ids.join(',')}` : '/friends');
   }
 
@@ -221,6 +225,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
       setPhase('select');
       return;
     }
+    void clearContactImportDraft(userId);
     navigate(origin === 'expense' ? '/add-expense' : '/friends');
   }
 
@@ -350,7 +355,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
 
           <div className="relative mt-4">
             <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} className="input !pl-10 min-h-11" placeholder="Search selected contacts" aria-label="Search selected contacts" />
+            <input value={query} maxLength={120} onChange={(event) => setQuery(event.target.value)} className="input !pl-10 min-h-11" placeholder="Search selected contacts" aria-label="Search selected contacts" />
           </div>
 
           <div className="mt-3 grid grid-cols-3 items-center">
@@ -488,7 +493,7 @@ function ContactReviewRow({
         <div className="mt-4 border-t border-[var(--color-border)] pt-4 space-y-4">
           <label className="block">
             <span className="text-sm font-semibold text-[var(--color-text-secondary)]">Name <span className="text-[var(--color-error)]">*</span></span>
-            <input value={item.name} onChange={(event) => onUpdate({ name: event.target.value })} className="input mt-1.5 min-h-11" placeholder="Friend's name" />
+            <input value={item.name} maxLength={120} onChange={(event) => onUpdate({ name: event.target.value })} className="input mt-1.5 min-h-11" placeholder="Friend's name" />
           </label>
 
           {item.phones.length > 0 && (
@@ -514,6 +519,7 @@ function ContactReviewRow({
               className="input mt-1.5 min-h-11"
               placeholder="e.g. +91 98765 43210"
               inputMode="tel"
+              maxLength={32}
             />
             <span className="mt-1.5 block text-xs text-[var(--color-text-muted)]">Include the country code. Indian 10-digit numbers use +91 automatically.</span>
           </label>

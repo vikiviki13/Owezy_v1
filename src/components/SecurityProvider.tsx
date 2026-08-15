@@ -14,7 +14,13 @@ import {
   verifyPin,
 } from '../lib/securityService';
 import { SecurityContext } from './SecurityContext';
-import { releaseSensitiveMemory } from '../lib/db';
+import { clearLegacyLocalData, clearSensitiveLocalData } from '../lib/db';
+import { clearContactImportDraft } from '../lib/contactImport';
+
+function clearLockedData() {
+  clearSensitiveLocalData();
+  clearLegacyLocalData();
+}
 
 export function SecurityProvider({ userId, children }: { userId: string; children: ReactNode }) {
   const [status, setStatus] = useState<SecurityStatus | null>(null);
@@ -28,7 +34,9 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     const next = await getSecurityStatus(userId);
     setStatus(next);
     const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
-    setLocked(next.appLockEnabled && (!next.grantValid || locallyExpired));
+    const locked = next.appLockEnabled && (!next.grantValid || locallyExpired);
+    setLocked(locked);
+    if (locked) { clearLockedData(); void clearContactImportDraft(userId); }
     setLoading(false);
     return next;
   }, [userId]);
@@ -42,10 +50,12 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
         if (!active) return;
         setStatus(next);
         const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
-        setLocked(next.appLockEnabled && (!next.grantValid || locallyExpired));
+        const locked = next.appLockEnabled && (!next.grantValid || locallyExpired);
+        setLocked(locked);
+        if (locked) { clearLockedData(); void clearContactImportDraft(userId); }
         if (locallyExpired) void lockApp(userId);
       })
-      .catch(() => { if (active) setLocked(true); })
+      .catch(() => { if (active) { setLocked(true); clearLockedData(); void clearContactImportDraft(userId); } })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [userId]);
@@ -62,7 +72,8 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     window.clearTimeout(timer.current);
     setLocked(true);
     setUnlockMessage('');
-    releaseSensitiveMemory();
+    clearLockedData();
+    void clearContactImportDraft(userId);
     await lockApp(userId);
   }, [userId]);
 

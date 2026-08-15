@@ -1,6 +1,7 @@
 import { FormEvent, useState } from 'react';
 import { Wallet, LoaderCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { authenticationErrorMessage } from '../lib/safeErrors';
 
 type Mode = 'sign-in' | 'sign-up';
 
@@ -24,6 +25,10 @@ export function Auth() {
     }
     if (password.length < 8) {
       setError('Password must contain at least 8 characters.');
+      return;
+    }
+    if (password.length > 128) {
+      setError('Password must contain no more than 128 characters.');
       return;
     }
 
@@ -52,7 +57,7 @@ export function Auth() {
         }
       }
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Authentication failed. Please try again.');
+      setError(authenticationErrorMessage(caught, mode));
     } finally {
       setLoading(false);
     }
@@ -93,6 +98,7 @@ export function Auth() {
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Your name"
+                  maxLength={120}
                   required
                 />
               </label>
@@ -106,6 +112,7 @@ export function Auth() {
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="you@example.com"
+                maxLength={254}
                 required
               />
             </label>
@@ -119,6 +126,7 @@ export function Auth() {
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="At least 8 characters"
                 minLength={8}
+                maxLength={128}
                 required
               />
             </label>

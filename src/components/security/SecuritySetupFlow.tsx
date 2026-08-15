@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Check, Fingerprint, KeyRound, LoaderCircle, LockKeyhole, ShieldCheck, X } from 'lucide-react';
 import type { AutoLockDuration } from '../../types/security';
-import { createPin, enableAppLock, isPlatformAuthenticatorAvailable, registerAuthenticator, SecurityServiceError } from '../../lib/securityService';
+import { createPin, enableAppLock, isPlatformAuthenticatorAvailable, registerAuthenticator, SecurityServiceError, verifyAccountPassword } from '../../lib/securityService';
 import { useSecurity } from '../SecurityContext';
 import { PinCreationFlow } from './PinCreationFlow';
 
-type SetupStep = 'intro' | 'device' | 'pin' | 'auto-lock' | 'success';
+type SetupStep = 'intro' | 'verify-account' | 'device' | 'pin' | 'auto-lock' | 'success';
 
 const AUTO_LOCK_OPTIONS: { value: AutoLockDuration; label: string; description?: string }[] = [
   { value: 'immediately', label: 'Immediately' },
@@ -23,6 +23,8 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
   const [autoLockDuration, setAutoLockDuration] = useState<AutoLockDuration>('5m');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [password, setPassword] = useState('');
+  const [stepUpToken, setStepUpToken] = useState('');
 
   useEffect(() => {
     if (step === 'device' && platformAvailable === null) void isPlatformAuthenticatorAvailable().then(setPlatformAvailable);
@@ -31,31 +33,44 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
   const setupDevice = useCallback(async () => {
     setBusy(true); setError('');
     try {
-      await registerAuthenticator(userId);
+      await registerAuthenticator(userId, undefined, stepUpToken);
       setDeviceEnabled(true);
       setStep(status?.pinEnabled ? 'auto-lock' : 'pin');
     } catch (caught) {
       if (caught instanceof SecurityServiceError && caught.code === 'authentication_cancelled') setError('');
       else setError(caught instanceof Error ? caught.message : 'Device Security could not be set up.');
     } finally { setBusy(false); }
-  }, [status?.pinEnabled, userId]);
+  }, [status?.pinEnabled, stepUpToken, userId]);
 
   const savePin = useCallback(async (pin: string) => {
     setBusy(true); setError('');
-    try { await createPin(userId, pin); setStep('auto-lock'); }
+    try { await createPin(userId, pin, stepUpToken); setStep('auto-lock'); }
     catch (caught) { setError(caught instanceof Error ? caught.message : 'The PIN could not be saved.'); }
     finally { setBusy(false); }
-  }, [userId]);
+  }, [stepUpToken, userId]);
+
+  const verifyAccount = useCallback(async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true); setError('');
+    try {
+      const proof = await verifyAccountPassword(userId, password, 'security_setup');
+      setStepUpToken(proof);
+      setPassword('');
+      setStep('device');
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Account verification failed.');
+    } finally { setBusy(false); }
+  }, [password, userId]);
 
   const finish = useCallback(async () => {
     setBusy(true); setError('');
     try {
-      await enableAppLock(userId, autoLockDuration);
+      await enableAppLock(userId, autoLockDuration, stepUpToken);
       await refresh();
       setStep('success');
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'App Lock could not be enabled.'); }
     finally { setBusy(false); }
-  }, [autoLockDuration, refresh, userId]);
+  }, [autoLockDuration, refresh, stepUpToken, userId]);
 
   return (
     <main className="fixed inset-0 z-[250] overflow-y-auto bg-[var(--color-bg)] px-5 py-7 safe-top safe-bottom">
@@ -72,9 +87,18 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
               <div className="text-left rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mt-7 space-y-3">
                 {['Protect expense history', 'Protect friend balances', 'Protect repayment information', 'Protect statements', 'Protect attachments'].map((benefit) => <div key={benefit} className="flex items-center gap-3 text-sm"><span className="size-6 rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center"><Check size={14} strokeWidth={3} /></span>{benefit}</div>)}
               </div>
-              <button type="button" onClick={() => setStep('device')} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold mt-7">Continue</button>
+              <button type="button" onClick={() => setStep('verify-account')} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold mt-7">Continue</button>
               <button type="button" onClick={onCancel} className="min-h-12 px-5 text-sm font-semibold text-[var(--color-text-secondary)] mt-2">Not Now</button>
             </section>
+          )}
+
+          {step === 'verify-account' && (
+            <form onSubmit={verifyAccount} className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5">
+              <div className="text-center"><span className="size-16 rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto"><ShieldCheck size={28} /></span><h1 className="text-2xl font-bold mt-5">Verify Your Account</h1><p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-2">Enter your current account password before adding unlock methods. This proof is valid only for this setup and expires after five minutes.</p></div>
+              <label className="block mt-6"><span className="text-sm font-semibold">Account password</span><input type="password" autoComplete="current-password" className="input min-h-12 mt-2" value={password} onChange={(event) => setPassword(event.target.value)} maxLength={1024} required /></label>
+              {error && <p className="text-sm text-[var(--color-error)] mt-3" role="alert">{error}</p>}
+              <button disabled={busy || !password} className="w-full min-h-14 rounded-2xl bg-[var(--color-primary)] text-white font-semibold mt-5 flex items-center justify-center gap-2 disabled:opacity-50">{busy && <LoaderCircle className="animate-spin" size={18} />}Verify and Continue</button>
+            </form>
           )}
 
           {step === 'device' && (
