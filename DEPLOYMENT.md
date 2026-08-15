@@ -62,7 +62,7 @@ In Supabase, open **Authentication → URL Configuration**:
 ## 5. Deploy with Vercel
 
 1. Push this source folder to GitHub and import the repository into Vercel.
-2. If this folder is inside a larger repository, set Vercel's **Root Directory** to `tab-expense-tracker-source`.
+2. If this folder is inside a larger repository, set Vercel's **Root Directory** to `owezy-source`.
 3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under **Project Settings → Environment Variables** for Production and Preview.
 4. Deploy. `vercel.json` selects the Vite build and `dist` output automatically.
 5. Copy the final `https://your-app.vercel.app` URL, add it to `WEBAUTHN_ALLOWED_ORIGINS`, set it as `WEBAUTHN_RP_ID`, and redeploy the `security` function using the commands above.
@@ -85,7 +85,7 @@ Device Security requires HTTPS in production. `http://localhost` is the browser-
 ## 7. Netlify alternative
 
 1. Push this source folder to GitHub and import the repository into Netlify.
-2. If this folder is inside a larger repository, set the **Base directory** to `tab-expense-tracker-source`.
+2. If this folder is inside a larger repository, set the **Base directory** to `owezy-source`.
 3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` under **Site configuration → Environment variables**.
 4. Deploy. `netlify.toml` runs the build and publishes `dist` automatically.
 

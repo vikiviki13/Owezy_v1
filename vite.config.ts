@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png'],
       manifest: {
-        name: 'Tab — Friend Expense Tracker',
-        short_name: 'Tab',
-        description: 'I paid. Remember it for me.',
+        name: 'Owezy — Friend Expense Tracker',
+        short_name: 'Owezy',
+        description: 'You Pay, We Remember.',
         theme_color: '#059669',
         background_color: '#FBFAF7',
         display: 'standalone',

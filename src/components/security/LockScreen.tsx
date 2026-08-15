@@ -60,9 +60,9 @@ export function LockScreen() {
   return (
     <main className="fixed inset-0 z-[200] overflow-y-auto bg-[var(--color-bg)] px-5 py-8 safe-top safe-bottom">
       <div className="min-h-full w-full max-w-sm mx-auto flex flex-col justify-center text-center">
-        <div className="flex items-center justify-center gap-2 text-[var(--color-primary)] mb-8" aria-label="Tab expense tracker">
+        <div className="flex items-center justify-center gap-2 text-[var(--color-primary)] mb-8" aria-label="Owezy expense tracker">
           <ShieldCheck size={22} />
-          <span className="font-bold tracking-tight">Tab</span>
+          <span className="font-bold tracking-tight">Owezy</span>
         </div>
         <span className="size-20 rounded-[26px] bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center mx-auto shadow-sm">
           <LockKeyhole size={34} />

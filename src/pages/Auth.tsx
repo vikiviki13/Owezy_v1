@@ -77,7 +77,7 @@ export function Auth() {
             <Wallet size={24} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Tab</h1>
+            <h1 className="text-2xl font-bold">Owezy</h1>
             <p className="text-sm text-[var(--color-text-muted)]">Friend expense tracker</p>
           </div>
         </div>

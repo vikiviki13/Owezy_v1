@@ -1,6 +1,6 @@
-# Tab — Friend Expense & Repayment Tracker
+# Owezy — Friend Expense & Repayment Tracker
 
-"I paid. Remember it for me."
+"You Pay, We Remember."
 
 A mobile-first PWA for tracking money you have fronted for friends and what they have paid back. The app now supports multiple private user accounts with Supabase email/password authentication and cloud synchronization.
 

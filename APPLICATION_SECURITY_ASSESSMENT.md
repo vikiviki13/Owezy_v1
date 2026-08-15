@@ -1,6 +1,6 @@
 # APPLICATION SECURITY ASSESSMENT REPORT
 
-**Application:** Tab — Friend Expense Tracker  
+**Application:** Owezy — Friend Expense Tracker  
 **Repository:** `D:\Projects\share`  
 **Assessment date:** 2026-08-15  
 **Assessment type:** Defensive static review, local build/test validation, dependency and secret audit  

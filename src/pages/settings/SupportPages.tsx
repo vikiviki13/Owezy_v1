@@ -50,7 +50,7 @@ export function AboutSettings() {
     }
   }
 
-  return <SettingsPage title="About"><div className="text-center py-7"><div className="w-18 h-18 rounded-3xl bg-[var(--color-primary)] text-white flex items-center justify-center text-3xl font-extrabold mx-auto shadow-lg shadow-emerald-900/15">T</div><h2 className="text-2xl font-extrabold mt-4">Tab</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">Friend Expense Tracker</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {APP_VERSION} · Build {import.meta.env.MODE}</p></div>
+  return <SettingsPage title="About"><div className="text-center py-7"><div className="w-18 h-18 rounded-3xl bg-[var(--color-primary)] text-white flex items-center justify-center text-3xl font-extrabold mx-auto shadow-lg shadow-emerald-900/15">O</div><h2 className="text-2xl font-extrabold mt-4">Owezy</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">Friend Expense Tracker</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {APP_VERSION} · Build {import.meta.env.MODE}</p></div>
     <SettingsSection title="App Version">
       <button onClick={() => void checkUpdates()} disabled={checking} className="w-full min-h-14 px-4 flex items-center gap-3 text-left disabled:opacity-50">
         <RefreshCw size={18} className={`text-[var(--color-text-secondary)] ${checking ? 'animate-spin' : ''}`} />

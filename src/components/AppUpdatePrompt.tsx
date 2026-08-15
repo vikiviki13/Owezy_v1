@@ -98,7 +98,7 @@ export function AppUpdatePrompt() {
           <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
             <CheckCircle2 size={18} />
           </span>
-          <p className="flex-1 text-sm font-medium">Tab is ready to work offline</p>
+          <p className="flex-1 text-sm font-medium">Owezy is ready to work offline</p>
           <button onClick={dismissOfflineReady} aria-label="Dismiss" className="size-8 rounded-full grid place-items-center hover:bg-[var(--color-surface-secondary)]">
             <X size={16} className="text-[var(--color-text-muted)]" />
           </button>
@@ -116,13 +116,13 @@ export function AppUpdatePrompt() {
           <span className="mx-auto grid size-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
             {phase === 'updating' ? <LoaderCircle size={26} className="animate-spin" /> : <RefreshCw size={26} />}
           </span>
-          <h2 className="text-lg font-bold mt-4">{phase === 'updating' ? 'Updating Tab…' : 'Update required'}</h2>
+          <h2 className="text-lg font-bold mt-4">{phase === 'updating' ? 'Updating Owezy…' : 'Update required'}</h2>
           <p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-2">
             {phase === 'failed'
               ? 'Check your internet connection and try again.'
               : phase === 'updating'
                 ? 'This will only take a moment.'
-                : 'Please update Tab to continue securely.'}
+                : 'Please update Owezy to continue securely.'}
           </p>
           {phase === 'failed' ? (
             <button onClick={() => setPhase('idle')} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold mt-6">Try Again</button>
@@ -164,7 +164,7 @@ export function AppUpdatePrompt() {
           <div className="flex items-center gap-3">
             <LoaderCircle size={22} className="animate-spin text-[var(--color-primary)] shrink-0" />
             <div>
-              <p className="font-semibold text-sm">Updating Tab…</p>
+              <p className="font-semibold text-sm">Updating Owezy…</p>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">This will only take a moment.</p>
             </div>
           </div>
@@ -176,7 +176,7 @@ export function AppUpdatePrompt() {
               </span>
               <div className="flex-1">
                 <p className="font-semibold text-sm">New update available</p>
-                <p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-0.5">A newer version of Tab is ready with the latest improvements and fixes.</p>
+                <p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-0.5">A newer version of Owezy is ready with the latest improvements and fixes.</p>
               </div>
               <button onClick={dismiss} aria-label="Dismiss" className="size-8 rounded-full grid place-items-center hover:bg-[var(--color-surface-secondary)]">
                 <X size={16} className="text-[var(--color-text-muted)]" />
