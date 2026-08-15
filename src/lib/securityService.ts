@@ -206,6 +206,15 @@ export async function disableAppLock(userId: string) {
   clearUnlockGrant(userId);
 }
 
+// Escape hatch for a locked-out user: verify the account password server-side
+// and disable App Lock with the resulting step-up proof, without needing an
+// unlock grant or remembered PIN.
+export async function disableAppLockWithPassword(userId: string, password: string) {
+  const proof = await verifyAccountPassword(userId, password, 'security_setup');
+  await invoke('lock/disable', { stepUpToken: proof }, userId);
+  clearUnlockGrant(userId);
+}
+
 export async function setAutoLock(userId: string, autoLockDuration: AutoLockDuration) {
   await invoke('lock/auto-lock', { autoLockDuration }, userId);
   const token = getUnlockGrant(userId);

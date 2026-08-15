@@ -822,7 +822,11 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'lock/disable') {
-      await requireFreshGrant(admin, user.id, unlockToken);
+      // A fresh unlock grant is the normal path, but a step-up proof from
+      // account-password verification is accepted too so a user who enabled
+      // App Lock but can no longer unlock can regain access with the
+      // strongest credential they have.
+      await requireFreshGrantOrSetupProof(admin, user.id, unlockToken, stepUpToken, Boolean(stepUpToken));
       await admin.from('security_profiles').update({ app_lock_enabled: false, updated_at: new Date().toISOString() }).eq('user_id', user.id);
       await admin.from('app_unlock_sessions').update({ revoked_at: new Date().toISOString() }).eq('user_id', user.id).is('revoked_at', null);
       await recordEvent(admin, user.id, 'app_lock_disabled');
