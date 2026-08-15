@@ -226,6 +226,8 @@ export function createFriend(input: Partial<Friend> & { name: string }): Friend 
     nickname: input.nickname,
     phone: input.phone,
     whatsapp_number: input.whatsapp_number,
+    phone_number: input.phone_number,
+    whatsapp_e164: input.whatsapp_e164,
     email: input.email,
     avatar_url: input.avatar_url,
     notes: input.notes,
@@ -236,6 +238,23 @@ export function createFriend(input: Partial<Friend> & { name: string }): Friend 
   db.friends.push(friend);
   persist();
   return friend;
+}
+export function commitImportedFriends(friends: Friend[]): Friend[] {
+  if (!friends.length) return [];
+  const db = load();
+  const committed: Friend[] = [];
+  friends.forEach((friend) => {
+    const existing = db.friends.find((item) => item.id === friend.id);
+    if (existing) {
+      Object.assign(existing, friend);
+      committed.push(existing);
+      return;
+    }
+    db.friends.push(friend);
+    committed.push(friend);
+  });
+  persist();
+  return committed;
 }
 export function updateFriend(id: string, patch: Partial<Friend>) {
   const db = load();

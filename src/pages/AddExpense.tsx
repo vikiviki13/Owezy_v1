@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Search, Check, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Search, Check, ContactRound, LoaderCircle, X, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal } from 'lucide-react';
 import { createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
 import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
+import { consumeExpenseContactHandoff, createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -22,13 +23,25 @@ export function AddExpense() {
   const groupId = params.get('group');
   const navigate = useNavigate();
   const toast = useToast();
+  const [contactHandoff] = useState(() => params.get('contactImport') === '1' ? consumeExpenseContactHandoff() : undefined);
   const friends = listFriends();
+  const newFriendIds = new Set(contactHandoff?.newFriendIds || []);
+  const orderedFriends = newFriendIds.size
+    ? [...friends].sort((a, b) => Number(newFriendIds.has(b.id)) - Number(newFriendIds.has(a.id)))
+    : friends;
 
   const groupMemberIds = groupId ? getGroupMembers(groupId).map((f) => f.id) : [];
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selected, setSelected] = useState<string[]>(preselectFriend ? [preselectFriend] : groupMemberIds);
+  const initialFriendIds = Array.from(new Set([
+    ...(preselectFriend ? [preselectFriend] : []),
+    ...groupMemberIds,
+    ...(contactHandoff?.selectedFriendIds || []),
+  ]));
+  const [step, setStep] = useState<1 | 2 | 3>(contactHandoff?.newFriendIds.length ? 2 : 1);
+  const [selected, setSelected] = useState<string[]>(initialFriendIds);
   const [search, setSearch] = useState('');
   const [newFriendName, setNewFriendName] = useState('');
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pickerError, setPickerError] = useState('');
 
   const [total, setTotal] = useState('');
   const [includeOwner, setIncludeOwner] = useState(true);
@@ -41,7 +54,7 @@ export function AddExpense() {
   const [notes, setNotes] = useState('');
   const [date] = useState(todayDate());
 
-  const filtered = friends.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = orderedFriends.filter((f) => f.name.toLowerCase().includes(search.toLowerCase()));
 
   function toggleFriend(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -52,6 +65,22 @@ export function AddExpense() {
     const f = createFriend({ name: newFriendName.trim() });
     setSelected((s) => [...s, f.id]);
     setNewFriendName('');
+  }
+
+  async function importContacts() {
+    setPickerBusy(true);
+    setPickerError('');
+    try {
+      const contacts = await pickDeviceContacts();
+      if (!contacts.length) return;
+      const draft = createContactImportDraft(contacts, 'expense', selected);
+      await saveContactImportDraft(draft);
+      navigate('/friends/import?from=expense');
+    } catch (caught) {
+      setPickerError(caught instanceof Error ? caught.message : 'Contacts could not be opened.');
+    } finally {
+      setPickerBusy(false);
+    }
   }
 
   const totalNum = parseFloat(total) || 0;
@@ -123,7 +152,7 @@ export function AddExpense() {
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who's this for?</p>
           <div className="relative mb-3">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends" className="input pl-9" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends" className="input !pl-9" />
           </div>
 
           {selected.length > 0 && (
@@ -132,9 +161,9 @@ export function AddExpense() {
                 const f = friends.find((x) => x.id === id);
                 if (!f) return null;
                 return (
-                  <span key={id} onClick={() => toggleFriend(id)} className="flex items-center gap-1.5 bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)] text-sm font-medium px-3 py-1.5 rounded-full cursor-pointer">
-                    {f.name} ✕
-                  </span>
+                  <button key={id} onClick={() => toggleFriend(id)} className="min-h-10 flex items-center gap-1.5 bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)] text-sm font-medium px-3 rounded-full">
+                    {f.name} <X size={14} aria-hidden="true" />
+                  </button>
                 );
               })}
             </div>
@@ -153,6 +182,18 @@ export function AddExpense() {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={() => void importContacts()}
+            disabled={pickerBusy}
+            className="mb-4 min-h-14 w-full flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 text-left disabled:opacity-50"
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+              {pickerBusy ? <LoaderCircle size={20} className="animate-spin" /> : <ContactRound size={20} />}
+            </span>
+            <span className="flex-1"><span className="block font-semibold">Import Contacts</span><span className="block text-xs leading-5 text-[var(--color-text-muted)]">Add and select several friends at once</span></span>
+          </button>
+          {pickerError && <p role="alert" className="mb-4 text-sm leading-5 text-[var(--color-error)]">{pickerError}</p>}
 
           <div className="flex items-center gap-2 border-t border-[var(--color-border)] pt-4">
             <input

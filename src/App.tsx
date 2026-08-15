@@ -12,6 +12,7 @@ import { Auth } from './pages/Auth';
 import { Onboarding } from './pages/Onboarding';
 import { Home } from './pages/Home';
 import { Friends } from './pages/Friends';
+import { ContactImport } from './pages/ContactImport';
 import { FriendDetail } from './pages/FriendDetail';
 import { AddExpense } from './pages/AddExpense';
 import { RecordRepayment } from './pages/RecordRepayment';
@@ -29,6 +30,7 @@ import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './li
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { clearSensitiveLocalData } from './lib/db';
 import { clearLocalSecurityState } from './lib/securityService';
+import { clearContactImportDraft } from './lib/contactImport';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -46,6 +48,7 @@ export default function App() {
         if (currentUserId) {
           clearLocalSecurityState(currentUserId);
           clearSensitiveLocalData();
+          void clearContactImportDraft();
         }
         currentUserId = null;
         if (mounted) {
@@ -155,6 +158,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/friends" element={<Friends />} />
+            <Route path="/friends/import" element={<ContactImport />} />
             <Route path="/friends/:id" element={<FriendDetail />} />
             <Route path="/add-expense" element={<AddExpense />} />
             <Route path="/record-repayment" element={<RecordRepayment />} />
