@@ -9,8 +9,10 @@ const NAV_ITEMS = [
   { to: '/activity', label: 'Activity', icon: Activity },
   { to: '/groups', label: 'Groups', icon: LayoutGrid },
   { to: '/profile', label: 'Profile', icon: User },
-  { to: '/profile/share', label: 'Share', icon: Share2 },
 ];
+
+const MOBILE_NAV_ITEMS = [...NAV_ITEMS];
+const DESKTOP_NAV_ITEMS = [...NAV_ITEMS, { to: '/profile/share', label: 'Share', icon: Share2 }];
 
 export function Shell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
@@ -34,7 +36,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <Plus size={18} /> Add
         </button>}
         <nav className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => (
+          {DESKTOP_NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -67,7 +69,7 @@ export function Shell({ children }: { children: ReactNode }) {
         {/* Mobile bottom nav */}
         {!isSubPage && <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-bottom">
           <div className="flex items-stretch justify-around max-w-2xl mx-auto">
-            {NAV_ITEMS.map((item) => (
+            {MOBILE_NAV_ITEMS.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
