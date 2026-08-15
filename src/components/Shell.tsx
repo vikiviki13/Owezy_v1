@@ -23,7 +23,7 @@ export function Shell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col w-64 border-r border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-6 sticky top-0 h-screen">
         <div className="flex items-center gap-2 px-2 mb-8">
-          <div className="w-8 h-8 rounded-xl bg-[var(--color-primary)] flex items-center justify-center text-white font-bold">O</div>
+          <img src="/icon.png" alt="Owezy" className="w-8 h-8 rounded-xl object-cover" />
           <span className="font-bold text-lg">Owezy</span>
         </div>
         {!isSubPage && <button

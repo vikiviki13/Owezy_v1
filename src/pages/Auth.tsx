@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Wallet, LoaderCircle } from 'lucide-react';
+import { LoaderCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { authenticationErrorMessage } from '../lib/safeErrors';
 
@@ -73,9 +73,7 @@ export function Auth() {
     <main className="min-h-screen px-5 py-10 safe-top flex items-center justify-center">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary)] text-white flex items-center justify-center">
-            <Wallet size={24} />
-          </div>
+          <img src="/icon.png" alt="Owezy" className="w-12 h-12 rounded-2xl object-cover" />
           <div>
             <h1 className="text-2xl font-bold">Owezy</h1>
             <p className="text-sm text-[var(--color-text-muted)]">You Pay, We Remember.</p>
