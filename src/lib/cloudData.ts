@@ -1,9 +1,18 @@
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
 import { defaultPreferences } from './preferences';
+import { readPrivateData, writePrivateData } from './securityService';
 
-const LOCAL_DB_KEY = 'tab_db_v1';
-const LEGACY_MIGRATION_KEY = 'tab_legacy_migrated_v1';
+const RUNTIME_DB_KEY = 'tab_db_session_v2';
+const LEGACY_DB_KEY = 'tab_db_v1';
+
+export type LegacyMigrationDecision = 'import' | 'discard';
+
+export class LegacyDataChoiceRequired extends Error {
+  constructor() {
+    super('Older data was found on this device and needs your confirmation.');
+    this.name = 'LegacyDataChoiceRequired';
+  }
+}
 
 type StoredData = Record<string, unknown> & {
   profile: Record<string, unknown>;
@@ -73,18 +82,12 @@ function prepareData(value: unknown, user: User): StoredData {
 }
 
 async function upload(userId: string, data: StoredData) {
-  const { error } = await supabase
-    .from('app_data')
-    .upsert(
-      { user_id: userId, data, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' },
-    );
-  if (error) throw error;
+  await writePrivateData(userId, data);
 }
 
 function queueUpload() {
   if (!activeUserId) return;
-  const raw = localStorage.getItem(LOCAL_DB_KEY);
+  const raw = sessionStorage.getItem(RUNTIME_DB_KEY);
   if (!raw) return;
 
   const userId = activeUserId;
@@ -107,37 +110,38 @@ function queueUpload() {
     });
 }
 
-export async function initializeCloudData(user: User) {
+export async function initializeCloudData(user: User, legacyDecision?: LegacyMigrationDecision) {
   stopCloudData();
   lastSyncError = null;
 
-  const { data: row, error } = await supabase
-    .from('app_data')
-    .select('data')
-    .eq('user_id', user.id)
-    .maybeSingle();
-  if (error) throw error;
+  const storedData = await readPrivateData<StoredData>(user.id);
 
   let data: StoredData;
-  if (row?.data) {
-    data = prepareData(row.data, user);
+  if (storedData) {
+    data = prepareData(storedData, user);
+    // A confirmed server copy supersedes plaintext persistence used by older
+    // releases, so remove that residual shared-browser copy immediately.
+    localStorage.removeItem(LEGACY_DB_KEY);
+    localStorage.removeItem('tab_legacy_migrated_v1');
   } else {
-    const legacy = localStorage.getItem(LOCAL_DB_KEY);
-    const legacyAlreadyClaimed = localStorage.getItem(LEGACY_MIGRATION_KEY) === '1';
-    if (legacy && !legacyAlreadyClaimed) {
+    const legacy = localStorage.getItem(LEGACY_DB_KEY);
+    if (legacy && !legacyDecision) throw new LegacyDataChoiceRequired();
+    if (legacy && legacyDecision === 'import') {
       try {
         data = prepareData(JSON.parse(legacy), user);
       } catch {
         data = emptyData(user);
       }
-      localStorage.setItem(LEGACY_MIGRATION_KEY, '1');
     } else {
       data = emptyData(user);
     }
     await upload(user.id, data);
+    // Remove the unbound legacy copy only after the chosen server operation
+    // succeeds, so a failed migration is never silently marked complete.
+    if (legacy && legacyDecision) localStorage.removeItem(LEGACY_DB_KEY);
   }
 
-  localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(data));
+  sessionStorage.setItem(RUNTIME_DB_KEY, JSON.stringify(data));
   activeUserId = user.id;
   syncHandler = queueUpload;
   window.addEventListener('tab-db-changed', syncHandler);

@@ -7,7 +7,21 @@ create table if not exists public.app_data (
 alter table public.app_data enable row level security;
 
 revoke all on table public.app_data from anon;
+-- Direct access is removed by `security_enforcement.sql` after the new Edge
+-- Function and frontend are deployed. Keeping this grant during the staged
+-- upgrade prevents an outage for clients running the previous release.
 grant select, insert, update, delete on table public.app_data to authenticated;
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'app_data_size_limit'
+  ) then
+    alter table public.app_data
+      add constraint app_data_size_limit
+      check (octet_length(data::text) <= 2097152) not valid;
+  end if;
+end $$;
 
 drop policy if exists "Users can read their own app data" on public.app_data;
 create policy "Users can read their own app data"
@@ -48,7 +62,21 @@ create table if not exists public.friends (
 
 alter table public.friends enable row level security;
 revoke all on table public.friends from anon;
+-- Direct access is removed by `security_enforcement.sql` as the final staged
+-- rollout step once confirmed contact imports use the Edge Function.
 grant select, insert, update, delete on table public.friends to authenticated;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'friends_field_lengths') then
+    alter table public.friends add constraint friends_field_lengths check (
+      length(name) <= 120
+      and (nickname is null or length(nickname) <= 80)
+      and length(phone_number) <= 32
+      and (email is null or length(email) <= 254)
+    ) not valid;
+  end if;
+end $$;
 
 drop policy if exists "Users can read their own friends" on public.friends;
 create policy "Users can read their own friends" on public.friends
@@ -217,29 +245,223 @@ create table if not exists public.security_events (
     'webauthn_removed',
     'webauthn_verified',
     'account_recovery',
-    'data_export_verified'
+    'data_export_verified',
+    'password_reauthentication_failed',
+    'password_reauthentication_succeeded',
+    'security_rate_limited',
+    'private_data_access_denied',
+    'friend_import_failed',
+    'all_sessions_revoked'
   ))
 );
 
+-- Recreate the event constraint when upgrading an existing project so the
+-- newly monitored security events are accepted.
+alter table public.security_events drop constraint if exists security_events_type;
+alter table public.security_events add constraint security_events_type check (event_type in (
+  'app_lock_enabled',
+  'app_lock_disabled',
+  'pin_created',
+  'pin_changed',
+  'pin_failed',
+  'webauthn_registered',
+  'webauthn_removed',
+  'webauthn_verified',
+  'account_recovery',
+  'data_export_verified',
+  'password_reauthentication_failed',
+  'password_reauthentication_succeeded',
+  'security_rate_limited',
+  'private_data_access_denied',
+  'friend_import_failed',
+  'all_sessions_revoked'
+));
+
 create index if not exists security_events_user_created_idx
 on public.security_events (user_id, created_at desc);
+
+-- Short-lived, action-bound proofs produced only after Supabase Auth has
+-- explicitly verified the current account password. Tokens are stored hashed.
+create table if not exists public.security_step_up_proofs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  token_hash text not null unique,
+  purpose text not null,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint security_step_up_purpose check (purpose in ('security_setup', 'pin_recovery'))
+);
+
+create index if not exists security_step_up_proofs_lookup_idx
+on public.security_step_up_proofs (user_id, token_hash, purpose)
+where consumed_at is null;
+
+-- Server-only counters provide atomic throttling across concurrent Edge
+-- Function instances. Buckets contain only a purpose and a hashed IP label.
+create table if not exists public.security_rate_limits (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  bucket text not null,
+  attempt_count integer not null default 0,
+  window_started_at timestamptz not null default now(),
+  blocked_until timestamptz,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, bucket),
+  constraint security_rate_limit_bucket_length check (length(bucket) between 1 and 120),
+  constraint security_rate_limit_attempts check (attempt_count >= 0)
+);
+
+-- Alerts are intentionally separate from the user-visible activity feed.
+-- Operators can forward these rows to their monitoring provider without
+-- exposing PINs, tokens, credentials, raw IP addresses, or financial data.
+create table if not exists public.security_alerts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
+  alert_type text not null,
+  severity text not null,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  acknowledged_at timestamptz,
+  constraint security_alert_severity check (severity in ('low', 'medium', 'high', 'critical')),
+  constraint security_alert_type_length check (length(alert_type) between 1 and 80)
+);
+
+create index if not exists security_alerts_created_idx
+on public.security_alerts (created_at desc)
+where acknowledged_at is null;
+
+-- Claim a PIN verification attempt while holding the profile row lock. This
+-- makes the escalating delay reliable even when requests arrive concurrently.
+create or replace function public.claim_pin_attempt(p_user_id uuid)
+returns table (attempts integer, locked_until timestamptz, allowed boolean)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  profile public.security_profiles%rowtype;
+  next_attempts integer;
+  delay_seconds integer;
+  next_locked_until timestamptz;
+begin
+  select * into profile
+  from public.security_profiles
+  where user_id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'security profile not found';
+  end if;
+
+  if profile.locked_until is not null and profile.locked_until > now() then
+    return query select profile.failed_pin_attempt_count, profile.locked_until, false;
+    return;
+  end if;
+
+  next_attempts := profile.failed_pin_attempt_count + 1;
+  delay_seconds := case
+    when next_attempts >= 10 then 300
+    when next_attempts >= 8 then 60
+    when next_attempts >= 5 then 30
+    else 0
+  end;
+  next_locked_until := case when delay_seconds > 0 then now() + make_interval(secs => delay_seconds) else null end;
+
+  update public.security_profiles
+  set failed_pin_attempt_count = next_attempts,
+      locked_until = next_locked_until,
+      updated_at = now()
+  where user_id = p_user_id;
+
+  return query select next_attempts, next_locked_until, true;
+end;
+$$;
+
+-- Generic fixed-window rate limiter. An advisory transaction lock serializes
+-- a single user's bucket without blocking unrelated users.
+create or replace function public.consume_security_rate_limit(
+  p_user_id uuid,
+  p_bucket text,
+  p_limit integer,
+  p_window_seconds integer,
+  p_block_seconds integer
+)
+returns table (allowed boolean, attempts integer, retry_after integer)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  current_row public.security_rate_limits%rowtype;
+  next_count integer;
+  next_blocked timestamptz;
+  window_start timestamptz;
+begin
+  if p_limit < 1 or p_window_seconds < 1 or p_block_seconds < 1 or length(p_bucket) not between 1 and 120 then
+    raise exception 'invalid rate-limit configuration';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || p_bucket, 0));
+  select * into current_row
+  from public.security_rate_limits
+  where user_id = p_user_id and bucket = p_bucket;
+
+  if found and current_row.blocked_until is not null and current_row.blocked_until > now() then
+    return query select false, current_row.attempt_count,
+      greatest(1, ceil(extract(epoch from (current_row.blocked_until - now())))::integer);
+    return;
+  end if;
+
+  if not found or current_row.window_started_at <= now() - make_interval(secs => p_window_seconds) then
+    next_count := 1;
+    window_start := now();
+  else
+    next_count := current_row.attempt_count + 1;
+    window_start := current_row.window_started_at;
+  end if;
+
+  next_blocked := case when next_count > p_limit then now() + make_interval(secs => p_block_seconds) else null end;
+
+  insert into public.security_rate_limits (
+    user_id, bucket, attempt_count, window_started_at, blocked_until, updated_at
+  ) values (
+    p_user_id, p_bucket, next_count, window_start, next_blocked, now()
+  )
+  on conflict (user_id, bucket) do update set
+    attempt_count = excluded.attempt_count,
+    window_started_at = excluded.window_started_at,
+    blocked_until = excluded.blocked_until,
+    updated_at = excluded.updated_at;
+
+  return query select next_count <= p_limit, next_count,
+    case when next_blocked is null then 0 else p_block_seconds end;
+end;
+$$;
 
 alter table public.security_profiles enable row level security;
 alter table public.user_authenticators enable row level security;
 alter table public.webauthn_challenges enable row level security;
 alter table public.app_unlock_sessions enable row level security;
 alter table public.security_events enable row level security;
+alter table public.security_step_up_proofs enable row level security;
+alter table public.security_rate_limits enable row level security;
+alter table public.security_alerts enable row level security;
 
 revoke all on table public.security_profiles from anon, authenticated;
 revoke all on table public.user_authenticators from anon, authenticated;
 revoke all on table public.webauthn_challenges from anon, authenticated;
 revoke all on table public.app_unlock_sessions from anon, authenticated;
 revoke all on table public.security_events from anon, authenticated;
+revoke all on table public.security_step_up_proofs from anon, authenticated;
+revoke all on table public.security_rate_limits from anon, authenticated;
+revoke all on table public.security_alerts from anon, authenticated;
+revoke all on function public.claim_pin_attempt(uuid) from public, anon, authenticated;
+revoke all on function public.consume_security_rate_limit(uuid, text, integer, integer, integer) from public, anon, authenticated;
+grant execute on function public.claim_pin_attempt(uuid) to service_role;
+grant execute on function public.consume_security_rate_limit(uuid, text, integer, integer, integer) to service_role;
 
--- Users may read their sanitized activity feed directly if needed, but event
--- creation stays server-only. The client currently reads through the Edge
--- Function so metadata can be filtered before it reaches the browser.
-grant select on table public.security_events to authenticated;
+-- The staged enforcement script removes any prior direct event-feed grant
+-- after the new App Lock-aware client is live.
 drop policy if exists "Users can read their security events" on public.security_events;
 create policy "Users can read their security events" on public.security_events
 for select to authenticated using ((select auth.uid()) = user_id);

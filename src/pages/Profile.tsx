@@ -10,12 +10,13 @@ import { SettingsRow, SettingsSection } from '../components/SettingsUI';
 import { usePreferences } from '../components/PreferencesContext';
 import { useToast } from '../components/ToastContext';
 import { clearCloudRuntimeState, flushCloudData } from '../lib/cloudData';
-import { clearSensitiveLocalData, getProfile, onDBChange } from '../lib/db';
+import { clearLegacyLocalData, clearSensitiveLocalData, getProfile, onDBChange } from '../lib/db';
 import { currencySymbol, formatDateTime } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { t } from '../lib/i18n';
-import { revokeAllSecuritySessions } from '../lib/securityService';
+import { clearAllLocalSecurityState, revokeAllSecuritySessions } from '../lib/securityService';
 import { useSecurity } from '../components/SecurityContext';
+import { clearContactImportDraft } from '../lib/contactImport';
 
 export function Profile() {
   const [profile, setProfile] = useState(getProfile);
@@ -29,17 +30,23 @@ export function Profile() {
 
   async function signOut() {
     setSigningOut(true);
+    let remoteFailure = false;
     try {
       try { await flushCloudData(); } catch { toast('Some changes could not be synced.'); }
-      await revokeAllSecuritySessions(userId);
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      try { await revokeAllSecuritySessions(userId); } catch { remoteFailure = true; }
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) remoteFailure = true;
+    } finally {
+      // Local privacy cleanup must never depend on network or Edge Function
+      // availability. A final local-only sign-out removes any residual token.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
       clearCloudRuntimeState();
       clearSensitiveLocalData();
+      clearLegacyLocalData();
+      clearAllLocalSecurityState();
+      await clearContactImportDraft(userId);
+      if (remoteFailure) toast('Local data was cleared. The server could not confirm every session revocation.');
       window.location.reload();
-    } catch (caught) {
-      toast(caught instanceof Error ? caught.message : 'Could not sign out');
-      setSigningOut(false);
     }
   }
 

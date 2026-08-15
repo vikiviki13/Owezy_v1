@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { AlertCircle, CloudOff, LoaderCircle, Wallet } from 'lucide-react';
+import { AlertCircle, CloudOff, Database, LoaderCircle, Wallet } from 'lucide-react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
@@ -26,11 +26,12 @@ import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSetting
 import { DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
-import { clearCloudRuntimeState, initializeCloudData, stopCloudData } from './lib/cloudData';
+import { clearCloudRuntimeState, initializeCloudData, LegacyDataChoiceRequired, stopCloudData, type LegacyMigrationDecision } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { clearSensitiveLocalData } from './lib/db';
-import { clearLocalSecurityState } from './lib/securityService';
+import { clearAllLocalSecurityState, clearLocalSecurityState } from './lib/securityService';
 import { clearContactImportDraft } from './lib/contactImport';
+import { privateDataErrorMessage } from './lib/safeErrors';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -45,11 +46,10 @@ export default function App() {
     async function activate(nextUser: User | null) {
       if (!nextUser) {
         clearCloudRuntimeState();
-        if (currentUserId) {
-          clearLocalSecurityState(currentUserId);
-          clearSensitiveLocalData();
-          void clearContactImportDraft();
-        }
+        if (currentUserId) clearLocalSecurityState(currentUserId);
+        clearAllLocalSecurityState();
+        clearSensitiveLocalData();
+        void clearContactImportDraft();
         currentUserId = null;
         if (mounted) {
           setUser(null);
@@ -58,6 +58,11 @@ export default function App() {
         }
         return;
       }
+      if (currentUserId && currentUserId !== nextUser.id) {
+        clearLocalSecurityState(currentUserId);
+        clearSensitiveLocalData();
+        await clearContactImportDraft();
+      }
       currentUserId = nextUser.id;
       if (mounted) { setUser(nextUser); setStartupError(''); setLoading(false); }
     }
@@ -65,7 +70,7 @@ export default function App() {
     void supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
         if (mounted) {
-          setStartupError(error.message);
+          setStartupError('Your session could not be restored securely. Sign in again.');
           setLoading(false);
         }
         return;
@@ -114,15 +119,39 @@ function PrivateDataApp({ user }: { user: User }) {
   const [syncError, setSyncError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
+  const [legacyPending, setLegacyPending] = useState(false);
+
+  useEffect(() => {
+    setOnboarded(localStorage.getItem(onboardingKey) === '1');
+  }, [onboardingKey]);
 
   useEffect(() => {
     let active = true;
     setDataLoading(true);
+    setDataError('');
+    setLegacyPending(false);
     void initializeCloudData(user)
-      .catch((caught) => { if (active) setDataError(caught instanceof Error ? caught.message : 'Could not load your cloud data.'); })
+      .catch((caught) => {
+        if (!active) return;
+        if (caught instanceof LegacyDataChoiceRequired) setLegacyPending(true);
+        else setDataError(privateDataErrorMessage(caught));
+      })
       .finally(() => { if (active) setDataLoading(false); });
     return () => { active = false; stopCloudData(); };
   }, [user]);
+
+  async function resolveLegacyData(decision: LegacyMigrationDecision) {
+    setDataLoading(true);
+    setDataError('');
+    try {
+      await initializeCloudData(user, decision);
+      setLegacyPending(false);
+    } catch (caught) {
+      setDataError(privateDataErrorMessage(caught));
+    } finally {
+      setDataLoading(false);
+    }
+  }
 
   useEffect(() => {
     const failed = (event: Event) => setSyncError((event as CustomEvent<string>).detail || 'Cloud sync failed.');
@@ -137,6 +166,20 @@ function PrivateDataApp({ user }: { user: User }) {
 
   if (dataLoading) return <LoadingScreen />;
   if (dataError) return <StartupError message={dataError} />;
+  if (legacyPending) {
+    return (
+      <main className="min-h-screen flex items-center justify-center px-5 bg-[var(--color-bg)]">
+        <section className="w-full max-w-md rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6">
+          <Database className="text-[var(--color-primary)]" size={30} />
+          <h1 className="text-xl font-bold mt-4">Older data found on this device</h1>
+          <p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-2">Import it only if it belongs to the account you just signed into. It will never be attached automatically.</p>
+          <div className="rounded-2xl bg-[var(--color-surface-secondary)] p-4 text-xs leading-5 text-[var(--color-text-secondary)] mt-4">Choosing “Start Fresh” removes the unassigned local copy from this browser after a new private account record is created.</div>
+          <button type="button" onClick={() => void resolveLegacyData('import')} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold mt-5">This Is My Data — Import</button>
+          <button type="button" onClick={() => void resolveLegacyData('discard')} className="w-full min-h-12 rounded-xl border border-[var(--color-border)] font-semibold mt-3">Start Fresh</button>
+        </section>
+      </main>
+    );
+  }
   if (!onboarded) {
     return (
       <Onboarding onDone={() => {

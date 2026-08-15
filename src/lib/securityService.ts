@@ -71,14 +71,19 @@ export function suggestedDeviceName() {
 }
 
 export function getUnlockGrant(userId: string) {
-  return sessionStorage.getItem(`${GRANT_KEY_PREFIX}${userId}`) || localStorage.getItem(`${GRANT_KEY_PREFIX}${userId}`);
+  // Drop grants written by older releases; persistent grants are no longer
+  // accepted after the security hardening migration.
+  localStorage.removeItem(`${GRANT_KEY_PREFIX}${userId}`);
+  return sessionStorage.getItem(`${GRANT_KEY_PREFIX}${userId}`);
 }
 
 export function saveUnlockGrant(userId: string, grant: UnlockGrant, duration: AutoLockDuration) {
   clearUnlockGrant(userId);
-  const storage = duration === 'immediately' ? sessionStorage : localStorage;
-  storage.setItem(`${GRANT_KEY_PREFIX}${userId}`, grant.token);
+  // Unlock grants never persist beyond the current browser tab. The server is
+  // authoritative for the configured idle duration.
+  sessionStorage.setItem(`${GRANT_KEY_PREFIX}${userId}`, grant.token);
   markActive(userId);
+  void duration;
 }
 
 export function clearUnlockGrant(userId: string) {
@@ -101,6 +106,16 @@ export function clearLocalSecurityState(userId: string) {
   document.documentElement.classList.remove('privacy-mode');
 }
 
+export function clearAllLocalSecurityState() {
+  for (const storage of [sessionStorage, localStorage]) {
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(GRANT_KEY_PREFIX) || key?.startsWith(ACTIVE_KEY_PREFIX)) storage.removeItem(key);
+    }
+  }
+  document.documentElement.classList.remove('privacy-mode');
+}
+
 export function clearLegacySecurityStorage() {
   localStorage.removeItem('tab_app_lock_hash_v1');
   localStorage.removeItem('tab_app_lock_salt_v1');
@@ -111,14 +126,14 @@ export async function getSecurityStatus(userId: string) {
   return invoke<SecurityStatus>('status', {}, userId);
 }
 
-export async function registerAuthenticator(userId: string, deviceName = suggestedDeviceName()) {
+export async function registerAuthenticator(userId: string, deviceName = suggestedDeviceName(), stepUpToken?: string) {
   if (!(await isPlatformAuthenticatorAvailable())) {
     throw new SecurityServiceError('platform_authenticator_unavailable', "Device authentication isn't available on this browser or device.");
   }
   try {
-    const start = await invoke<{ options: Parameters<typeof startRegistration>[0]['optionsJSON'] }>('webauthn/registration-options', {}, userId);
+    const start = await invoke<{ options: Parameters<typeof startRegistration>[0]['optionsJSON'] }>('webauthn/registration-options', { stepUpToken }, userId);
     const response = await startRegistration({ optionsJSON: start.options });
-    await invoke('webauthn/registration-verify', { response, deviceName }, userId);
+    await invoke('webauthn/registration-verify', { response, deviceName, stepUpToken }, userId);
   } catch (caught) {
     if (caught instanceof WebAuthnError && (caught.name === 'NotAllowedError' || caught.code === 'ERROR_CEREMONY_ABORTED')) {
       throw new SecurityServiceError('authentication_cancelled', '');
@@ -146,8 +161,8 @@ export async function authenticateWithWebAuthn(userId: string, duration: AutoLoc
   }
 }
 
-export async function createPin(userId: string, pin: string) {
-  const result = await invoke<{ grant: UnlockGrant }>('pin/create', { pin }, userId);
+export async function createPin(userId: string, pin: string, stepUpToken?: string) {
+  const result = await invoke<{ grant: UnlockGrant }>('pin/create', { pin, stepUpToken }, userId);
   saveUnlockGrant(userId, result.grant, '5m');
 }
 
@@ -162,14 +177,14 @@ export async function changePin(userId: string, pin: string) {
   await invoke('pin/change', { pin }, userId);
 }
 
-export async function recoverPin(userId: string, pin: string, duration: AutoLockDuration) {
-  const result = await invoke<{ grant: UnlockGrant }>('pin/recover', { pin }, userId);
+export async function recoverPin(userId: string, pin: string, duration: AutoLockDuration, stepUpToken?: string) {
+  const result = await invoke<{ grant: UnlockGrant }>('pin/recover', { pin, stepUpToken }, userId);
   saveUnlockGrant(userId, result.grant, duration);
   return result.grant;
 }
 
-export async function enableAppLock(userId: string, autoLockDuration: AutoLockDuration) {
-  const result = await invoke<{ grant?: UnlockGrant }>('lock/enable', { autoLockDuration }, userId);
+export async function enableAppLock(userId: string, autoLockDuration: AutoLockDuration, stepUpToken?: string) {
+  const result = await invoke<{ grant?: UnlockGrant }>('lock/enable', { autoLockDuration, stepUpToken }, userId);
   if (result.grant) saveUnlockGrant(userId, result.grant, autoLockDuration);
 }
 
@@ -183,9 +198,38 @@ export async function setAutoLock(userId: string, autoLockDuration: AutoLockDura
   const token = getUnlockGrant(userId);
   if (token) {
     clearUnlockGrant(userId);
-    const storage = autoLockDuration === 'immediately' ? sessionStorage : localStorage;
-    storage.setItem(`${GRANT_KEY_PREFIX}${userId}`, token);
+    sessionStorage.setItem(`${GRANT_KEY_PREFIX}${userId}`, token);
   }
+}
+
+export async function verifyAccountPassword(
+  userId: string,
+  password: string,
+  purpose: 'security_setup' | 'pin_recovery',
+) {
+  const result = await invoke<{ proof: string; expiresIn: number }>('reauth/password', { password, purpose }, userId);
+  return result.proof;
+}
+
+export async function readPrivateData<T>(userId: string) {
+  const result = await invoke<{ data: T | null; updatedAt: string | null }>('data/read', {}, userId);
+  return result.data;
+}
+
+export async function writePrivateData(userId: string, data: Record<string, unknown>) {
+  await invoke('data/write', { data }, userId);
+}
+
+export interface SecureFriendImportResponse<TRow = Record<string, unknown>> {
+  successes: Array<{ clientId: string; row: TRow }>;
+  failures: Array<{ clientId: string; name: string; reason: string }>;
+}
+
+export async function importConfirmedFriends<TRow = Record<string, unknown>>(
+  userId: string,
+  friends: Array<Record<string, unknown>>,
+) {
+  return invoke<SecureFriendImportResponse<TRow>>('friends/import', { friends }, userId);
 }
 
 export async function touchUnlockSession(userId: string) {

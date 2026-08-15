@@ -7,6 +7,7 @@ import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, SplitMode } from '../types';
 import { consumeExpenseContactHandoff, createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
+import { useSecurity } from '../components/SecurityContext';
 
 const CATEGORIES: { key: ExpenseCategory; icon: React.ReactNode }[] = [
   { key: 'Food', icon: <Utensils size={16} /> },
@@ -23,7 +24,8 @@ export function AddExpense() {
   const groupId = params.get('group');
   const navigate = useNavigate();
   const toast = useToast();
-  const [contactHandoff] = useState(() => params.get('contactImport') === '1' ? consumeExpenseContactHandoff() : undefined);
+  const { userId } = useSecurity();
+  const [contactHandoff] = useState(() => params.get('contactImport') === '1' ? consumeExpenseContactHandoff(userId) : undefined);
   const friends = listFriends();
   const newFriendIds = new Set(contactHandoff?.newFriendIds || []);
   const orderedFriends = newFriendIds.size
@@ -73,7 +75,7 @@ export function AddExpense() {
     try {
       const contacts = await pickDeviceContacts();
       if (!contacts.length) return;
-      const draft = createContactImportDraft(contacts, 'expense', selected);
+      const draft = createContactImportDraft(contacts, 'expense', userId, selected);
       await saveContactImportDraft(draft);
       navigate('/friends/import?from=expense');
     } catch (caught) {

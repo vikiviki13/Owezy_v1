@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { BottomSheet } from '../components/BottomSheet';
 import { useToast } from '../components/ToastContext';
 import { createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
+import { useSecurity } from '../components/SecurityContext';
 
 type Tab = 'all' | 'pending' | 'settled';
 
@@ -109,6 +110,7 @@ function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void 
   const [pickerError, setPickerError] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
+  const { userId } = useSecurity();
 
   function save() {
     if (!name.trim()) return;
@@ -125,7 +127,7 @@ function AddFriendSheet({ open, onClose }: { open: boolean; onClose: () => void 
     try {
       const contacts = await pickDeviceContacts();
       if (!contacts.length) return;
-      const draft = createContactImportDraft(contacts, 'friends');
+      const draft = createContactImportDraft(contacts, 'friends', userId);
       await saveContactImportDraft(draft);
       onClose();
       navigate('/friends/import?from=friends');

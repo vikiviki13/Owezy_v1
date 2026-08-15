@@ -9,6 +9,7 @@ import { getExportData, getStorageSummary } from '../../lib/db';
 import { clearContactImportDraft } from '../../lib/contactImport';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
+import { quoteCsvCell } from '../../lib/exportSecurity';
 
 export function NotificationSettings() {
   const { preferences, updatePreferences } = usePreferences();
@@ -108,11 +109,10 @@ export function ExportDataSettings() {
     let content: string; let mime: string;
     if (format === 'json') { content = JSON.stringify(safe, null, 2); mime = 'application/json'; }
     else {
-      const quote = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
       const rows = [['type', 'title', 'friend_or_method', 'amount', 'currency', 'date', 'notes']];
       expenses.forEach((e) => rows.push(['expense', e.title, e.category, String(e.recoverable_amount), e.currency, e.expense_date, e.notes || '']));
       repayments.forEach((r) => rows.push(['repayment', 'Payment', r.payment_method, String(r.amount), data.preferences.currency_code, r.repayment_date, r.notes || '']));
-      content = rows.map((row) => row.map(quote).join(',')).join('\n'); mime = 'text/csv';
+      content = rows.map((row) => row.map(quoteCsvCell).join(',')).join('\n'); mime = 'text/csv';
     }
     const url = URL.createObjectURL(new Blob([content], { type: mime })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `tab-data-${new Date().toISOString().slice(0, 10)}.${format}`; anchor.click(); URL.revokeObjectURL(url); toast('Your export is ready');
   }, [format, from, scope, to, toast]);

@@ -32,7 +32,7 @@ describe('contact import validation', () => {
   it('does not guess when a contact has multiple phone numbers', () => {
     const draft = createContactImportDraft([
       { name: ['Karthik'], tel: ['98765 43210', '99887 66554'] },
-    ], 'friends');
+    ], 'friends', 'user-1');
 
     expect(draft.items[0].selectedPhoneId).toBeUndefined();
     expect(classifyContactDraft(draft.items, [])[0]).toMatchObject({
@@ -46,7 +46,7 @@ describe('contact import validation', () => {
       { name: ['Arun'], tel: ['+91 98765 43210'] },
       { name: ['Vijay'], tel: ['+91 99887 66554'] },
       { name: ['Vijay duplicate'], tel: ['99887 66554'] },
-    ], 'friends');
+    ], 'friends', 'user-1');
     const reviews = classifyContactDraft(draft.items, [friend({ whatsapp_e164: '+919876543210' })]);
 
     expect(reviews.map((review) => [review.status, review.message])).toEqual([
@@ -57,15 +57,16 @@ describe('contact import validation', () => {
   });
 
   it('requires both a name and WhatsApp number', () => {
-    const draft = createContactImportDraft([{ name: [], tel: [] }], 'friends');
+    const draft = createContactImportDraft([{ name: [], tel: [] }], 'friends', 'user-1');
     expect(classifyContactDraft(draft.items, [])[0]).toMatchObject({ status: 'attention', message: 'Add a name' });
   });
 
   it('keeps an active draft in local memory when IndexedDB is unavailable', async () => {
-    const draft = createContactImportDraft([{ name: ['Arun'], tel: ['98765 43210'] }], 'friends');
+    const draft = createContactImportDraft([{ name: ['Arun'], tel: ['98765 43210'] }], 'friends', 'user-1');
     await saveContactImportDraft(draft);
-    expect((await loadContactImportDraft())?.items[0].name).toBe('Arun');
-    await clearContactImportDraft();
-    expect(await loadContactImportDraft()).toBeUndefined();
+    expect((await loadContactImportDraft('user-1'))?.items[0].name).toBe('Arun');
+    expect(await loadContactImportDraft('user-2')).toBeUndefined();
+    await clearContactImportDraft('user-1');
+    expect(await loadContactImportDraft('user-1')).toBeUndefined();
   });
 });
