@@ -3,13 +3,16 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify('1.0.0'),
+  },
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png'],
+      registerType: 'prompt',
+      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-512-maskable.png'],
       manifest: {
-        name: 'Tab �?" Friend Expense Tracker',
+        name: 'Tab — Friend Expense Tracker',
         short_name: 'Tab',
         description: 'I paid. Remember it for me.',
         theme_color: '#059669',

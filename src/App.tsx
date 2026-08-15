@@ -33,6 +33,7 @@ import { clearSensitiveLocalData } from './lib/db';
 import { clearAllLocalSecurityState, clearLocalSecurityState } from './lib/securityService';
 import { clearContactImportDraft } from './lib/contactImport';
 import { privateDataErrorMessage } from './lib/safeErrors';
+import { AppUpdatePrompt } from './components/AppUpdatePrompt';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -232,6 +233,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/about" element={<AboutSettings />} />
             </Routes>
             </Shell>
+            <AppUpdatePrompt />
       </PreferencesProvider>
     </>
   );

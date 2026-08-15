@@ -1,6 +1,9 @@
-import { ChevronDown, ExternalLink, Mail, MessageCircleQuestion, Send } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ExternalLink, Mail, MessageCircleQuestion, RefreshCw, Send, Sparkles } from 'lucide-react';
 import { SettingsPage, SettingsSection } from '../../components/SettingsUI';
 import { useToast } from '../../components/ToastContext';
+import { APP_VERSION, latestReleaseNotes } from '../../lib/appRelease';
+import { checkForAppUpdate } from '../../lib/pwaUpdate';
 
 const HELP_TOPICS = [
   ['Getting Started', 'Set up your profile, add your first friend, and record an expense.'],
@@ -29,8 +32,44 @@ export function HelpSupport() {
 function SupportAction({ icon: Icon, title, onClick }: { icon: typeof Mail; title: string; onClick: () => void }) { return <button onClick={onClick} className="w-full min-h-14 px-4 flex items-center gap-3 text-left"><Icon size={18} className="text-[var(--color-text-secondary)]" /><span className="flex-1 font-medium text-sm">{title}</span><ExternalLink size={15} className="text-[var(--color-text-muted)]" /></button>; }
 
 export function AboutSettings() {
-  const version = '1.0.0';
-  return <SettingsPage title="About"><div className="text-center py-7"><div className="w-18 h-18 rounded-3xl bg-[var(--color-primary)] text-white flex items-center justify-center text-3xl font-extrabold mx-auto shadow-lg shadow-emerald-900/15">T</div><h2 className="text-2xl font-extrabold mt-4">Tab</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">Friend Expense Tracker</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {version} · Build {import.meta.env.MODE}</p></div><SettingsSection title="Legal"><LegalLink title="Privacy Policy" href="/privacy" /><LegalLink title="Terms of Service" href="/terms" /><LegalLink title="Open Source Licenses" href="/licenses" /></SettingsSection><p className="text-center text-xs text-[var(--color-text-muted)] mt-9">Made for clearer money conversations.</p></SettingsPage>;
+  const toast = useToast();
+  const [checking, setChecking] = useState(false);
+  const release = latestReleaseNotes();
+
+  async function checkUpdates() {
+    setChecking(true);
+    try {
+      const result = await checkForAppUpdate();
+      if (result === 'unsupported') toast('Updates are managed by your browser');
+      else if (result === 'update-found') toast('New update available');
+      else toast("You're up to date");
+    } catch {
+      toast('Could not check for updates. Check your connection and try again.');
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  return <SettingsPage title="About"><div className="text-center py-7"><div className="w-18 h-18 rounded-3xl bg-[var(--color-primary)] text-white flex items-center justify-center text-3xl font-extrabold mx-auto shadow-lg shadow-emerald-900/15">T</div><h2 className="text-2xl font-extrabold mt-4">Tab</h2><p className="text-sm text-[var(--color-text-secondary)] mt-1">Friend Expense Tracker</p><p className="text-xs text-[var(--color-text-muted)] mt-3">Version {APP_VERSION} · Build {import.meta.env.MODE}</p></div>
+    <SettingsSection title="App Version">
+      <button onClick={() => void checkUpdates()} disabled={checking} className="w-full min-h-14 px-4 flex items-center gap-3 text-left disabled:opacity-50">
+        <RefreshCw size={18} className={`text-[var(--color-text-secondary)] ${checking ? 'animate-spin' : ''}`} />
+        <span className="flex-1 text-sm font-medium">{checking ? 'Checking for updates…' : 'Check for Updates'}</span>
+      </button>
+    </SettingsSection>
+    {release && (
+      <SettingsSection title={`What's New in ${release.version}`}>
+        <ul className="px-4 py-4 flex flex-col gap-2">
+          {release.notes.map((note) => (
+            <li key={note} className="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">
+              <Sparkles size={15} className="text-[var(--color-primary)] shrink-0 mt-0.5" />
+              <span>{note}</span>
+            </li>
+          ))}
+        </ul>
+      </SettingsSection>
+    )}
+    <SettingsSection title="Legal"><LegalLink title="Privacy Policy" href="/privacy" /><LegalLink title="Terms of Service" href="/terms" /><LegalLink title="Open Source Licenses" href="/licenses" /></SettingsSection><p className="text-center text-xs text-[var(--color-text-muted)] mt-9">Made for clearer money conversations.</p></SettingsPage>;
 }
 
 function LegalLink({ title, href }: { title: string; href: string }) { return <a href={href} target="_blank" rel="noreferrer" className="min-h-14 px-4 flex items-center gap-3"><span className="flex-1 text-sm font-medium">{title}</span><ExternalLink size={16} className="text-[var(--color-text-muted)]" /></a>; }
