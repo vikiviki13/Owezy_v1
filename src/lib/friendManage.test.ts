@@ -13,6 +13,7 @@ function stubStorage() {
     clear: () => store.clear(),
   };
   vi.stubGlobal('sessionStorage', storage);
+  vi.stubGlobal('localStorage', storage);
   vi.stubGlobal('window', { dispatchEvent: () => true });
 }
 

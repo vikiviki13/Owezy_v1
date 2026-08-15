@@ -67,7 +67,7 @@ let cache: DB | null = null;
 function load(): DB {
   if (cache) return cache;
   try {
-    const raw = sessionStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY);
     cache = raw ? (JSON.parse(raw) as DB) : emptyDB();
   } catch {
     cache = emptyDB();
@@ -79,7 +79,7 @@ function load(): DB {
 
 function persist() {
   if (!cache) return;
-  sessionStorage.setItem(KEY, JSON.stringify(cache));
+  localStorage.setItem(KEY, JSON.stringify(cache));
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
 }
 
@@ -90,7 +90,7 @@ export function resetDB() {
 
 export function clearSensitiveLocalData() {
   cache = null;
-  sessionStorage.removeItem(KEY);
+  localStorage.removeItem(KEY);
   setPreferenceSnapshot(defaultPreferences());
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
 }

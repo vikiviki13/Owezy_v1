@@ -5,16 +5,9 @@ const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.tr
 
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
 
-// Auth state is tab-scoped so closing the browser removes refresh tokens from
-// persistent storage. Remove tokens written by older releases before creating
-// the client; users complete a normal sign-in once after this migration.
-if (typeof window !== 'undefined') {
-  for (let index = localStorage.length - 1; index >= 0; index -= 1) {
-    const key = localStorage.key(index);
-    if (key?.startsWith('sb-') && key.endsWith('-auth-token')) localStorage.removeItem(key);
-  }
-}
-
+// Auth state is persisted in localStorage so the session survives closing the
+// app, browser restarts, and installed-PWA restarts. Supabase automatically
+// restores the session on startup and refreshes tokens in the background.
 // Placeholder values let the app render a useful configuration screen instead
 // of crashing before the user's environment variables have been added.
 export const supabase = createClient(
@@ -25,7 +18,7 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     },
   },
 );

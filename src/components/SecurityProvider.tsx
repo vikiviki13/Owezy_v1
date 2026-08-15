@@ -3,7 +3,9 @@ import type { AutoLockDuration, SecurityStatus } from '../types/security';
 import { autoLockMilliseconds, shouldAutoLock } from '../lib/securityPolicy';
 import {
   authenticateWithWebAuthn,
+  cacheAppLockEnabled,
   clearLegacySecurityStorage,
+  getCachedAppLockEnabled,
   getLastActive,
   getSecurityStatus,
   lockApp,
@@ -33,6 +35,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
   const refresh = useCallback(async () => {
     const next = await getSecurityStatus(userId);
     setStatus(next);
+    cacheAppLockEnabled(userId, next.appLockEnabled);
     const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
     const locked = next.appLockEnabled && (!next.grantValid || locallyExpired);
     setLocked(locked);
@@ -49,13 +52,23 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
       .then((next) => {
         if (!active) return;
         setStatus(next);
+        cacheAppLockEnabled(userId, next.appLockEnabled);
         const locallyExpired = next.appLockEnabled && shouldAutoLock(next.autoLockDuration, getLastActive(userId));
         const locked = next.appLockEnabled && (!next.grantValid || locallyExpired);
         setLocked(locked);
         if (locked) { clearLockedData(); void clearContactImportDraft(userId); }
         if (locallyExpired) void lockApp(userId);
       })
-      .catch(() => { if (active) { setLocked(true); clearLockedData(); void clearContactImportDraft(userId); } })
+      .catch(() => {
+        if (!active) return;
+        // Offline: the security state cannot be verified. Only lock when the
+        // last known state had App Lock enabled; otherwise let the user keep
+        // working with their locally persisted session and data.
+        const cachedLocked = getCachedAppLockEnabled(userId);
+        setStatus(null);
+        setLocked(cachedLocked === true);
+        if (cachedLocked === true) { clearLockedData(); void clearContactImportDraft(userId); }
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [userId]);

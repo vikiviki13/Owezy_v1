@@ -72,7 +72,7 @@ export default function App() {
     void supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
         if (mounted) {
-          setStartupError('Your session could not be restored securely. Sign in again.');
+          setStartupError('Your session has expired. Please sign in again.');
           setLoading(false);
         }
         return;

@@ -10,6 +10,18 @@ import type { AutoLockDuration, SecurityEvent, SecurityStatus, UnlockGrant } fro
 
 const GRANT_KEY_PREFIX = 'tab_unlock_grant_v2_';
 const ACTIVE_KEY_PREFIX = 'tab_last_active_v2_';
+const APP_LOCK_STATE_KEY_PREFIX = 'tab_app_lock_state_v2_';
+
+export function cacheAppLockEnabled(userId: string, enabled: boolean) {
+  localStorage.setItem(`${APP_LOCK_STATE_KEY_PREFIX}${userId}`, enabled ? '1' : '0');
+}
+
+export function getCachedAppLockEnabled(userId: string): boolean | null {
+  const value = localStorage.getItem(`${APP_LOCK_STATE_KEY_PREFIX}${userId}`);
+  if (value === '1') return true;
+  if (value === '0') return false;
+  return null;
+}
 
 export class SecurityServiceError extends Error {
   code: string;
@@ -103,6 +115,7 @@ export function getLastActive(userId: string) {
 export function clearLocalSecurityState(userId: string) {
   clearUnlockGrant(userId);
   localStorage.removeItem(`${ACTIVE_KEY_PREFIX}${userId}`);
+  localStorage.removeItem(`${APP_LOCK_STATE_KEY_PREFIX}${userId}`);
   document.documentElement.classList.remove('privacy-mode');
 }
 
@@ -110,7 +123,7 @@ export function clearAllLocalSecurityState() {
   for (const storage of [sessionStorage, localStorage]) {
     for (let index = storage.length - 1; index >= 0; index -= 1) {
       const key = storage.key(index);
-      if (key?.startsWith(GRANT_KEY_PREFIX) || key?.startsWith(ACTIVE_KEY_PREFIX)) storage.removeItem(key);
+      if (key?.startsWith(GRANT_KEY_PREFIX) || key?.startsWith(ACTIVE_KEY_PREFIX) || key?.startsWith(APP_LOCK_STATE_KEY_PREFIX)) storage.removeItem(key);
     }
   }
   document.documentElement.classList.remove('privacy-mode');

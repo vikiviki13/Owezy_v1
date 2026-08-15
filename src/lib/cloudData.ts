@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import { defaultPreferences } from './preferences';
-import { readPrivateData, writePrivateData } from './securityService';
+import { readPrivateData, SecurityServiceError, writePrivateData } from './securityService';
 
 const RUNTIME_DB_KEY = 'tab_db_session_v2';
 const LEGACY_DB_KEY = 'tab_db_v1';
@@ -20,6 +20,7 @@ type StoredData = Record<string, unknown> & {
 
 let activeUserId: string | null = null;
 let syncHandler: (() => void) | null = null;
+let onlineHandler: (() => void) | null = null;
 let pendingSync: Promise<void> = Promise.resolve();
 let lastSyncError: Error | null = null;
 
@@ -87,7 +88,7 @@ async function upload(userId: string, data: StoredData) {
 
 function queueUpload() {
   if (!activeUserId) return;
-  const raw = sessionStorage.getItem(RUNTIME_DB_KEY);
+  const raw = localStorage.getItem(RUNTIME_DB_KEY);
   if (!raw) return;
 
   const userId = activeUserId;
@@ -114,42 +115,68 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
   stopCloudData();
   lastSyncError = null;
 
-  const storedData = await readPrivateData<StoredData>(user.id);
-
   let data: StoredData;
-  if (storedData) {
-    data = prepareData(storedData, user);
-    // A confirmed server copy supersedes plaintext persistence used by older
-    // releases, so remove that residual shared-browser copy immediately.
-    localStorage.removeItem(LEGACY_DB_KEY);
-    localStorage.removeItem('tab_legacy_migrated_v1');
-  } else {
-    const legacy = localStorage.getItem(LEGACY_DB_KEY);
-    if (legacy && !legacyDecision) throw new LegacyDataChoiceRequired();
-    if (legacy && legacyDecision === 'import') {
-      try {
-        data = prepareData(JSON.parse(legacy), user);
-      } catch {
+  try {
+    const storedData = await readPrivateData<StoredData>(user.id);
+
+    if (storedData) {
+      data = prepareData(storedData, user);
+      // A confirmed server copy supersedes plaintext persistence used by older
+      // releases, so remove that residual shared-browser copy immediately.
+      localStorage.removeItem(LEGACY_DB_KEY);
+      localStorage.removeItem('tab_legacy_migrated_v1');
+    } else {
+      const legacy = localStorage.getItem(LEGACY_DB_KEY);
+      if (legacy && !legacyDecision) throw new LegacyDataChoiceRequired();
+      if (legacy && legacyDecision === 'import') {
+        try {
+          data = prepareData(JSON.parse(legacy), user);
+        } catch {
+          data = emptyData(user);
+        }
+      } else {
         data = emptyData(user);
       }
-    } else {
-      data = emptyData(user);
+      await upload(user.id, data);
+      // Remove the unbound legacy copy only after the chosen server operation
+      // succeeds, so a failed migration is never silently marked complete.
+      if (legacy && legacyDecision) localStorage.removeItem(LEGACY_DB_KEY);
     }
-    await upload(user.id, data);
-    // Remove the unbound legacy copy only after the chosen server operation
-    // succeeds, so a failed migration is never silently marked complete.
-    if (legacy && legacyDecision) localStorage.removeItem(LEGACY_DB_KEY);
+  } catch (caught) {
+    // The user is already authenticated with a valid session. If the server is
+    // unreachable (offline / network error), fall back to the last locally
+    // persisted copy so the app stays usable instead of forcing a sign-in.
+    const isOffline = navigator.onLine === false
+      || (caught instanceof SecurityServiceError && caught.code === 'network_failure');
+    if (isOffline) {
+      const cached = localStorage.getItem(RUNTIME_DB_KEY);
+      if (cached) {
+        try {
+          data = prepareData(JSON.parse(cached), user);
+        } catch {
+          throw caught;
+        }
+      } else {
+        throw caught;
+      }
+    } else {
+      throw caught;
+    }
   }
 
-  sessionStorage.setItem(RUNTIME_DB_KEY, JSON.stringify(data));
+  localStorage.setItem(RUNTIME_DB_KEY, JSON.stringify(data));
   activeUserId = user.id;
   syncHandler = queueUpload;
   window.addEventListener('tab-db-changed', syncHandler);
+  onlineHandler = () => { if (activeUserId) queueUpload(); };
+  window.addEventListener('online', onlineHandler);
 }
 
 export function stopCloudData() {
   if (syncHandler) window.removeEventListener('tab-db-changed', syncHandler);
+  if (onlineHandler) window.removeEventListener('online', onlineHandler);
   syncHandler = null;
+  onlineHandler = null;
   activeUserId = null;
 }
 
