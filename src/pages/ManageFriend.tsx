@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Archive, ArchiveRestore, ArrowLeft, Camera, Check, ChevronRight, CircleDollarSign, ContactRound, FileDown, Mail, MessageCircle, Pencil, Phone, ShieldAlert, Trash2, X } from 'lucide-react';
 import { archiveFriend, calculateFriendBalance, clearFriendData, clearFriendDues, deleteFriend, getFriend, listExpensesForFriend, listRepaymentsForFriend, onDBChange, updateFriend } from '../lib/db';
+import { compressAvatar } from '../lib/avatar';
 import { formatCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
@@ -208,9 +209,7 @@ function EditFriendSheet({ open, friendId, onSaved, onClose }: { open: boolean; 
 
   function pickPhoto(file: File | undefined) {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setAvatarUrl(String(reader.result));
-    reader.readAsDataURL(file);
+    void compressAvatar(file).then((url) => setAvatarUrl(url)).catch(() => undefined);
   }
 
   const save = () => {

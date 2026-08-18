@@ -7,9 +7,12 @@ import { initializeSync, stopSync, syncNow } from '../services/sync/syncManager'
 import type { StoredDoc } from '../services/sync/conflictResolver';
 import { clearSyncQueue } from '../services/sync/syncQueue';
 import { readPrivateData, SecurityServiceError } from './securityService';
+import { compressAvatar, dataUrlBytes, isDataAvatar } from './avatar';
+import { updateFriend, updateProfile } from './db';
 
 const RUNTIME_DB_KEY = 'tab_db_session_v2';
 const LEGACY_DB_KEY = 'tab_db_v1';
+const AVATAR_SHRINK_BYTES = 150_000;
 
 export type LegacyMigrationDecision = 'import' | 'discard';
 
@@ -92,6 +95,40 @@ function prepareData(value: unknown, user: User): StoredData {
   };
 }
 
+// Phone photos stored as base64 can grow a document far past the cloud
+// limit (2 MB), which makes every sync fail. Recompress any avatar that got
+// in before the size cap so the next push succeeds.
+async function shrinkStoredAvatars() {
+  const raw = localStorage.getItem(RUNTIME_DB_KEY);
+  if (!raw) return;
+  let db: { profile?: { avatar_url?: string }; friends?: Array<{ id: string; avatar_url?: string }> };
+  try {
+    db = JSON.parse(raw) as typeof db;
+  } catch {
+    return;
+  }
+  const targets: Array<{ id: string; url: string }> = [];
+  if (isDataAvatar(db.profile?.avatar_url) && dataUrlBytes(db.profile.avatar_url) > AVATAR_SHRINK_BYTES) {
+    targets.push({ id: '', url: db.profile.avatar_url });
+  }
+  for (const friend of db.friends || []) {
+    if (isDataAvatar(friend.avatar_url) && dataUrlBytes(friend.avatar_url) > AVATAR_SHRINK_BYTES) {
+      targets.push({ id: friend.id, url: friend.avatar_url });
+    }
+  }
+  for (const target of targets) {
+    try {
+      const blob = await (await fetch(target.url)).blob();
+      const shrunk = await compressAvatar(blob);
+      if (shrunk.length >= target.url.length) continue;
+      if (target.id) updateFriend(target.id, { avatar_url: shrunk });
+      else updateProfile({ avatar_url: shrunk });
+    } catch {
+      // Keep the original avatar; it is a display detail, not a blocker.
+    }
+  }
+}
+
 export async function initializeCloudData(user: User, legacyDecision?: LegacyMigrationDecision) {
   stopSync();
   activeUser = user;
@@ -150,6 +187,7 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
   // record-by-record, push local-only records back, and wire all sync
   // triggers. The fetched copy is passed only to the first sync; later
   // triggers re-fetch on their own.
+  await shrinkStoredAvatars();
   await initializeSync(user.id, serverData as StoredDoc | null);
 }
 

@@ -5,6 +5,7 @@ import { SettingsPage } from '../../components/SettingsUI';
 import { Avatar } from '../../components/Avatar';
 import { useToast } from '../../components/ToastContext';
 import { getProfile, updateProfile } from '../../lib/db';
+import { compressAvatar } from '../../lib/avatar';
 import { supabase } from '../../lib/supabase';
 
 export function EditProfile() {
@@ -26,15 +27,18 @@ export function EditProfile() {
 
   async function readPhoto(file?: File) {
     if (!file) return;
-    if (file.size > 750 * 1024) { toast('Choose a PNG, JPEG, or WebP photo smaller than 750 KB'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast('Choose a photo smaller than 10 MB'); return; }
     const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
     const isJpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
     const isPng = header.slice(0, 8).every((value, index) => value === [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a][index]);
     const isWebp = String.fromCharCode(...header.slice(0, 4)) === 'RIFF' && String.fromCharCode(...header.slice(8, 12)) === 'WEBP';
     if (!isJpeg && !isPng && !isWebp) { toast('Choose a valid PNG, JPEG, or WebP image'); return; }
-    const reader = new FileReader();
-    reader.onload = () => { setAvatar(String(reader.result)); setPhotoOpen(false); };
-    reader.readAsDataURL(file);
+    try {
+      setAvatar(await compressAvatar(file));
+      setPhotoOpen(false);
+    } catch {
+      toast('The photo could not be processed. Choose a smaller image.');
+    }
   }
 
   async function save() {

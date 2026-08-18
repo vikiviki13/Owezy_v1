@@ -36,12 +36,12 @@ export class SecurityServiceError extends Error {
 
 type ApiErrorBody = { error?: { code?: string; message?: string; retryAfter?: number } };
 
-async function invoke<T>(action: string, body: Record<string, unknown> = {}, userId?: string): Promise<T> {
+async function invoke<T>(action: string, body: Record<string, unknown> = {}, userId?: string, timeout = 20_000): Promise<T> {
   const unlockToken = userId ? getUnlockGrant(userId) : null;
   const { data, error } = await supabase.functions.invoke('security', {
     body: { action, ...body, unlockToken },
     // A hung request must never leave the app stuck on the loading screen.
-    timeout: 20_000,
+    timeout,
   });
   if (error) {
     let parsed: ApiErrorBody | null = null;
@@ -236,12 +236,14 @@ export async function verifyAccountPassword(
 }
 
 export async function readPrivateData<T>(userId: string) {
-  const result = await invoke<{ data: T | null; updatedAt: string | null }>('data/read', {}, userId);
+  const result = await invoke<{ data: T | null; updatedAt: string | null }>('data/read', {}, userId, 25_000);
   return result;
 }
 
 export async function writePrivateData(userId: string, data: Record<string, unknown>) {
-  await invoke('data/write', { data }, userId);
+  // Writes carry the whole document and run in the background; give slow
+  // mobile uplinks enough headroom instead of failing the sync.
+  await invoke('data/write', { data }, userId, 60_000);
 }
 
 export interface SecureFriendImportResponse<TRow = Record<string, unknown>> {
