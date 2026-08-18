@@ -19,6 +19,7 @@ const MAX_IMPORT_SIZE = 100;
 const APP_DATA_ARRAY_KEYS = [
   'friends', 'groups', 'groupMembers', 'expenses', 'expenseParticipants',
   'expenseItems', 'expenseItemAssignments', 'expenseAdjustments', 'repayments', 'attachments',
+  'deleted',
 ] as const;
 const APP_DATA_KEYS = new Set(['profile', 'preferences', 'rev', 'updated_at', ...APP_DATA_ARRAY_KEYS]);
 

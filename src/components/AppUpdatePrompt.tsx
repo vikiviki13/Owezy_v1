@@ -111,7 +111,7 @@ export function AppUpdatePrompt() {
 
   if (required) {
     return (
-      <div className="fixed inset-0 z-[60] bg-[var(--color-bg)]/95 backdrop-blur-sm flex items-center justify-center px-5">
+      <div className="fixed inset-0 z-[60] bg-[var(--color-bg)]/95 backdrop-blur-sm flex items-center justify-center px-5" data-no-swipe>
         <div className="w-full max-w-sm rounded-3xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
           <span className="mx-auto grid size-14 place-items-center rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
             {phase === 'updating' ? <LoaderCircle size={26} className="animate-spin" /> : <RefreshCw size={26} />}

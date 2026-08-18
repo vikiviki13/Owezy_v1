@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Wallet, Users, Share2 } from 'lucide-react';
 import { updateProfile } from '../lib/db';
+import { useHorizontalSwipe } from '../hooks/useHorizontalSwipe';
 
 const SLIDES = [
   { icon: Wallet, title: 'You pay.', body: 'Cover the bill at dinner, on a trip, wherever — record it in seconds.' },
@@ -12,6 +13,14 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+
+  // Swiping between the intro slides uses the onboarding's own navigation
+  // state; it is never connected to the main app navigation. The name form
+  // is not part of the swipeable sequence.
+  useHorizontalSwipe({
+    onSwipeLeft: () => setStep((current) => Math.min(current + 1, SLIDES.length - 1)),
+    onSwipeRight: () => setStep((current) => Math.max(current - 1, 0)),
+  }, !showProfile);
 
   function finish() {
     updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR' });

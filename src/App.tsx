@@ -25,6 +25,7 @@ import { Profile } from './pages/Profile';
 import { EditProfile } from './pages/settings/EditProfile';
 import { AppearanceSettings, CurrencySettings, DateTimeSettings, LanguageSettings } from './pages/settings/PreferencePages';
 import { DataStorageSettings, ExportDataSettings, InstallAppSettings, NotificationSettings, PaymentReminderSettings, PrivacySettings } from './pages/settings/AccountSettingsPages';
+import { DataSyncSettings } from './pages/settings/DataSyncSettings';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { ShareAppSettings } from './pages/settings/ShareAppPage';
@@ -228,6 +229,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/security/change-pin" element={<ChangePinPage />} />
             <Route path="/profile/privacy" element={<PrivacySettings />} />
             <Route path="/profile/data-storage" element={<DataStorageSettings />} />
+            <Route path="/profile/data-sync" element={<DataSyncSettings />} />
             <Route path="/profile/export" element={<ExportDataSettings />} />
             <Route path="/profile/install" element={<InstallAppSettings />} />
             <Route path="/profile/help" element={<HelpSupport />} />

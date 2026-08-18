@@ -1,15 +1,20 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X, Share2 } from 'lucide-react';
+import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X, Share2, type LucideIcon } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
+import { SyncStatusBadge } from './SyncStatusBadge';
+import { MAIN_NAV_ORDER } from '../lib/navigation';
+import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
-const NAV_ITEMS = [
-  { to: '/', label: 'Home', icon: Home },
-  { to: '/friends', label: 'Friends', icon: Users },
-  { to: '/activity', label: 'Activity', icon: Activity },
-  { to: '/groups', label: 'Groups', icon: LayoutGrid },
-  { to: '/profile', label: 'Profile', icon: User },
-];
+const NAV_ICONS: Record<string, LucideIcon> = {
+  '/': Home,
+  '/friends': Users,
+  '/activity': Activity,
+  '/groups': LayoutGrid,
+  '/profile': User,
+};
+
+const NAV_ITEMS = MAIN_NAV_ORDER.map(({ path, label }) => ({ to: path, label, icon: NAV_ICONS[path] }));
 
 const MOBILE_NAV_ITEMS = [...NAV_ITEMS];
 const DESKTOP_NAV_ITEMS = [...NAV_ITEMS, { to: '/profile/share', label: 'Share', icon: Share2 }];
@@ -19,7 +24,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   usePreferences();
+  useSwipeNavigation();
   const isSubPage = location.pathname.startsWith('/profile/') || location.pathname === '/friends/import';
+  const navDir = (location.state as { navDir?: 'next' | 'prev' } | null)?.navDir;
 
   return (
     <div className="min-h-screen flex bg-[var(--color-bg)]">
@@ -32,10 +39,11 @@ export function Shell({ children }: { children: ReactNode }) {
         {!isSubPage && <button
           onClick={() => setQuickOpen(true)}
           className="flex items-center gap-2 justify-center bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white font-medium rounded-xl py-2.5 mb-6 transition-colors"
+          data-no-swipe
         >
           <Plus size={18} /> Add
         </button>}
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1" data-no-swipe>
           {DESKTOP_NAV_ITEMS.map((item) => (
             <NavLink
               key={item.to}
@@ -55,19 +63,23 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <main className="flex-1 pb-24 md:pb-8 max-w-2xl w-full mx-auto">{children}</main>
+        <div className="max-w-2xl w-full mx-auto px-4 pt-4 flex justify-end">
+          <SyncStatusBadge />
+        </div>
+        <main key={location.pathname} className={`flex-1 pb-24 md:pb-8 max-w-2xl w-full mx-auto${navDir === 'next' ? ' animate-nav-next' : navDir === 'prev' ? ' animate-nav-prev' : ''}`}>{children}</main>
 
         {/* Mobile floating add button */}
         {!isSubPage && <button
           onClick={() => setQuickOpen(true)}
           className="md:hidden fixed bottom-20 right-5 z-40 w-14 h-14 rounded-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white shadow-lg shadow-black/20 flex items-center justify-center active:scale-95 transition-transform"
           aria-label="Add"
+          data-no-swipe
         >
           <Plus size={26} />
         </button>}
 
         {/* Mobile bottom nav */}
-        {!isSubPage && <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-bottom">
+        {!isSubPage && <nav className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-[var(--color-surface)] border-t border-[var(--color-border)] safe-bottom" data-no-swipe>
           <div className="flex items-stretch justify-around max-w-2xl mx-auto">
             {MOBILE_NAV_ITEMS.map((item) => (
               <NavLink
@@ -89,7 +101,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
 
       {quickOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center">
+        <div className="fixed inset-0 z-50 flex items-end justify-center" data-no-swipe>
           <div className="absolute inset-0 bg-black/40" onClick={() => setQuickOpen(false)} />
           <div className="relative w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl shadow-2xl animate-sheet-up safe-bottom">
             <div className="flex justify-center pt-3">

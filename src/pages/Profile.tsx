@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Bell, CalendarDays, ChevronRight, CircleHelp, Database, Download, Fingerprint,
-  Languages, LogOut, Moon, ReceiptText, Share2, ShieldCheck, Smartphone, WalletCards, Info,
+  Languages, LogOut, Moon, ReceiptText, RefreshCw, Share2, ShieldCheck, Smartphone, WalletCards, Info,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
@@ -81,6 +81,7 @@ export function Profile() {
         <SettingsRow icon={Fingerprint} title="Security" value={status?.appLockEnabled ? 'Protected' : 'Off'} to="/profile/security" />
         <SettingsRow icon={ShieldCheck} title="Privacy" to="/profile/privacy" />
         <SettingsRow icon={Database} title="Data & Storage" to="/profile/data-storage" />
+        <SettingsRow icon={RefreshCw} title="Data & Sync" to="/profile/data-sync" />
       </SettingsSection>
 
       <SettingsSection title={t('appData')}>

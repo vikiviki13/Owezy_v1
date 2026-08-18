@@ -6,6 +6,8 @@ import {
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
 import { expenseDateError } from './expenseDraft';
+import { enqueueChange } from '../services/sync/syncQueue';
+import type { SyncEntityType, Tombstone } from '../services/sync/types';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -36,6 +38,7 @@ interface DB {
   expenseAdjustments: ExpenseAdjustment[];
   repayments: Repayment[];
   attachments: Attachment[];
+  deleted: Tombstone[];
 }
 
 const OWNER_ID = 'local-user';
@@ -63,10 +66,18 @@ function emptyDB(): DB {
     expenseAdjustments: [],
     repayments: [],
     attachments: [],
+    deleted: [],
   };
 }
 
 let cache: DB | null = null;
+
+// Called after the sync layer replaces the runtime document with a merged
+// cloud pull, so the next db read re-loads from storage instead of serving a
+// stale in-memory copy that would clobber the merged records on persist.
+export function invalidateCache() {
+  cache = null;
+}
 
 function load(): DB {
   if (cache) return cache;
@@ -78,6 +89,7 @@ function load(): DB {
   }
   cache.rev = typeof cache.rev === 'number' ? cache.rev : 0;
   cache.updated_at = cache.updated_at || new Date().toISOString();
+  cache.deleted = Array.isArray(cache.deleted) ? cache.deleted : [];
   cache.preferences = { ...defaultPreferences(cache.profile.id), ...(cache.preferences || {}) };
   setPreferenceSnapshot(cache.preferences);
   return cache;
@@ -89,6 +101,21 @@ function persist() {
   cache.updated_at = new Date().toISOString();
   localStorage.setItem(KEY, JSON.stringify(cache));
   window.dispatchEvent(new CustomEvent('tab-db-changed'));
+}
+
+// Soft-delete tombstone: the record stays in the cloud document long enough
+// for other devices to learn about the deletion, while the local cache drops
+// it immediately. The sync layer reconciles tombstones on every merge.
+function recordTombstone(entityType: SyncEntityType, id: string) {
+  const db = load();
+  const deletedAt = new Date().toISOString();
+  const existing = db.deleted.findIndex((entry) => entry.entityType === entityType && entry.id === id);
+  if (existing >= 0) db.deleted[existing] = { entityType, id, deletedAt };
+  else db.deleted.push({ entityType, id, deletedAt });
+}
+
+function enqueue(entityType: SyncEntityType, entityId: string, operation: 'CREATE' | 'UPDATE' | 'DELETE') {
+  enqueueChange(entityType, entityId, operation);
 }
 
 export function resetDB() {
@@ -185,6 +212,7 @@ export function updateProfile(patch: Partial<Profile>) {
   const db = load();
   db.profile = { ...db.profile, ...patch, updated_at: new Date().toISOString() };
   persist();
+  enqueue('profile', db.profile.id, 'UPDATE');
   return db.profile;
 }
 
@@ -198,6 +226,7 @@ export function updateUserPreferences(patch: Partial<UserPreferences>): UserPref
   if (patch.currency_code) db.profile.default_currency = patch.currency_code;
   setPreferenceSnapshot(db.preferences);
   persist();
+  enqueue('preferences', db.preferences.id || db.profile.id, 'UPDATE');
   return db.preferences;
 }
 
@@ -252,6 +281,7 @@ export function createFriend(input: Partial<Friend> & { name: string }): Friend 
   };
   db.friends.push(friend);
   persist();
+  enqueue('friend', friend.id, 'CREATE');
   return friend;
 }
 export function commitImportedFriends(friends: Friend[]): Friend[] {
@@ -263,10 +293,12 @@ export function commitImportedFriends(friends: Friend[]): Friend[] {
     if (existing) {
       Object.assign(existing, friend);
       committed.push(existing);
+      enqueue('friend', friend.id, 'UPDATE');
       return;
     }
     db.friends.push(friend);
     committed.push(friend);
+    enqueue('friend', friend.id, 'CREATE');
   });
   persist();
   return committed;
@@ -277,6 +309,7 @@ export function updateFriend(id: string, patch: Partial<Friend>) {
   if (idx === -1) return;
   db.friends[idx] = { ...db.friends[idx], ...patch, updated_at: new Date().toISOString() };
   persist();
+  enqueue('friend', id, 'UPDATE');
 }
 
 export function archiveFriend(id: string, archived = true) {
@@ -311,6 +344,7 @@ export function clearFriendData(friendId: string) {
     if (!otherParticipants) expenseIdsToDelete.add(expenseId);
   });
 
+  const removedRepaymentIds = db.repayments.filter((r) => r.friend_id === friendId).map((r) => r.id);
   const deletedItemIds = new Set(db.expenseItems.filter((i) => expenseIdsToDelete.has(i.expense_id)).map((i) => i.id));
   db.expenseItems = db.expenseItems.filter((i) => !expenseIdsToDelete.has(i.expense_id));
   db.expenseItemAssignments = db.expenseItemAssignments.filter((a) => !deletedItemIds.has(a.expense_item_id) && a.friend_id !== friendId);
@@ -320,6 +354,13 @@ export function clearFriendData(friendId: string) {
   db.attachments = db.attachments.filter((a) => !expenseIdsToDelete.has(a.expense_id));
   db.repayments = db.repayments.filter((r) => r.friend_id !== friendId);
   db.groupMembers = db.groupMembers.filter((m) => m.friend_id !== friendId);
+
+  recordTombstone('friend', friendId);
+  expenseIdsToDelete.forEach((expenseId) => recordTombstone('expense', expenseId));
+  removedRepaymentIds.forEach((repaymentId) => recordTombstone('repayment', repaymentId));
+  enqueue('friend', friendId, 'DELETE');
+  expenseIdsToDelete.forEach((expenseId) => enqueue('expense', expenseId, 'DELETE'));
+
   persist();
 }
 
@@ -342,9 +383,12 @@ export function createGroup(input: { name: string; description?: string; memberI
   const group: Group = { id: uid(), owner_id: OWNER_ID, name: input.name, description: input.description, created_at: now, updated_at: now };
   db.groups.push(group);
   input.memberIds.forEach((friend_id) => {
-    db.groupMembers.push({ id: uid(), group_id: group.id, friend_id, created_at: now });
+    const member = { id: uid(), group_id: group.id, friend_id, created_at: now };
+    db.groupMembers.push(member);
+    enqueue('groupMember', member.id, 'CREATE');
   });
   persist();
+  enqueue('group', group.id, 'CREATE');
   return group;
 }
 export function getGroupMembers(groupId: string): Friend[] {
@@ -407,7 +451,7 @@ export function createExpense(input: CreateExpenseInput): Expense {
 
   input.participants.forEach((p) => {
     const share = roundCurrency(p.share_amount);
-    db.expenseParticipants.push({
+    const participant: ExpenseParticipant = {
       id: uid(),
       expense_id: expense.id,
       friend_id: p.friend_id,
@@ -417,17 +461,24 @@ export function createExpense(input: CreateExpenseInput): Expense {
       status: 'pending',
       created_at: now,
       updated_at: now,
-    });
+    };
+    db.expenseParticipants.push(participant);
+    enqueue('expenseParticipant', participant.id, 'CREATE');
   });
 
   (input.items || []).forEach((item) => {
-    db.expenseItems.push({ ...item, id: uid(), expense_id: expense.id, created_at: now });
+    const entry = { ...item, id: uid(), expense_id: expense.id, created_at: now };
+    db.expenseItems.push(entry);
+    enqueue('expenseItem', entry.id, 'CREATE');
   });
   (input.adjustments || []).forEach((adj) => {
-    db.expenseAdjustments.push({ ...adj, id: uid(), expense_id: expense.id });
+    const entry = { ...adj, id: uid(), expense_id: expense.id };
+    db.expenseAdjustments.push(entry);
+    enqueue('expenseAdjustment', entry.id, 'CREATE');
   });
 
   persist();
+  enqueue('expense', expense.id, 'CREATE');
   return expense;
 }
 
@@ -440,6 +491,8 @@ export function deleteExpense(id: string) {
   // Repayments tied to a deleted expense fall back to general (unlinked) repayments
   // rather than vanishing — money already received stays recorded.
   db.repayments = db.repayments.map((r) => (r.expense_id === id ? { ...r, expense_id: undefined } : r));
+  recordTombstone('expense', id);
+  enqueue('expense', id, 'DELETE');
   persist();
 }
 
@@ -525,6 +578,7 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
   touchedExpenseIds.forEach((eid) => recomputeExpenseStatus(eid));
 
   persist();
+  enqueue('repayment', repayment.id, 'CREATE');
   return repayment;
 }
 
