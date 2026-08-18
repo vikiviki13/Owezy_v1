@@ -113,9 +113,16 @@ function shouldSyncNow() {
   return false;
 }
 
-async function pullAndMerge(userId: string): Promise<{ needsPush: boolean; doc: StoredDoc }> {
-  const result = await readPrivateData<StoredDoc>(userId);
-  const cloudRaw = result.data as StoredDoc | null;
+async function pullAndMerge(userId: string, seedCloud?: StoredDoc | null): Promise<{ needsPush: boolean; doc: StoredDoc }> {
+  let cloudRaw: StoredDoc | null;
+  if (seedCloud === undefined) {
+    const result = await readPrivateData<StoredDoc>(userId);
+    cloudRaw = result.data as StoredDoc | null;
+  } else {
+    // Startup: the bootstrap already fetched the cloud document; reuse it to
+    // avoid a second network round-trip before the app opens.
+    cloudRaw = seedCloud;
+  }
   const localRaw = readDoc();
   if (!cloudRaw) {
     // No server copy yet: keep the local copy untouched (it will be pushed).
@@ -172,13 +179,13 @@ async function pushDoc(userId: string, doc: StoredDoc) {
   }
 }
 
-async function syncOnce(userId: string) {
+async function syncOnce(userId: string, seedCloud?: StoredDoc | null) {
   if (running) return;
   running = true;
   try {
     if (!shouldSyncNow()) return;
     emit(userId, snapshotOf(userId, 'syncing'));
-    const { needsPush, doc } = await pullAndMerge(userId);
+    const { needsPush, doc } = await pullAndMerge(userId, seedCloud);
     if (needsPush) {
       markQueueSyncing();
       await pushDoc(userId, doc);
@@ -269,7 +276,7 @@ function unwireListeners() {
   listeners.focus = null;
 }
 
-export async function initializeSync(userId: string) {
+export async function initializeSync(userId: string, seedCloud?: StoredDoc | null) {
   stopSync();
   activeUserId = userId;
   retryAttempt = 0;
@@ -277,7 +284,7 @@ export async function initializeSync(userId: string) {
   wireListeners(userId);
   startPeriodic(userId);
   realtimeUnsub = subscribeToAppData(userId, () => onRealtimeEvent(userId));
-  await syncOnce(userId);
+  await syncOnce(userId, seedCloud);
 }
 
 export function stopSync() {

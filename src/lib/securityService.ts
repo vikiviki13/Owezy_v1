@@ -40,6 +40,8 @@ async function invoke<T>(action: string, body: Record<string, unknown> = {}, use
   const unlockToken = userId ? getUnlockGrant(userId) : null;
   const { data, error } = await supabase.functions.invoke('security', {
     body: { action, ...body, unlockToken },
+    // A hung request must never leave the app stuck on the loading screen.
+    timeout: 20_000,
   });
   if (error) {
     let parsed: ApiErrorBody | null = null;

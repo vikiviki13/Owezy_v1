@@ -4,6 +4,7 @@
 import type { User } from '@supabase/supabase-js';
 import { defaultPreferences } from './preferences';
 import { initializeSync, stopSync, syncNow } from '../services/sync/syncManager';
+import type { StoredDoc } from '../services/sync/conflictResolver';
 import { clearSyncQueue } from '../services/sync/syncQueue';
 import { readPrivateData, SecurityServiceError } from './securityService';
 
@@ -144,9 +145,12 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
     localStorage.removeItem('tab_legacy_migrated_v1');
   }
 
-  // Pull the cloud document, merge it with the local cache record-by-record,
-  // push local-only records back, and wire all sync triggers.
-  await initializeSync(user.id);
+  // Pull the cloud document (already fetched above — reuse it so the app
+  // opens after a single server round-trip), merge it with the local cache
+  // record-by-record, push local-only records back, and wire all sync
+  // triggers. The fetched copy is passed only to the first sync; later
+  // triggers re-fetch on their own.
+  await initializeSync(user.id, serverData as StoredDoc | null);
 }
 
 export function stopCloudData() {
