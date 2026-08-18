@@ -5,6 +5,7 @@ import { listAllRepayments, listExpenses, getFriend, getExpenseParticipants } fr
 import { formatCurrency, formatTime, formatTimestampTime, todayDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { shiftIsoDate } from '../lib/expenseDraft';
 
 type Filter = 'all' | 'expense' | 'repayment';
 
@@ -103,8 +104,8 @@ export function Activity() {
 
 function groupByDate<T extends { date: string }>(items: T[]): Record<string, T[]> {
   const today = todayDate();
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-  const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+  const yesterday = shiftIsoDate(today, -1);
+  const weekAgo = shiftIsoDate(today, -7);
   const groups: Record<string, T[]> = { Today: [], Yesterday: [], 'This Week': [], Earlier: [] };
   items.forEach((item) => {
     if (item.date === today) groups['Today'].push(item);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CloudOff, CloudUpload, LoaderCircle, RefreshCw, Check, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSecurity } from './SecurityContext';
-import { getSyncSnapshot } from '../services/sync/syncManager';
+import { getSyncSnapshot, syncNow } from '../services/sync/syncManager';
 import type { SyncStatusSnapshot } from '../services/sync/types';
 
 function labelFor(snapshot: SyncStatusSnapshot): { text: string; icon: typeof Check; tone: string } {
@@ -26,6 +26,7 @@ export function SyncStatusBadge() {
   const { userId } = useSecurity();
   const navigate = useNavigate();
   const [snapshot, setSnapshot] = useState<SyncStatusSnapshot>(() => getSyncSnapshot(userId));
+  const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
     const update = (event: Event) => setSnapshot((event as CustomEvent<SyncStatusSnapshot>).detail);
@@ -35,16 +36,33 @@ export function SyncStatusBadge() {
   }, [userId]);
 
   const { text, icon: Icon, tone } = labelFor(snapshot);
+  const canRetry = snapshot.state === 'offline' || snapshot.state === 'error' || snapshot.pendingCount > 0;
+
+  async function handleClick() {
+    if (!canRetry || retrying) {
+      navigate('/profile/data-sync');
+      return;
+    }
+    setRetrying(true);
+    try {
+      await syncNow(userId);
+      setSnapshot(getSyncSnapshot(userId));
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   return (
     <button
       type="button"
-      onClick={() => navigate('/profile/data-sync')}
-      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-surface)] min-h-8"
-      aria-label="Sync status"
+      onClick={() => void handleClick()}
+      disabled={retrying}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border border-[var(--color-border)] bg-[var(--color-surface)] min-h-8 ${canRetry ? 'cursor-pointer hover:bg-[var(--color-surface-secondary)]' : ''} disabled:opacity-70`}
+      aria-label={canRetry ? 'Retry synchronization' : 'View synchronization details'}
     >
-      <Icon size={13} className={snapshot.state === 'syncing' ? `${tone} animate-spin` : tone} />
+      <Icon size={13} className={retrying || snapshot.state === 'syncing' ? `${tone} animate-spin` : tone} />
       <span className={tone}>{text}</span>
-      {snapshot.state === 'error' && <RefreshCw size={12} className="text-[var(--color-error)]" />}
+      {canRetry && <RefreshCw size={12} className={tone} />}
     </button>
   );
 }

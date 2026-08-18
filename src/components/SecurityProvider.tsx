@@ -28,9 +28,10 @@ function clearLockedData() {
 }
 
 export function SecurityProvider({ userId, children }: { userId: string; children: ReactNode }) {
+  const cachedAppLock = getCachedAppLockEnabled(userId);
   const [status, setStatus] = useState<SecurityStatus | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isLocked, setLocked] = useState(true);
+  const [loading, setLoading] = useState(cachedAppLock === null);
+  const [isLocked, setLocked] = useState(cachedAppLock === true);
   const [unlockMessage, setUnlockMessage] = useState('');
   const timer = useRef<number | undefined>(undefined);
   const lastServerTouch = useRef(0);
@@ -50,7 +51,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
   useEffect(() => {
     let active = true;
     clearLegacySecurityStorage();
-    setLoading(true);
+    if (cachedAppLock !== false) setLoading(true);
     getSecurityStatus(userId)
       .then((next) => {
         if (!active) return;
@@ -74,7 +75,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [userId]);
+  }, [cachedAppLock, userId]);
 
   useEffect(() => {
     const revealLockScreen = () => {

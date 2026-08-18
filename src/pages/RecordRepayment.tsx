@@ -29,10 +29,13 @@ export function RecordRepayment() {
 
   const amountNum = parseFloat(amount) || 0;
   const maxAmount = balance?.pending ?? 0;
-  const overpaying = mode === 'general' && amountNum > maxAmount && maxAmount > 0;
+  const selectedPending = mode === 'specific'
+    ? getExpenseParticipants(expenseId).find((participant) => participant.friend_id === friendId)?.pending_amount || 0
+    : maxAmount;
+  const overpaying = amountNum > selectedPending;
 
   function save() {
-    if (!friendId || amountNum <= 0) return;
+    if (!friendId || amountNum <= 0 || overpaying) return;
     const friend = friends.find((f) => f.id === friendId);
     recordRepayment({
       friend_id: friendId,
@@ -164,7 +167,7 @@ export function RecordRepayment() {
 
       <button
         onClick={save}
-        disabled={amountNum <= 0 || (mode === 'specific' && !expenseId)}
+        disabled={amountNum <= 0 || overpaying || (mode === 'specific' && !expenseId)}
         className="w-full bg-[var(--color-primary)] disabled:opacity-40 text-white font-medium rounded-xl py-3.5"
       >
         Record Repayment

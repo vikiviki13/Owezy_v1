@@ -10,6 +10,7 @@ import { clearContactImportDraft } from '../../lib/contactImport';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
 import { quoteCsvCell } from '../../lib/exportSecurity';
+import { todayDate } from '../../lib/utils';
 
 export function NotificationSettings() {
   const { preferences, updatePreferences } = usePreferences();
@@ -94,8 +95,8 @@ function InfoCard({ icon: Icon, label, value }: { icon: typeof Database; label: 
 export function ExportDataSettings() {
   const [format, setFormat] = useState<'csv' | 'json'>('csv');
   const [scope, setScope] = useState<'all' | 'custom'>('all');
-  const [from, setFrom] = useState('2026-01-01');
-  const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
+  const [from, setFrom] = useState(`${todayDate().slice(0, 4)}-01-01`);
+  const [to, setTo] = useState(todayDate);
   const [reauth, setReauth] = useState(false);
   const { userId } = useSecurity();
   const toast = useToast();
@@ -114,7 +115,7 @@ export function ExportDataSettings() {
       repayments.forEach((r) => rows.push(['repayment', 'Payment', r.payment_method, String(r.amount), data.preferences.currency_code, r.repayment_date, r.notes || '']));
       content = rows.map((row) => row.map(quoteCsvCell).join(',')).join('\n'); mime = 'text/csv';
     }
-    const url = URL.createObjectURL(new Blob([content], { type: mime })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `tab-data-${new Date().toISOString().slice(0, 10)}.${format}`; anchor.click(); URL.revokeObjectURL(url); toast('Your export is ready');
+    const url = URL.createObjectURL(new Blob([content], { type: mime })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `tab-data-${todayDate()}.${format}`; anchor.click(); URL.revokeObjectURL(url); toast('Your export is ready');
   }, [format, from, scope, to, toast]);
   const verifiedExport = useCallback(async () => {
     await recordVerifiedExport(userId);

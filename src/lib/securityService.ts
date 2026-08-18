@@ -200,11 +200,13 @@ export async function recoverPin(userId: string, pin: string, duration: AutoLock
 
 export async function enableAppLock(userId: string, autoLockDuration: AutoLockDuration, stepUpToken?: string) {
   const result = await invoke<{ grant?: UnlockGrant }>('lock/enable', { autoLockDuration, stepUpToken }, userId);
+  cacheAppLockEnabled(userId, true);
   if (result.grant) saveUnlockGrant(userId, result.grant, autoLockDuration);
 }
 
 export async function disableAppLock(userId: string) {
   await invoke('lock/disable', {}, userId);
+  cacheAppLockEnabled(userId, false);
   clearUnlockGrant(userId);
 }
 
@@ -214,6 +216,7 @@ export async function disableAppLock(userId: string) {
 export async function disableAppLockWithPassword(userId: string, password: string) {
   const proof = await verifyAccountPassword(userId, password, 'security_setup');
   await invoke('lock/disable', { stepUpToken: proof }, userId);
+  cacheAppLockEnabled(userId, false);
   clearUnlockGrant(userId);
 }
 

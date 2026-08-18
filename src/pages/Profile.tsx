@@ -11,7 +11,7 @@ import { usePreferences } from '../components/PreferencesContext';
 import { useToast } from '../components/ToastContext';
 import { clearCloudRuntimeState, flushCloudData } from '../lib/cloudData';
 import { clearLegacyLocalData, clearSensitiveLocalData, getProfile, onDBChange } from '../lib/db';
-import { currencySymbol, formatDateTime } from '../lib/utils';
+import { currencySymbol, formatDateTime, nowTime, todayDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { t } from '../lib/i18n';
 import { clearAllLocalSecurityState, revokeAllSecuritySessions } from '../lib/securityService';
@@ -67,7 +67,7 @@ export function Profile() {
 
       <SettingsSection title={t('preferences')}>
         <SettingsRow icon={WalletCards} title="Currency" value={`${preferences.currency_code} · ${currencySymbol()}`} to="/profile/currency" />
-        <SettingsRow icon={CalendarDays} title="Date & Time" value={formatDateTime('2026-08-12', '14:03')} to="/profile/date-time" />
+        <SettingsRow icon={CalendarDays} title="Date & Time" value={formatDateTime(todayDate(), nowTime())} to="/profile/date-time" />
         <SettingsRow icon={Moon} title="Appearance" value={preferences.theme === 'system' ? 'System' : titleCase(preferences.theme)} to="/profile/appearance" />
         <SettingsRow icon={Languages} title="Language" value="English" to="/profile/language" />
       </SettingsSection>

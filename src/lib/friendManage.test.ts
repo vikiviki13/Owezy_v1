@@ -45,6 +45,20 @@ describe('clearFriendDues', () => {
     const friend = createFriend({ name: 'Priya' });
     expect(clearFriendDues(friend.id)).toBeUndefined();
   });
+
+  it('rejects repayments that exceed the outstanding balance', () => {
+    const friend = createFriend({ name: 'Vijay' });
+    const expense = createExpense({
+      title: 'Cab', category: 'Travel', total_amount: 300, owner_share: 0,
+      expense_date: '2026-08-10',
+      participants: [{ friend_id: friend.id, share_amount: 300 }],
+    });
+
+    expect(() => recordRepayment({ friend_id: friend.id, amount: 301 })).toThrow(/exceed/);
+    expect(() => recordRepayment({ friend_id: friend.id, amount: 301, expense_id: expense.id })).toThrow(/exceed/);
+    expect(listRepaymentsForFriend(friend.id)).toHaveLength(0);
+    expect(calculateFriendBalance(friend.id).pending).toBe(300);
+  });
 });
 
 describe('clearFriendData', () => {

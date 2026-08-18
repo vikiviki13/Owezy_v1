@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useId } from 'react';
 import { X } from 'lucide-react';
 
 export function BottomSheet({
@@ -12,13 +12,20 @@ export function BottomSheet({
   title?: string;
   children: ReactNode;
 }) {
+  const titleId = useId();
+
   useEffect(() => {
     if (open) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    if (open) document.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = '';
+      document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [onClose, open]);
 
   if (!open) return null;
 
@@ -26,6 +33,9 @@ export function BottomSheet({
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className="relative w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl shadow-2xl animate-sheet-up safe-bottom max-h-[88vh] flex flex-col"
       >
         <div className="flex justify-center pt-3">
@@ -33,7 +43,7 @@ export function BottomSheet({
         </div>
         {title && (
           <div className="flex items-center justify-between px-5 pt-3 pb-2">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-primary)]">{title}</h2>
             <button onClick={onClose} className="size-11 rounded-full hover:bg-[var(--color-surface-secondary)] grid place-items-center" aria-label="Close">
               <X size={20} className="text-[var(--color-text-secondary)]" />
             </button>

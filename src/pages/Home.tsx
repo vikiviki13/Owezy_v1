@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, Users2, PiggyBank, ArrowUpRight, FileText, HandCoins } from 'lucide-react';
+import { Users2, PiggyBank, ArrowUpRight, FileText, HandCoins } from 'lucide-react';
 import { dashboardTotals, getProfile, listFriendBalances, onDBChange, listAllRepayments, listExpenses } from '../lib/db';
 import { formatCurrency, formatDateTimeRelative, formatTimestampRelative, greeting } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
+import { SyncStatusBadge } from '../components/SyncStatusBadge';
 
 export function Home() {
   const [, setTick] = useState(0);
@@ -27,17 +28,12 @@ export function Home() {
   return (
     <div className="px-4 pt-6 safe-top">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-start justify-between gap-3 mb-6">
         <div>
           <p className="text-sm text-[var(--color-text-muted)]">{greeting()},</p>
           <h1 className="text-xl font-semibold">{profile.full_name}</h1>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="relative w-10 h-10 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
-            <Bell size={18} className="text-[var(--color-text-secondary)]" />
-          </button>
-          <Avatar name={profile.full_name} size={40} />
-        </div>
+        <SyncStatusBadge />
       </div>
 
       {/* Main balance card */}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, MessageCircle, Copy, Share2 } from 'lucide-react';
 import { calculateStatement, getFriend } from '../lib/db';
 import { formatCurrency, formatDateShort, todayDate } from '../lib/utils';
+import { dateToIso, shiftIsoDate } from '../lib/expenseDraft';
 import { buildStatementMessage, copyToClipboard, nativeShare, shareToWhatsApp } from '../lib/share';
 import { useToast } from '../components/ToastContext';
 
@@ -10,29 +11,19 @@ type Preset = 'week' | 'month' | 'lastMonth' | '3months' | 'year' | 'all' | 'cus
 
 function presetRange(preset: Preset): { from: string; to: string } {
   const to = todayDate();
-  const now = new Date();
+  const monthStart = `${to.slice(0, 7)}-01`;
   switch (preset) {
-    case 'week': {
-      const d = new Date(Date.now() - 7 * 86400000);
-      return { from: d.toISOString().slice(0, 10), to };
-    }
-    case 'month': {
-      const d = new Date(now.getFullYear(), now.getMonth(), 1);
-      return { from: d.toISOString().slice(0, 10), to };
-    }
+    case 'week': return { from: shiftIsoDate(to, -7), to };
+    case 'month': return { from: monthStart, to };
     case 'lastMonth': {
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const end = new Date(now.getFullYear(), now.getMonth(), 0);
-      return { from: from.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) };
+      const lastMonthEnd = shiftIsoDate(monthStart, -1);
+      return { from: `${lastMonthEnd.slice(0, 7)}-01`, to: lastMonthEnd };
     }
     case '3months': {
-      const d = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
-      return { from: d.toISOString().slice(0, 10), to };
+      const [year, month, day] = to.split('-').map(Number);
+      return { from: dateToIso(new Date(year, month - 1 - 3, day, 12)), to };
     }
-    case 'year': {
-      const d = new Date(now.getFullYear(), 0, 1);
-      return { from: d.toISOString().slice(0, 10), to };
-    }
+    case 'year': return { from: `${to.slice(0, 4)}-01-01`, to };
     case 'all':
       return { from: '2000-01-01', to };
     default:

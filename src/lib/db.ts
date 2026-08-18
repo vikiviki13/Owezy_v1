@@ -5,7 +5,7 @@ import {
 } from '../types';
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
-import { expenseDateError } from './expenseDraft';
+import { expenseDateError, shiftIsoDate } from './expenseDraft';
 import { enqueueChange } from '../services/sync/syncQueue';
 import type { SyncEntityType, Tombstone } from '../services/sync/types';
 
@@ -199,7 +199,7 @@ export function seedSampleData() {
 }
 
 function daysAgo(n: number): string {
-  return new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  return shiftIsoDate(todayDate(), -n);
 }
 
 // ---------------------------------------------------------------------------
@@ -533,6 +533,14 @@ interface RecordRepaymentInput {
 }
 export function recordRepayment(input: RecordRepaymentInput): Repayment {
   const db = load();
+  const amount = roundCurrency(input.amount);
+  if (!Number.isFinite(input.amount) || amount <= 0) throw new Error('Repayment amount must be greater than zero.');
+  const friend = db.friends.find((candidate) => candidate.id === input.friend_id);
+  if (!friend) throw new Error('Friend not found.');
+  const pending = input.expense_id
+    ? db.expenseParticipants.find((participant) => participant.expense_id === input.expense_id && participant.friend_id === input.friend_id)?.pending_amount || 0
+    : db.expenseParticipants.filter((participant) => participant.friend_id === input.friend_id).reduce((sum, participant) => sum + participant.pending_amount, 0);
+  if (amount > roundCurrency(pending)) throw new Error('Repayment cannot exceed the selected outstanding balance.');
   const now = new Date().toISOString();
   const repaymentDate = input.repayment_date || todayDate();
   const repaymentTime = input.repayment_time || nowTime();
@@ -541,7 +549,7 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
     owner_id: OWNER_ID,
     friend_id: input.friend_id,
     expense_id: input.expense_id,
-    amount: roundCurrency(input.amount),
+    amount,
     payment_method: input.payment_method || 'UPI',
     transaction_reference: input.transaction_reference,
     repayment_date: repaymentDate,

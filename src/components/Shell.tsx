@@ -2,7 +2,6 @@ import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X, Share2, type LucideIcon } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
-import { SyncStatusBadge } from './SyncStatusBadge';
 import { MAIN_NAV_ORDER } from '../lib/navigation';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
 
@@ -63,9 +62,6 @@ export function Shell({ children }: { children: ReactNode }) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="max-w-2xl w-full mx-auto px-4 pt-4 flex justify-end">
-          <SyncStatusBadge />
-        </div>
         <main key={location.pathname} className={`flex-1 pb-24 md:pb-8 max-w-2xl w-full mx-auto${navDir === 'next' ? ' animate-nav-next' : navDir === 'prev' ? ' animate-nav-prev' : ''}`}>{children}</main>
 
         {/* Mobile floating add button */}

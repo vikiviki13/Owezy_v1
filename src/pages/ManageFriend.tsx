@@ -89,7 +89,7 @@ export function ManageFriend() {
 
       <Section title="Friend Information">
         <Row icon={<ContactRound size={17} />} title="Edit Profile" subtitle="Photo, name, nickname, contact details" onClick={() => setEditOpen(true)} />
-        {whatsapp && <Row icon={<MessageCircle size={17} />} title="WhatsApp Number" subtitle={whatsapp} onClick={() => window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank')} />}
+        {whatsapp && <Row icon={<MessageCircle size={17} />} title="WhatsApp Number" subtitle={whatsapp} onClick={() => window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')} />}
         {friend.phone && <Row icon={<Phone size={17} />} title="Phone" subtitle={friend.phone} />}
         {friend.email && <Row icon={<Mail size={17} />} title="Email" subtitle={friend.email} />}
         {friend.notes && <Row icon={<Pencil size={17} />} title="Notes" subtitle={friend.notes} />}
