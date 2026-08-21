@@ -19,6 +19,7 @@ export function RecordRepayment() {
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('UPI');
   const [mode, setMode] = useState<'general' | 'specific'>('general');
+  const [direction, setDirection] = useState<'from_friend' | 'to_friend'>('from_friend');
   const [expenseId, setExpenseId] = useState<string>('');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
@@ -28,7 +29,7 @@ export function RecordRepayment() {
   const pendingExpenses = friendId ? listExpensesForFriend(friendId).filter((e) => e.status !== 'settled') : [];
 
   const amountNum = parseFloat(amount) || 0;
-  const maxAmount = balance?.pending ?? 0;
+  const maxAmount = direction === 'to_friend' ? (balance?.iOweThem ?? 0) : (balance?.pending ?? 0);
   const selectedPending = mode === 'specific'
     ? getExpenseParticipants(expenseId).find((participant) => participant.friend_id === friendId)?.pending_amount || 0
     : maxAmount;
@@ -44,9 +45,10 @@ export function RecordRepayment() {
       expense_id: mode === 'specific' ? expenseId || undefined : undefined,
       transaction_reference: reference.trim() || undefined,
       notes: notes.trim() || undefined,
+      direction,
     });
     const updated = calculateFriendBalance(friendId);
-    toast(`${formatCurrency(amountNum)} received from ${friend?.name}. Updated balance: ${formatCurrency(Math.max(updated.pending, 0))} pending`);
+    toast(direction === 'to_friend' ? `${formatCurrency(amountNum)} paid to ${friend?.name}. Updated balance: ${formatCurrency(Math.abs(updated.netBalance))}` : `${formatCurrency(amountNum)} received from ${friend?.name}. Updated balance: ${formatCurrency(Math.max(updated.pending, 0))} pending`);
     navigate(`/friends/${friendId}`);
   }
 
@@ -95,7 +97,12 @@ export function RecordRepayment() {
         </div>
       </div>
 
-      <p className="text-sm text-[var(--color-text-secondary)] mb-2">Amount received</p>
+      <div className="flex gap-2 mb-5">
+        <button onClick={() => { setDirection('from_friend'); setMode('general'); }} className={`flex-1 rounded-xl py-2 text-sm font-medium ${direction === 'from_friend' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Received from friend</button>
+        <button onClick={() => { setDirection('to_friend'); setMode('general'); }} className={`flex-1 rounded-xl py-2 text-sm font-medium ${direction === 'to_friend' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Paid to friend</button>
+      </div>
+
+      <p className="text-sm text-[var(--color-text-secondary)] mb-2">{direction === 'to_friend' ? 'Amount paid' : 'Amount received'}</p>
       <div className="flex items-center gap-1 mb-2">
         <span className="text-3xl font-bold text-[var(--color-text-muted)]">₹</span>
         <input
@@ -127,15 +134,15 @@ export function RecordRepayment() {
         ))}
       </div>
 
-      <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Apply to</p>
-      <div className="flex gap-2 mb-4">
+      {direction === 'from_friend' && <p className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Apply to</p>}
+      {direction === 'from_friend' && <div className="flex gap-2 mb-4">
         <button onClick={() => setMode('general')} className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${mode === 'general' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
           General repayment
         </button>
         <button onClick={() => setMode('specific')} className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors ${mode === 'specific' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
           Specific expense
         </button>
-      </div>
+      </div>}
 
       {mode === 'specific' && (
         <div className="flex flex-col gap-2 mb-5">

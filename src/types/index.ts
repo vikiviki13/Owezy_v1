@@ -86,6 +86,15 @@ export interface GroupMember {
 export type ExpenseCategory = 'Food' | 'Travel' | 'Movie' | 'Shopping' | 'Stay' | 'Other';
 export type ExpenseStatus = 'pending' | 'partial' | 'settled';
 export type SplitMode = 'equal' | 'custom' | 'items' | 'percentage';
+export type ExpensePayerType = 'me' | 'friend' | 'multiple';
+export type ExpenseType = 'personal' | 'for_friend' | 'paid_by_friend';
+
+export interface ExpensePaymentContribution {
+  id: UUID;
+  payer_id: UUID; // use owner_id sentinel 'owner' for the current user
+  amount: number;
+  payment_method?: PaymentMethod;
+}
 
 export interface Expense {
   id: UUID;
@@ -98,6 +107,10 @@ export interface Expense {
   total_amount: number;
   owner_share: number;
   recoverable_amount: number;
+  expense_type?: ExpenseType;
+  payer_type?: ExpensePayerType;
+  payer_friend_id?: UUID;
+  payment_contributions?: ExpensePaymentContribution[];
   expense_date: string; // YYYY-MM-DD
   expense_time: string; // HH:mm
   occurred_at?: string; // UTC timestamp for the actual transaction moment
@@ -160,6 +173,7 @@ export interface Repayment {
   friend_id: UUID;
   expense_id?: UUID;
   amount: number;
+  direction?: 'from_friend' | 'to_friend';
   payment_method: PaymentMethod;
   transaction_reference?: string;
   repayment_date: string;
@@ -185,6 +199,9 @@ export interface FriendBalance {
   friend: Friend;
   totalPaidByYou: number;
   totalRepaid: number;
+  theyOweMe: number;
+  iOweThem: number;
+  netBalance: number;
   pending: number;
   status: ExpenseStatus;
   lastActivityAt?: string;

@@ -18,12 +18,15 @@ export function ExpenseDetail() {
   if (!expense) return <div className="p-6 text-center text-[var(--color-text-muted)]">Expense not found.</div>;
 
   const participants = getExpenseParticipants(id);
+  const paidByMe = expense.payment_contributions?.filter((payment) => payment.payer_id === 'owner').reduce((sum, payment) => sum + payment.amount, 0) ?? expense.total_amount;
+  const paidByFriends = expense.total_amount - paidByMe;
+  const payerLabel = expense.payer_type === 'friend' ? getFriend(expense.payer_friend_id || '')?.name || 'Friend' : expense.payer_type === 'multiple' ? 'Multiple people' : 'Me';
 
   async function handleShare() {
     if (!expense) return;
     const lines = [
       `${expense.title} — ${formatCurrency(expense.total_amount)}`,
-      `Paid by you on ${formatDate(expense.expense_date)}`,
+      `Paid by ${payerLabel} on ${formatDate(expense.expense_date)}`,
       '',
       ...participants.map((p) => `${getFriend(p.friend_id)?.name}: ${formatCurrency(p.share_amount)} (${p.status})`),
     ];
@@ -53,7 +56,14 @@ export function ExpenseDetail() {
 
       <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-5 text-center">
         <p className="text-3xl font-extrabold amount-tabular">{formatCurrency(expense.total_amount)}</p>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">Paid by you{expense.merchant_name ? ` at ${expense.merchant_name}` : ''}</p>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">Paid by {payerLabel}{expense.merchant_name ? ` at ${expense.merchant_name}` : ''}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <Metric label="My share" value={expense.owner_share} />
+        <Metric label="Friends' share" value={expense.recoverable_amount} />
+        <Metric label="Paid by me" value={paidByMe} />
+        <Metric label={paidByFriends > 0 ? 'Paid by friends' : 'Recoverable'} value={paidByFriends > 0 ? paidByFriends : expense.recoverable_amount} />
       </div>
 
       <p className="text-sm font-semibold mb-2">Participants</p>
@@ -114,4 +124,8 @@ export function ExpenseDetail() {
       )}
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><p className="text-xs text-[var(--color-text-muted)]">{label}</p><p className="mt-1 font-semibold amount-tabular">{formatCurrency(value)}</p></div>;
 }

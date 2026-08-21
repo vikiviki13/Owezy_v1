@@ -47,12 +47,11 @@ export function FriendDetail() {
 
       <div className="px-4">
         <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">
-            {balance.pending >= 0 ? 'Owes you' : 'You owe'}
+          <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">Net balance</p>
+          <p className={`text-3xl font-extrabold mt-1 amount-tabular ${balance.netBalance >= 0 ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'}`}>
+            {formatCurrency(Math.abs(balance.netBalance))}
           </p>
-          <p className={`text-3xl font-extrabold mt-1 amount-tabular ${balance.pending > 0 ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'}`}>
-            {formatCurrency(Math.abs(balance.pending))}
-          </p>
+          <div className="mt-2 flex gap-3 text-xs text-[var(--color-text-muted)]"><span>They owe you {formatCurrency(balance.theyOweMe)}</span><span>I owe them {formatCurrency(balance.iOweThem)}</span></div>
           <div className="grid grid-cols-3 gap-2 mt-4">
             <ActionBtn icon={<Receipt size={16} />} label="Add Expense" onClick={() => navigate(`/add-expense?friend=${friend.id}`)} />
             <ActionBtn icon={<HandCoins size={16} />} label="Repayment" onClick={() => navigate(`/record-repayment?friend=${friend.id}`)} />
@@ -76,10 +75,11 @@ export function FriendDetail() {
 
         {tab === 'overview' && (
           <div className="flex flex-col gap-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <Stat label="Total Paid" value={formatCurrency(balance.totalPaidByYou)} />
               <Stat label="Total Repaid" value={formatCurrency(balance.totalRepaid)} />
-              <Stat label="Pending" value={formatCurrency(balance.pending)} highlight />
+              <Stat label="They owe me" value={formatCurrency(balance.theyOweMe)} highlight />
+              <Stat label="I owe them" value={formatCurrency(balance.iOweThem)} />
             </div>
             <p className="text-sm font-semibold text-[var(--color-text-secondary)] mt-1">Recent transactions</p>
             <LedgerList ledger={ledger.slice(-5).reverse()} />

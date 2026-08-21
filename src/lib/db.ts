@@ -2,6 +2,7 @@ import {
   Attachment, Expense, ExpenseAdjustment, ExpenseItem, ExpenseItemAssignment,
   ExpenseParticipant, Friend, FriendBalance, Group, GroupMember, LedgerEntry,
   Profile, Repayment, UserPreferences, PaymentMethod,
+  ExpensePaymentContribution, ExpensePayerType, ExpenseType,
 } from '../types';
 import { localDateTimeToUTC, roundCurrency, todayDate, nowTime, uid } from './utils';
 import { defaultPreferences, setPreferenceSnapshot } from './preferences';
@@ -413,6 +414,10 @@ interface CreateExpenseInput {
   notes?: string;
   split_mode?: Expense['split_mode'];
   participants: { friend_id: string; share_amount: number }[];
+  payer_type?: ExpensePayerType;
+  expense_type?: ExpenseType;
+  payer_friend_id?: string;
+  payment_contributions?: Omit<ExpensePaymentContribution, 'id'>[];
   items?: Omit<ExpenseItem, 'id' | 'expense_id' | 'created_at'>[];
   adjustments?: Omit<ExpenseAdjustment, 'id' | 'expense_id'>[];
 }
@@ -420,6 +425,14 @@ interface CreateExpenseInput {
 export function createExpense(input: CreateExpenseInput): Expense {
   const db = load();
   const now = new Date().toISOString();
+  const payerType = input.payer_type || 'me';
+  const contributions = (input.payment_contributions?.length
+    ? input.payment_contributions
+    : [{ payer_id: 'owner', amount: input.total_amount }]).map((payment) => ({
+      ...payment,
+      id: uid(),
+      amount: roundCurrency(payment.amount),
+    }));
   const recoverable = roundCurrency(input.participants.reduce((s, p) => s + p.share_amount, 0));
   const expenseDate = input.expense_date;
   const dateError = expenseDateError(expenseDate);
@@ -436,6 +449,10 @@ export function createExpense(input: CreateExpenseInput): Expense {
     total_amount: roundCurrency(input.total_amount),
     owner_share: roundCurrency(input.owner_share),
     recoverable_amount: recoverable,
+    expense_type: input.expense_type || (payerType === 'friend' ? 'paid_by_friend' : input.participants.length ? 'for_friend' : 'personal'),
+    payer_type: payerType,
+    payer_friend_id: input.payer_friend_id,
+    payment_contributions: contributions,
     expense_date: expenseDate,
     expense_time: expenseTime,
     occurred_at: localDateTimeToUTC(expenseDate, expenseTime, db.preferences.timezone_mode === 'automatic' ? Intl.DateTimeFormat().resolvedOptions().timeZone : db.preferences.timezone),
@@ -457,8 +474,8 @@ export function createExpense(input: CreateExpenseInput): Expense {
       friend_id: p.friend_id,
       share_amount: share,
       paid_amount: 0,
-      pending_amount: share,
-      status: 'pending',
+      pending_amount: payerType === 'friend' ? 0 : share,
+      status: payerType === 'friend' ? 'settled' : 'pending',
       created_at: now,
       updated_at: now,
     };
@@ -530,6 +547,7 @@ interface RecordRepaymentInput {
   notes?: string;
   repayment_date?: string;
   repayment_time?: string;
+  direction?: Repayment['direction'];
 }
 export function recordRepayment(input: RecordRepaymentInput): Repayment {
   const db = load();
@@ -537,7 +555,9 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
   if (!Number.isFinite(input.amount) || amount <= 0) throw new Error('Repayment amount must be greater than zero.');
   const friend = db.friends.find((candidate) => candidate.id === input.friend_id);
   if (!friend) throw new Error('Friend not found.');
-  const pending = input.expense_id
+  const direction = input.direction || 'from_friend';
+  const balance = calculateFriendBalance(input.friend_id);
+  const pending = direction === 'to_friend' ? balance.iOweThem : input.expense_id
     ? db.expenseParticipants.find((participant) => participant.expense_id === input.expense_id && participant.friend_id === input.friend_id)?.pending_amount || 0
     : db.expenseParticipants.filter((participant) => participant.friend_id === input.friend_id).reduce((sum, participant) => sum + participant.pending_amount, 0);
   if (amount > roundCurrency(pending)) throw new Error('Repayment cannot exceed the selected outstanding balance.');
@@ -550,6 +570,7 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
     friend_id: input.friend_id,
     expense_id: input.expense_id,
     amount,
+    direction,
     payment_method: input.payment_method || 'UPI',
     transaction_reference: input.transaction_reference,
     repayment_date: repaymentDate,
@@ -560,6 +581,12 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
     updated_at: now,
   };
   db.repayments.push(repayment);
+
+  if (direction === 'to_friend') {
+    persist();
+    enqueue('repayment', repayment.id, 'CREATE');
+    return repayment;
+  }
 
   // Allocate against participant pending_amounts, oldest expense first.
   let remaining = repayment.amount;
@@ -616,11 +643,30 @@ export function calculateFriendBalance(friendId: string): FriendBalance {
   const db = load();
   const friend = db.friends.find((f) => f.id === friendId)!;
   const parts = db.expenseParticipants.filter((p) => p.friend_id === friendId);
-  const totalPaidByYou = roundCurrency(parts.reduce((s, p) => s + p.share_amount, 0));
-  const totalRepaid = roundCurrency(parts.reduce((s, p) => s + p.paid_amount, 0));
-  const pending = roundCurrency(totalPaidByYou - totalRepaid);
+  const friendExpenses = db.expenses.filter((expense) => parts.some((p) => p.expense_id === expense.id));
+  const totalPaidByYou = roundCurrency(friendExpenses.reduce((sum, expense) => {
+    const part = parts.find((candidate) => candidate.expense_id === expense.id);
+    if (!part || payerType(expense) === 'friend') return sum;
+    return sum + Math.max(0, part.share_amount - amountPaidBy(expense, friendId));
+  }, 0));
+  const receivedRepayments = roundCurrency(db.repayments
+    .filter((repayment) => repayment.friend_id === friendId && repayment.direction !== 'to_friend')
+    .reduce((sum, repayment) => sum + repayment.amount, 0));
+  const totalRepaid = roundCurrency(Math.min(totalPaidByYou, receivedRepayments));
+  const theyOweMe = roundCurrency(Math.max(0, totalPaidByYou - totalRepaid));
+  const friendPaidForMe = roundCurrency(friendExpenses.reduce((sum, expense) => {
+    if (payerType(expense) === 'me') return sum;
+    const friendPaid = amountPaidBy(expense, friendId);
+    return sum + Math.min(expense.owner_share, friendPaid);
+  }, 0));
+  const paidBackToFriend = roundCurrency(db.repayments
+    .filter((repayment) => repayment.friend_id === friendId && repayment.direction === 'to_friend')
+    .reduce((sum, repayment) => sum + repayment.amount, 0));
+  const iOweThem = roundCurrency(Math.max(0, friendPaidForMe - paidBackToFriend));
+  const netBalance = roundCurrency(theyOweMe - iOweThem);
+  const pending = Math.max(0, netBalance);
 
-  const expenseDates = db.expenses.filter((e) => parts.some((p) => p.expense_id === e.id)).map((e) => e.expense_date + 'T' + e.expense_time);
+  const expenseDates = friendExpenses.map((e) => e.expense_date + 'T' + e.expense_time);
   const repayDates = db.repayments.filter((r) => r.friend_id === friendId).map((r) => r.repayment_date + 'T' + r.repayment_time);
   const lastActivityAt = [...expenseDates, ...repayDates].sort().pop();
 
@@ -628,8 +674,11 @@ export function calculateFriendBalance(friendId: string): FriendBalance {
     friend,
     totalPaidByYou,
     totalRepaid,
+    theyOweMe,
+    iOweThem,
+    netBalance,
     pending,
-    status: pending <= 0 && totalPaidByYou > 0 ? 'settled' : totalRepaid > 0 ? 'partial' : 'pending',
+    status: netBalance === 0 && (totalPaidByYou > 0 || friendPaidForMe > 0) ? 'settled' : (totalRepaid > 0 || paidBackToFriend > 0) ? 'partial' : 'pending',
     lastActivityAt,
   };
 }
@@ -643,6 +692,75 @@ export function listFriendBalances(): FriendBalance[] {
 export function calculateExpensePending(expenseId: string): number {
   const parts = getExpenseParticipants(expenseId);
   return roundCurrency(parts.reduce((s, p) => s + p.pending_amount, 0));
+}
+
+function expensePayments(expense: Expense): ExpensePaymentContribution[] {
+  return expense.payment_contributions?.length
+    ? expense.payment_contributions
+    : [{ id: `${expense.id}-legacy-owner-payment`, payer_id: 'owner', amount: expense.total_amount }];
+}
+
+function payerType(expense: Expense): ExpensePayerType {
+  return expense.payer_type || 'me';
+}
+
+function amountPaidBy(expense: Expense, payerId: string) {
+  return roundCurrency(expensePayments(expense)
+    .filter((payment) => payment.payer_id === payerId)
+    .reduce((sum, payment) => sum + payment.amount, 0));
+}
+
+export interface SpendingSummary {
+  fromDate: string;
+  toDate: string;
+  totalPaidByMe: number;
+  totalPaidByFriends: number;
+  myActualSpending: number;
+  spentForFriends: number;
+  paidByFriendsForMe: number;
+  personalExpenses: number;
+  netPersonalSpending: number;
+  categoryBreakdown: { category: Expense['category']; amount: number }[];
+}
+
+export function calculateSpendingSummary(fromDate: string, toDate: string): SpendingSummary {
+  const expenses = listExpenses().filter((expense) => expense.expense_date >= fromDate && expense.expense_date <= toDate);
+  const totalPaidByMe = roundCurrency(expenses.reduce((sum, expense) => sum + amountPaidBy(expense, 'owner'), 0));
+  const totalPaidByFriends = roundCurrency(expenses.reduce((sum, expense) => sum + expensePayments(expense)
+    .filter((payment) => payment.payer_id !== 'owner')
+    .reduce((inner, payment) => inner + payment.amount, 0), 0));
+  const myActualSpending = roundCurrency(expenses.reduce((sum, expense) => sum + expense.owner_share, 0));
+  const spentForFriends = roundCurrency(expenses.reduce((sum, expense) => {
+    const friendShare = expense.recoverable_amount;
+    const friendPaid = roundCurrency(expensePayments(expense)
+      .filter((payment) => payment.payer_id !== 'owner')
+      .reduce((inner, payment) => inner + payment.amount, 0));
+    return sum + (payerType(expense) === 'me' ? friendShare : Math.max(0, friendShare - friendPaid));
+  }, 0));
+  const paidByFriendsForMe = roundCurrency(expenses.reduce((sum, expense) => {
+    const friendPaid = totalPaidByFriendsForExpense(expense);
+    return sum + Math.min(expense.owner_share, friendPaid);
+  }, 0));
+  const categoryMap = new Map<Expense['category'], number>();
+  expenses.forEach((expense) => categoryMap.set(expense.category, roundCurrency((categoryMap.get(expense.category) || 0) + expense.owner_share)));
+  return {
+    fromDate,
+    toDate,
+    totalPaidByMe,
+    totalPaidByFriends,
+    myActualSpending,
+    spentForFriends,
+    paidByFriendsForMe,
+    personalExpenses: roundCurrency(expenses.filter((expense) => expense.owner_share > 0 && expense.recoverable_amount === 0).reduce((sum, expense) => sum + expense.owner_share, 0)),
+    netPersonalSpending: roundCurrency(myActualSpending - paidByFriendsForMe),
+    categoryBreakdown: [...categoryMap.entries()].map(([category, amount]) => ({ category, amount })),
+  };
+}
+
+function totalPaidByFriendsForExpense(expense: Expense) {
+  return roundCurrency(expensePayments(expense)
+    .filter((payment) => payment.payer_id !== 'owner')
+    .reduce((sum, payment) => sum + payment.amount, 0));
 }
 
 export function calculateGroupBalance(groupId: string): number {
@@ -713,7 +831,8 @@ export function dashboardTotals() {
   const totalPaid = roundCurrency(balances.reduce((s, b) => s + b.totalPaidByYou, 0));
   const totalReceived = roundCurrency(balances.reduce((s, b) => s + b.totalRepaid, 0));
   const friendsOwing = balances.filter((b) => b.pending > 0).length;
-  return { totalPending, totalPaid, totalReceived, friendsOwing };
+  const summary = calculateSpendingSummary('0000-01-01', '9999-12-31');
+  return { totalPending, totalPaid, totalReceived, friendsOwing, ...summary };
 }
 
 export function onDBChange(cb: () => void) {

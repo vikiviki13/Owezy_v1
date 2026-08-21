@@ -5,7 +5,7 @@ import { calculateFriendBalance, createFriend, createExpense, listFriends, getGr
 import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
-import { ExpenseCategory, SplitMode } from '../types';
+import { ExpenseCategory, ExpensePayerType, SplitMode } from '../types';
 import { consumeExpenseContactHandoff, createContactImportDraft, pickDeviceContacts, saveContactImportDraft } from '../lib/contactImport';
 import { useSecurity } from '../components/SecurityContext';
 import { buildExpenseWhatsAppMessage, expenseDateError, expenseDateLabel, shiftIsoDate } from '../lib/expenseDraft';
@@ -65,9 +65,12 @@ export function AddExpense() {
   const [pickerError, setPickerError] = useState('');
 
   const [total, setTotal] = useState('');
-  const [includeOwner, setIncludeOwner] = useState(true);
+  const [includeOwner] = useState(true);
   const [splitMode, setSplitMode] = useState<SplitMode>('equal');
   const [customShares, setCustomShares] = useState<Record<string, string>>({});
+  const [payerType, setPayerType] = useState<ExpensePayerType>('me');
+  const [payerFriendId, setPayerFriendId] = useState('');
+  const [paymentShares, setPaymentShares] = useState<Record<string, string>>({});
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Food');
@@ -139,6 +142,19 @@ export function AddExpense() {
 
     const reason = title.trim() || category;
     try {
+      const paymentContributions = payerType === 'me'
+        ? [{ payer_id: 'owner', amount: totalNum }]
+        : payerType === 'friend'
+          ? [{ payer_id: payerFriendId, amount: totalNum }]
+          : [
+              { payer_id: 'owner', amount: parseFloat(paymentShares.owner || '') || 0 },
+              ...friends.map((friend) => ({ payer_id: friend.id, amount: parseFloat(paymentShares[friend.id] || '') || 0 })),
+            ].filter((payment) => payment.amount > 0);
+      const paymentTotal = roundCurrency(paymentContributions.reduce((sum, payment) => sum + payment.amount, 0));
+      if ((payerType === 'friend' && !payerFriendId) || paymentTotal !== totalNum) {
+        toast('Choose who paid and assign the full bill amount.');
+        return;
+      }
       const expense = createExpense({
         title: reason,
         category,
@@ -149,6 +165,10 @@ export function AddExpense() {
         notes: notes.trim() || undefined,
         split_mode: splitMode,
         participants,
+        payer_type: payerType,
+        expense_type: payerType === 'friend' ? 'paid_by_friend' : selected.length ? 'for_friend' : 'personal',
+        payer_friend_id: payerType === 'friend' ? payerFriendId : undefined,
+        payment_contributions: paymentContributions,
       });
 
       const messages = participants.flatMap((participant) => {
@@ -184,7 +204,7 @@ export function AddExpense() {
     setDateSheetMode('quick');
   }
 
-  const canProceedStep1 = selected.length > 0;
+  const canProceedStep1 = true;
   const canProceedStep2 = totalNum > 0 && (splitMode === 'equal' || customDiff === 0);
 
   if (savedExpense) {
@@ -247,6 +267,10 @@ export function AddExpense() {
       {step === 1 && (
         <div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who's this for?</p>
+          <div className="flex gap-2 mb-4">
+            <button onClick={() => setSelected([])} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${selected.length === 0 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Personal</button>
+            <div className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium ${selected.length > 0 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>For friends</div>
+          </div>
           <div className="relative mb-3">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends" className="input !pl-9" />
@@ -328,14 +352,8 @@ export function AddExpense() {
             />
           </div>
 
-          <div className="flex items-center justify-between bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-4">
-            <span className="text-sm font-medium">Include my share</span>
-            <button
-              onClick={() => setIncludeOwner((v) => !v)}
-              className={`w-11 h-6 rounded-full transition-colors relative ${includeOwner ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'}`}
-            >
-              <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${includeOwner ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </button>
+          <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-4 text-sm text-[var(--color-text-secondary)]">
+            Your share is always included in this expense. Add friends only when the bill was shared.
           </div>
 
           <div className="flex gap-2 mb-4">
@@ -419,6 +437,31 @@ export function AddExpense() {
 
       {step === 3 && (
         <div>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who paid?</p>
+          <div className="flex gap-2 mb-3">
+            {(['me', 'friend', 'multiple'] as ExpensePayerType[]).map((type) => (
+              <button key={type} onClick={() => setPayerType(type)} className={`flex-1 rounded-xl py-2 text-xs font-medium capitalize ${payerType === type ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
+                {type === 'me' ? 'I paid' : type === 'friend' ? 'Friend paid' : 'Multiple'}
+              </button>
+            ))}
+          </div>
+          {payerType === 'friend' && (
+            <select value={payerFriendId} onChange={(e) => setPayerFriendId(e.target.value)} className="input mb-3">
+              <option value="">Select the friend who paid</option>
+              {friends.map((friend) => <option key={friend.id} value={friend.id}>{friend.name}</option>)}
+            </select>
+          )}
+          {payerType === 'multiple' && (
+            <div className="mb-5 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3">
+              <p className="text-xs text-[var(--color-text-muted)]">Enter each payment. The total must equal the bill.</p>
+              {[{ id: 'owner', label: 'You' }, ...friends.filter((friend) => selected.includes(friend.id)).map((friend) => ({ id: friend.id, label: friend.name }))].map((payer) => (
+                <div key={payer.id} className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium">{payer.label}</span>
+                  <input value={paymentShares[payer.id] || ''} onChange={(e) => setPaymentShares((shares) => ({ ...shares, [payer.id]: e.target.value.replace(/[^0-9.]/g, '') }))} placeholder="0" inputMode="decimal" className="w-28 input text-right" />
+                </div>
+              ))}
+            </div>
+          )}
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">What was it for?</p>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {CATEGORIES.map((c) => (

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users2, PiggyBank, ArrowUpRight, FileText, HandCoins } from 'lucide-react';
-import { dashboardTotals, getProfile, listFriendBalances, onDBChange, listAllRepayments, listExpenses } from '../lib/db';
-import { formatCurrency, formatDateTimeRelative, formatTimestampRelative, greeting } from '../lib/utils';
+import { calculateSpendingSummary, dashboardTotals, getProfile, listFriendBalances, onDBChange, listAllRepayments, listExpenses } from '../lib/db';
+import { formatCurrency, formatDateTimeRelative, formatTimestampRelative, greeting, todayDate } from '../lib/utils';
+import { shiftIsoDate } from '../lib/expenseDraft';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
@@ -10,11 +11,24 @@ import { SyncStatusBadge } from '../components/SyncStatusBadge';
 
 export function Home() {
   const [, setTick] = useState(0);
+  const [range, setRange] = useState<'today' | 'week' | 'month' | 'last-month' | 'custom'>('month');
+  const [customFrom, setCustomFrom] = useState(() => shiftIsoDate(todayDate(), -30));
+  const [customTo, setCustomTo] = useState(() => todayDate());
   const navigate = useNavigate();
   useEffect(() => onDBChange(() => setTick((t) => t + 1)), []);
 
   const profile = getProfile();
   const totals = dashboardTotals();
+  const today = todayDate();
+  const firstOfMonth = `${today.slice(0, 7)}-01`;
+  const summaryDates = range === 'today'
+    ? [today, today]
+    : range === 'week'
+      ? [shiftIsoDate(today, -6), today]
+      : range === 'last-month'
+        ? [`${shiftIsoDate(firstOfMonth, -1).slice(0, 7)}-01`, shiftIsoDate(firstOfMonth, -1)]
+        : range === 'custom' ? [customFrom, customTo] : [firstOfMonth, today];
+  const spending = calculateSpendingSummary(summaryDates[0], summaryDates[1]);
   const balances = listFriendBalances().filter((b) => b.pending > 0);
   const owing = balances.slice(0, 8);
 
@@ -35,6 +49,22 @@ export function Home() {
         </div>
         <SyncStatusBadge />
       </div>
+
+      <section className="mb-8">
+        <div className="flex items-center justify-between mb-3"><h2 className="font-semibold">Spending overview</h2><span className="text-xs text-[var(--color-text-muted)]">{summaryDates[0]} → {summaryDates[1]}</span></div>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {(['today', 'week', 'month', 'last-month', 'custom'] as const).map((value) => <button key={value} onClick={() => setRange(value)} className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize ${range === value ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>{value.replace('-', ' ')}</button>)}
+        </div>
+        {range === 'custom' && <div className="flex gap-2 mb-3"><input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="input text-xs" /><input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="input text-xs" /></div>}
+        <div className="grid grid-cols-2 gap-3">
+          <SummaryMetric label="My actual spending" amount={spending.myActualSpending} />
+          <SummaryMetric label="Spent for friends" amount={spending.spentForFriends} />
+          <SummaryMetric label="Paid by friends for me" amount={spending.paidByFriendsForMe} />
+          <SummaryMetric label="Net personal spending" amount={spending.netPersonalSpending} />
+          <SummaryMetric label="Total paid by me" amount={spending.totalPaidByMe} />
+          <SummaryMetric label="Total paid by friends" amount={spending.totalPaidByFriends} />
+        </div>
+      </section>
 
       {/* Main balance card */}
       <div className="rounded-3xl bg-[var(--color-primary)] text-white p-6 mb-8 receipt-edge relative overflow-hidden">
@@ -120,6 +150,10 @@ export function Home() {
       </div>
     </div>
   );
+}
+
+function SummaryMetric({ label, amount }: { label: string; amount: number }) {
+  return <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3"><p className="text-xs leading-4 text-[var(--color-text-muted)]">{label}</p><p className="mt-1 font-semibold amount-tabular">{formatCurrency(amount)}</p></div>;
 }
 
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
