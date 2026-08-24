@@ -5,12 +5,16 @@ import { usePreferences } from '../../components/PreferencesContext';
 import { useToast } from '../../components/ToastContext';
 import { useSecurity } from '../../components/SecurityContext';
 import { RequireReauthentication } from '../../components/security/RequireReauthentication';
-import { getExportData, getStorageSummary } from '../../lib/db';
+import { getStorageSummary } from '../../lib/db';
 import { clearContactImportDraft } from '../../lib/contactImport';
 import { getInstallPrompt, isStandalone, subscribeInstallPrompt } from '../../lib/install';
 import { recordVerifiedExport } from '../../lib/securityService';
-import { quoteCsvCell } from '../../lib/exportSecurity';
 import { todayDate } from '../../lib/utils';
+import { bundleToCsv, downloadText } from '../../lib/export/csvExport';
+import { downloadJson } from '../../lib/export/jsonExport';
+import { buildExportBundle } from '../../lib/export/financialSummary';
+import { downloadPdf } from '../../lib/export/pdfExport';
+import type { ExportDateRange, ExportRangePreset } from '../../lib/export/exportTypes';
 
 export function NotificationSettings() {
   const { preferences, updatePreferences } = usePreferences();
@@ -93,40 +97,61 @@ export function DataStorageSettings() {
 function InfoCard({ icon: Icon, label, value }: { icon: typeof Database; label: string; value: string }) { return <div className="rounded-2xl bg-[var(--color-surface)] border border-[var(--color-border)] p-4"><Icon size={20} className="text-[var(--color-primary)] mb-4" /><p className="text-xs text-[var(--color-text-muted)]">{label}</p><p className="font-bold mt-1">{value}</p></div>; }
 
 export function ExportDataSettings() {
-  const [format, setFormat] = useState<'csv' | 'json'>('csv');
-  const [scope, setScope] = useState<'all' | 'custom'>('all');
+  const [format, setFormat] = useState<'csv' | 'json' | 'pdf'>('csv');
+  const [scope, setScope] = useState<ExportRangePreset>('all');
   const [from, setFrom] = useState(`${todayDate().slice(0, 4)}-01-01`);
   const [to, setTo] = useState(todayDate);
   const [reauth, setReauth] = useState(false);
+  const [busy, setBusy] = useState(false);
   const { userId } = useSecurity();
   const toast = useToast();
-  const download = useCallback(() => {
-    const data = getExportData();
-    const inRange = (date: string) => scope === 'all' || (date >= from && date <= to);
-    const expenses = data.expenses.filter((item) => inRange(item.expense_date));
-    const expenseIds = new Set(expenses.map((item) => item.id));
-    const repayments = data.repayments.filter((item) => inRange(item.repayment_date));
-    const safe = { friends: data.friends, groups: data.groups, group_members: data.groupMembers, expenses, expense_participants: data.expenseParticipants.filter((item) => expenseIds.has(item.expense_id)), repayments };
-    let content: string; let mime: string;
-    if (format === 'json') { content = JSON.stringify(safe, null, 2); mime = 'application/json'; }
-    else {
-      const rows = [['type', 'title', 'friend_or_method', 'amount', 'currency', 'date', 'notes']];
-      expenses.forEach((e) => rows.push(['expense', e.title, e.category, String(e.recoverable_amount), e.currency, e.expense_date, e.notes || '']));
-      repayments.forEach((r) => rows.push(['repayment', 'Payment', r.payment_method, String(r.amount), data.preferences.currency_code, r.repayment_date, r.notes || '']));
-      content = rows.map((row) => row.map(quoteCsvCell).join(',')).join('\n'); mime = 'text/csv';
+  const today = todayDate();
+  function dateRange(): ExportDateRange {
+    const date = new Date(`${today}T12:00:00`);
+    if (scope === 'all') return { from: '0000-01-01', to: '9999-12-31', label: 'All time' };
+    if (scope === 'today') return { from: today, to: today, label: 'Today' };
+    if (scope === 'this_week') {
+      const start = new Date(date); start.setDate(date.getDate() - date.getDay());
+      const startText = start.toISOString().slice(0, 10);
+      return { from: startText, to: today, label: 'This week' };
     }
-    const url = URL.createObjectURL(new Blob([content], { type: mime })); const anchor = document.createElement('a'); anchor.href = url; anchor.download = `tab-data-${todayDate()}.${format}`; anchor.click(); URL.revokeObjectURL(url); toast('Your export is ready');
-  }, [format, from, scope, to, toast]);
+    if (scope === 'this_month') return { from: `${today.slice(0, 7)}-01`, to: today, label: 'This month' };
+    if (scope === 'last_month') {
+      const last = new Date(date.getFullYear(), date.getMonth() - 1, 1);
+      const lastFrom = last.toISOString().slice(0, 10);
+      const lastTo = new Date(date.getFullYear(), date.getMonth(), 0).toISOString().slice(0, 10);
+      return { from: lastFrom, to: lastTo, label: 'Last month' };
+    }
+    return { from, to, label: `${from} – ${to}` };
+  }
+  const range = dateRange();
+  const invalidRange = scope === 'custom' && (!from || !to || from > to);
+  const download = useCallback(async () => {
+    if (invalidRange) return;
+    setBusy(true);
+    try {
+      const bundle = buildExportBundle(range, format === 'json' ? 'full_backup' : format === 'pdf' ? 'statement' : 'report');
+      if (!bundle.summary.expenseCount && !bundle.summary.repaymentCount && format !== 'json') { toast('No financial activity found for this date range'); return; }
+      const suffix = range.from === '0000-01-01' ? today : `${range.from}-to-${range.to}`;
+      if (format === 'json') downloadJson(`owezy-backup-${suffix}.json`, bundle);
+      else if (format === 'pdf') await downloadPdf(`owezy-statement-${suffix}.pdf`, bundle);
+      else downloadText(`owezy-report-${suffix}.csv`, bundleToCsv(bundle), 'text/csv;charset=utf-8');
+      toast('Your export is ready');
+    } catch { toast('Could not generate this export'); }
+    finally { setBusy(false); }
+  }, [format, invalidRange, range, today, toast]);
   const verifiedExport = useCallback(async () => {
     await recordVerifiedExport(userId);
     setReauth(false);
-    download();
+    await download();
   }, [download, userId]);
-  return <SettingsPage title="Export Your Data" description="Download a copy of your expense and repayment history."><div className="grid grid-cols-2 gap-3 mb-7">{([['csv', FileSpreadsheet, 'CSV', 'Best for Excel and spreadsheet applications.'], ['json', FileJson, 'JSON', 'Complete structured backup.']] as const).map(([value, Icon, title, desc]) => <button key={value} onClick={() => setFormat(value)} className={`relative rounded-2xl border-2 p-4 text-left min-h-36 ${format === value ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}><Icon size={23} className="mb-4" /><p className="font-bold">{title}</p><p className="text-xs leading-5 text-[var(--color-text-muted)] mt-1">{desc}</p>{format === value && <Check size={18} className="absolute right-3 top-3 text-[var(--color-primary)]" />}</button>)}</div>
-    <SettingsSection title="Scope"><ChoiceRow selected={scope === 'all'} title="All Data" onClick={() => setScope('all')} /><ChoiceRow selected={scope === 'custom'} title="Custom Date Range" onClick={() => setScope('custom')} /></SettingsSection>
+  const options = ([['csv', FileSpreadsheet, 'Export Report', 'Simple expense and balance report.'], ['json', FileJson, 'Full Backup', 'Complete backup for restoring your data.'], ['pdf', FileSpreadsheet, 'Financial Statement', 'Simple summary for viewing or sharing.']] as const);
+  return <SettingsPage title="Export Your Data" description="Export and download your financial information."><SettingsSection title="Date Range"><select className="input min-h-12" value={scope} onChange={(e) => setScope(e.target.value as ExportRangePreset)}><option value="all">All Time</option><option value="today">Today</option><option value="this_week">This Week</option><option value="this_month">This Month</option><option value="last_month">Last Month</option><option value="custom">Custom Date Range</option></select></SettingsSection>
     {scope === 'custom' && <div className="grid grid-cols-2 gap-3 mb-7"><label><span className="text-xs font-semibold block mb-2">From</span><input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></label><label><span className="text-xs font-semibold block mb-2">To</span><input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} /></label></div>}
-    <div className="rounded-2xl bg-[var(--color-surface-secondary)] p-4 mb-7 text-xs leading-5 text-[var(--color-text-secondary)]">Includes friends, expenses, participants, repayments, groups, dates, and notes. Authentication tokens, passwords, and internal security identifiers are never exported.</div>
-    <button onClick={() => setReauth(true)} disabled={scope === 'custom' && (!from || !to || from > to)} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold disabled:opacity-40">Download {format.toUpperCase()}</button>
+    {invalidRange && <p className="text-sm text-[var(--color-error)] mb-5">Start date must be before or equal to the end date.</p>}
+    <div className="grid grid-cols-2 gap-3 mb-7">{options.map(([value, Icon, title, desc]) => <button key={value} onClick={() => setFormat(value)} className={`relative rounded-2xl border-2 p-4 text-left min-h-36 ${format === value ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]' : 'border-[var(--color-border)] bg-[var(--color-surface)]'}`}><Icon size={23} className="mb-4" /><p className="font-bold">{title}</p><p className="text-xs leading-5 text-[var(--color-text-muted)] mt-1">{desc}</p>{format === value && <Check size={18} className="absolute right-3 top-3 text-[var(--color-primary)]" />}</button>)}</div>
+    <div className="rounded-2xl bg-[var(--color-surface-secondary)] p-4 mb-7 text-xs leading-5 text-[var(--color-text-secondary)]">{range.label}. Includes financial summaries, friends, balances, expenses, repayments, categories, and safe backup metadata. Authentication and security credentials are never exported.</div>
+    <button onClick={() => setReauth(true)} disabled={invalidRange || busy} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold disabled:opacity-40">{busy ? 'Preparing your export…' : `Download ${format.toUpperCase()}`}</button>
     <RequireReauthentication open={reauth} purpose="export all financial data" onCancel={() => setReauth(false)} onVerified={verifiedExport} />
   </SettingsPage>;
 }

@@ -242,7 +242,12 @@ export function getExportData() {
     groupMembers: db.groupMembers,
     expenses: db.expenses,
     expenseParticipants: db.expenseParticipants,
+    expenseItems: db.expenseItems,
+    expenseItemAssignments: db.expenseItemAssignments,
+    expenseAdjustments: db.expenseAdjustments,
     repayments: db.repayments,
+    attachments: db.attachments,
+    deleted: db.deleted,
   };
 }
 

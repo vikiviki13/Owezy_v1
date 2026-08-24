@@ -20,6 +20,7 @@ import { AddExpense } from './pages/AddExpense';
 import { RecordRepayment } from './pages/RecordRepayment';
 import { ExpenseDetail } from './pages/ExpenseDetail';
 import { Activity } from './pages/Activity';
+import { SpendingOverview } from './pages/SpendingOverview';
 import { Statement } from './pages/Statement';
 import { Groups } from './pages/Groups';
 import { Profile } from './pages/Profile';
@@ -217,6 +218,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/record-repayment" element={<RecordRepayment />} />
             <Route path="/expense/:id" element={<ExpenseDetail />} />
             <Route path="/activity" element={<Activity />} />
+            <Route path="/spending-overview" element={<SpendingOverview />} />
             <Route path="/statement/:friendId" element={<Statement />} />
             <Route path="/groups" element={<Groups />} />
             <Route path="/profile" element={<Profile />} />

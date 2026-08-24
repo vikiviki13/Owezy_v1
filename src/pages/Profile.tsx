@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   Bell, CalendarDays, ChevronRight, CircleHelp, Database, Download, Fingerprint,
-  Languages, LogOut, Moon, ReceiptText, RefreshCw, Share2, ShieldCheck, Smartphone, WalletCards, Info,
+  BarChart3, Languages, LogOut, Moon, ReceiptText, RefreshCw, Share2, ShieldCheck, Smartphone, WalletCards, Info,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar } from '../components/Avatar';
@@ -75,6 +75,7 @@ export function Profile() {
       </SettingsSection>
 
       <SettingsSection title={t('appData')}>
+        <SettingsRow icon={BarChart3} title="Spending Overview" description="Review your monthly spending" to="/spending-overview" />
         <SettingsRow icon={Share2} title="Share App" to="/profile/share" />
         <SettingsRow icon={Smartphone} title="Install App" to="/profile/install" />
         <SettingsRow icon={Download} title="Export Data" to="/profile/export" />

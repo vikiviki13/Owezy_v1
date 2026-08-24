@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Users, Activity, LayoutGrid, User, Plus, Receipt, HandCoins, X, Share2, type LucideIcon } from 'lucide-react';
+import { Home, Users, Activity, LayoutGrid, User, BarChart3, Plus, Receipt, HandCoins, X, Share2, type LucideIcon } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
 import { MAIN_NAV_ORDER } from '../lib/navigation';
 import { useSwipeNavigation } from '../hooks/useSwipeNavigation';
@@ -16,7 +16,12 @@ const NAV_ICONS: Record<string, LucideIcon> = {
 const NAV_ITEMS = MAIN_NAV_ORDER.map(({ path, label }) => ({ to: path, label, icon: NAV_ICONS[path] }));
 
 const MOBILE_NAV_ITEMS = [...NAV_ITEMS];
-const DESKTOP_NAV_ITEMS = [...NAV_ITEMS, { to: '/profile/share', label: 'Share', icon: Share2 }];
+const DESKTOP_NAV_ITEMS = [
+  ...NAV_ITEMS.slice(0, 3),
+  { to: '/spending-overview', label: 'Spending Overview', icon: BarChart3 },
+  ...NAV_ITEMS.slice(3),
+  { to: '/profile/share', label: 'Share', icon: Share2 },
+];
 
 export function Shell({ children }: { children: ReactNode }) {
   const [quickOpen, setQuickOpen] = useState(false);
