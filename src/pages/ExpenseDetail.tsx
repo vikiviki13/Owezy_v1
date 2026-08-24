@@ -135,6 +135,13 @@ export function ExpenseDetail() {
         </div>
       )}
 
+      {expense.description && (
+        <div className="mb-6">
+          <p className="text-sm font-semibold mb-1">Purpose / Reason</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">{expense.description}</p>
+        </div>
+      )}
+
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-black/40" onClick={() => setConfirmDelete(false)} />

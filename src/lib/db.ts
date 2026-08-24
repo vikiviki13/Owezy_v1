@@ -409,6 +409,7 @@ export function getGroupMembers(groupId: string): Friend[] {
 // ---------------------------------------------------------------------------
 interface CreateExpenseInput {
   title: string;
+  description?: string;
   category: Expense['category'];
   merchant_name?: string;
   location_name?: string;
@@ -449,6 +450,7 @@ export function createExpense(input: CreateExpenseInput): Expense {
     id: uid(),
     owner_id: OWNER_ID,
     title: input.title,
+    description: input.description,
     category: input.category,
     merchant_name: input.merchant_name,
     location_name: input.location_name,

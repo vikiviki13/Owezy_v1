@@ -76,6 +76,7 @@ export function AddExpense() {
   const [paymentShares, setPaymentShares] = useState<Record<string, string>>({});
 
   const [title, setTitle] = useState('');
+  const [purpose, setPurpose] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Food');
   const [merchant, setMerchant] = useState('');
   const [notes, setNotes] = useState('');
@@ -174,6 +175,7 @@ export function AddExpense() {
       }
       const expense = createExpense({
         title: reason,
+        description: purpose.trim() || undefined,
         category,
         merchant_name: merchant.trim() || undefined,
         total_amount: totalNum,
@@ -517,6 +519,16 @@ export function AddExpense() {
               </button>
             ))}
           </div>
+
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Purpose / Reason</span>
+            <input
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="e.g. Team lunch, monthly rent, personal dinner"
+              className="input mt-2"
+            />
+          </label>
 
           <div className="flex flex-col gap-3 mb-6">
             <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Restaurant / place (optional)" className="input" />
