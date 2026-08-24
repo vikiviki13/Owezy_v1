@@ -52,6 +52,7 @@ function emptyDB(): DB {
     profile: {
       id: OWNER_ID,
       full_name: 'Viki',
+      onboarding_completed: false,
       default_currency: 'INR',
       created_at: now,
       updated_at: now,
@@ -518,6 +519,15 @@ export function listExpenses(): Expense[] {
 }
 export function getExpense(id: string): Expense | undefined {
   return load().expenses.find((e) => e.id === id);
+}
+export function updateExpense(id: string, patch: Partial<Pick<Expense, 'title' | 'merchant_name' | 'notes'>>) {
+  const db = load();
+  const expense = db.expenses.find((candidate) => candidate.id === id);
+  if (!expense) return undefined;
+  Object.assign(expense, patch, { updated_at: new Date().toISOString() });
+  persist();
+  enqueue('expense', id, 'UPDATE');
+  return expense;
 }
 export function getExpenseParticipants(expenseId: string): ExpenseParticipant[] {
   return load().expenseParticipants.filter((p) => p.expense_id === expenseId);

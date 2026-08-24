@@ -7,6 +7,7 @@ export type UUID = string;
 export interface Profile {
   id: UUID;
   full_name: string;
+  onboarding_completed?: boolean;
   email?: string;
   phone?: string;
   avatar_url?: string;

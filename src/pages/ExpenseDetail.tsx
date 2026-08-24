@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Trash2, Share2 } from 'lucide-react';
-import { deleteExpense, getExpense, getExpenseParticipants, getFriend } from '../lib/db';
+import { ArrowLeft, Trash2, Share2, Pencil } from 'lucide-react';
+import { deleteExpense, getExpense, getExpenseParticipants, getFriend, updateExpense } from '../lib/db';
 import { formatCurrency, formatDate, formatTime, formatTimestamp } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { StatusBadge } from '../components/StatusBadge';
@@ -13,6 +13,8 @@ export function ExpenseDetail() {
   const navigate = useNavigate();
   const toast = useToast();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editName, setEditName] = useState('');
   if (!id) return null;
   const expense = getExpense(id);
   if (!expense) return <div className="p-6 text-center text-[var(--color-text-muted)]">Expense not found.</div>;
@@ -39,6 +41,13 @@ export function ExpenseDetail() {
     deleteExpense(expense.id);
     toast('Expense deleted');
     navigate(-1);
+  }
+
+  function handleEditSave() {
+    if (!expense) return;
+    updateExpense(expense.id, { title: editName.trim() || expense.category });
+    setEditOpen(false);
+    toast('Expense name updated');
   }
 
   return (
@@ -101,6 +110,9 @@ export function ExpenseDetail() {
       )}
 
       <div className="flex gap-3">
+        <button onClick={() => { setEditName(expense.title); setEditOpen(true); }} className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-surface-secondary)] font-medium rounded-xl py-3">
+          <Pencil size={16} /> Edit
+        </button>
         <button onClick={handleShare} className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-surface-secondary)] font-medium rounded-xl py-3">
           <Share2 size={16} /> Share
         </button>
@@ -108,6 +120,20 @@ export function ExpenseDetail() {
           <Trash2 size={16} /> Delete
         </button>
       </div>
+
+      {editOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setEditOpen(false)} />
+          <div className="relative bg-[var(--color-surface)] rounded-2xl p-5 w-full max-w-sm">
+            <p className="font-semibold mb-3">Edit Expense Name</p>
+            <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="e.g. Barbeque Nation, Taj Hotel, PVR" className="input" autoFocus />
+            <div className="flex gap-2 mt-4">
+              <button onClick={() => setEditOpen(false)} className="flex-1 py-2.5 rounded-xl bg-[var(--color-surface-secondary)] font-medium text-sm">Cancel</button>
+              <button onClick={handleEditSave} className="flex-1 py-2.5 rounded-xl bg-[var(--color-primary)] text-white font-medium text-sm">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">

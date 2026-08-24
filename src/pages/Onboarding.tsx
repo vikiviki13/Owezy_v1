@@ -23,7 +23,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
   }, !showProfile);
 
   function finish() {
-    updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR' });
+    updateProfile({ full_name: name.trim() || 'You', default_currency: 'INR', onboarding_completed: true });
     onDone();
   }
 

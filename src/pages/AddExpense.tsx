@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ContactRound, LoaderCircle, X, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, CalendarDays, CheckCircle2, Eye, MessageCircle } from 'lucide-react';
 import { calculateFriendBalance, createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
-import { formatCurrency, roundCurrency, todayDate } from '../lib/utils';
+import { formatCurrency, roundCurrency, todayDate, nowTime } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, ExpensePayerType, SplitMode } from '../types';
@@ -57,6 +57,9 @@ export function AddExpense() {
     ...groupMemberIds,
     ...(contactHandoff?.selectedFriendIds || []),
   ]));
+  type ExpenseAudience = 'self' | 'friends';
+  const [audience, setAudience] = useState<ExpenseAudience>(initialFriendIds.length ? 'friends' : 'self');
+  const [friendSelectionMode, setFriendSelectionMode] = useState<'friend' | 'friends'>('friends');
   const [step, setStep] = useState<1 | 2 | 3>(contactHandoff?.newFriendIds.length ? 2 : 1);
   const [selected, setSelected] = useState<string[]>(initialFriendIds);
   const [search, setSearch] = useState('');
@@ -77,6 +80,7 @@ export function AddExpense() {
   const [merchant, setMerchant] = useState('');
   const [notes, setNotes] = useState('');
   const [date, setDate] = useState(() => todayDate());
+  const [time, setTime] = useState(() => nowTime());
   const [dateSheetOpen, setDateSheetOpen] = useState(false);
   const [dateSheetMode, setDateSheetMode] = useState<'quick' | 'calendar'>('quick');
   const [savedExpense, setSavedExpense] = useState<SavedExpenseResult>();
@@ -85,6 +89,18 @@ export function AddExpense() {
 
   function toggleFriend(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  }
+
+  function chooseAudience(next: ExpenseAudience, selectionMode?: 'friend' | 'friends') {
+    setAudience(next);
+    if (selectionMode) setFriendSelectionMode(selectionMode);
+    if (next === 'self') {
+      setSelected([]);
+      setSplitMode('equal');
+      setPayerType('me');
+      setPayerFriendId('');
+      setPaymentShares({});
+    }
   }
 
   function addNewFriend() {
@@ -134,24 +150,25 @@ export function AddExpense() {
   const customDiff = roundCurrency(totalNum - customAssigned);
 
   function save() {
-    const participants = selected.map((id) => ({
+    const participants = audience === 'self' ? [] : selected.map((id) => ({
       friend_id: id,
       share_amount: splitMode === 'equal' ? equalShares[id] || 0 : parseFloat(customShares[id]) || 0,
     }));
-    const ownerShare = splitMode === 'equal' ? ownerShareEqual : ownerCustom;
+    const ownerShare = audience === 'self' ? totalNum : splitMode === 'equal' ? ownerShareEqual : ownerCustom;
 
     const reason = title.trim() || category;
     try {
-      const paymentContributions = payerType === 'me'
+      const effectivePayerType = audience === 'self' ? 'me' : payerType;
+      const paymentContributions = effectivePayerType === 'me'
         ? [{ payer_id: 'owner', amount: totalNum }]
-        : payerType === 'friend'
+        : effectivePayerType === 'friend'
           ? [{ payer_id: payerFriendId, amount: totalNum }]
           : [
               { payer_id: 'owner', amount: parseFloat(paymentShares.owner || '') || 0 },
               ...friends.map((friend) => ({ payer_id: friend.id, amount: parseFloat(paymentShares[friend.id] || '') || 0 })),
             ].filter((payment) => payment.amount > 0);
       const paymentTotal = roundCurrency(paymentContributions.reduce((sum, payment) => sum + payment.amount, 0));
-      if ((payerType === 'friend' && !payerFriendId) || paymentTotal !== totalNum) {
+      if ((effectivePayerType === 'friend' && !payerFriendId) || paymentTotal !== totalNum) {
         toast('Choose who paid and assign the full bill amount.');
         return;
       }
@@ -162,12 +179,13 @@ export function AddExpense() {
         total_amount: totalNum,
         owner_share: ownerShare,
         expense_date: date,
+        expense_time: time,
         notes: notes.trim() || undefined,
         split_mode: splitMode,
         participants,
-        payer_type: payerType,
-        expense_type: payerType === 'friend' ? 'paid_by_friend' : selected.length ? 'for_friend' : 'personal',
-        payer_friend_id: payerType === 'friend' ? payerFriendId : undefined,
+        payer_type: effectivePayerType,
+        expense_type: audience === 'self' ? 'personal' : effectivePayerType === 'friend' ? 'paid_by_friend' : 'for_friend',
+        payer_friend_id: effectivePayerType === 'friend' ? payerFriendId : undefined,
         payment_contributions: paymentContributions,
       });
 
@@ -266,11 +284,13 @@ export function AddExpense() {
 
       {step === 1 && (
         <div>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who's this for?</p>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who is this expense for?</p>
           <div className="flex gap-2 mb-4">
-            <button onClick={() => setSelected([])} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${selected.length === 0 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Personal</button>
-            <div className={`flex-1 rounded-xl py-2.5 text-center text-sm font-medium ${selected.length > 0 ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>For friends</div>
+            <button onClick={() => chooseAudience('self')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'self' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Self</button>
+            <button onClick={() => chooseAudience('friends', 'friend')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'friends' && friendSelectionMode === 'friend' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Friend</button>
+            <button onClick={() => chooseAudience('friends', 'friends')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'friends' && friendSelectionMode === 'friends' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Friends</button>
           </div>
+          {audience === 'friends' && <>
           <div className="relative mb-3">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search friends" className="input !pl-9" />
@@ -326,6 +346,7 @@ export function AddExpense() {
             />
             <button onClick={addNewFriend} className="shrink-0 px-4 py-2.5 rounded-xl bg-[var(--color-surface-secondary)] font-medium text-sm">Add</button>
           </div>
+          </>}
 
           <button
             disabled={!canProceedStep1}
@@ -352,11 +373,21 @@ export function AddExpense() {
             />
           </div>
 
-          <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-4 text-sm text-[var(--color-text-secondary)]">
-            Your share is always included in this expense. Add friends only when the bill was shared.
-          </div>
+          <label className="block mb-5">
+            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Expense Name</span>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Barbeque Nation, Taj Hotel, PVR"
+              className="input mt-2"
+            />
+          </label>
 
-          <div className="flex gap-2 mb-4">
+          {audience === 'friends' && <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-4 text-sm text-[var(--color-text-secondary)]">
+            Your share is always included in this expense. Add friends only when the bill was shared.
+          </div>}
+
+          {audience === 'friends' && <div className="flex gap-2 mb-4">
             {(['equal', 'custom'] as SplitMode[]).map((m) => (
               <button
                 key={m}
@@ -366,9 +397,16 @@ export function AddExpense() {
                 {m} split
               </button>
             ))}
-          </div>
+          </div>}
 
-          {splitMode === 'equal' && totalNum > 0 && (
+          {audience === 'self' && totalNum > 0 && (
+            <div className="flex items-center justify-between bg-[var(--color-primary-soft)] rounded-xl p-3 mb-4 text-sm">
+              <span className="font-medium">Self · You</span>
+              <span className="font-semibold amount-tabular">{formatCurrency(totalNum)}</span>
+            </div>
+          )}
+
+          {audience === 'friends' && splitMode === 'equal' && totalNum > 0 && (
             <div className="flex flex-col gap-2 mb-4">
               {includeOwner && (
                 <div className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
@@ -388,7 +426,7 @@ export function AddExpense() {
             </div>
           )}
 
-          {splitMode === 'custom' && (
+          {audience === 'friends' && splitMode === 'custom' && (
             <div className="flex flex-col gap-2 mb-2">
               {includeOwner && (
                 <div className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-3">
@@ -437,21 +475,25 @@ export function AddExpense() {
 
       {step === 3 && (
         <div>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who paid?</p>
-          <div className="flex gap-2 mb-3">
+          {audience === 'self' ? (
+            <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-5 text-sm text-[var(--color-text-secondary)]">
+              Personal expense · Paid by you · For you
+            </div>
+          ) : <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who paid?</p>}
+          {audience === 'friends' && <div className="flex gap-2 mb-3">
             {(['me', 'friend', 'multiple'] as ExpensePayerType[]).map((type) => (
               <button key={type} onClick={() => setPayerType(type)} className={`flex-1 rounded-xl py-2 text-xs font-medium capitalize ${payerType === type ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
                 {type === 'me' ? 'I paid' : type === 'friend' ? 'Friend paid' : 'Multiple'}
               </button>
             ))}
-          </div>
-          {payerType === 'friend' && (
+          </div>}
+          {audience === 'friends' && payerType === 'friend' && (
             <select value={payerFriendId} onChange={(e) => setPayerFriendId(e.target.value)} className="input mb-3">
               <option value="">Select the friend who paid</option>
               {friends.map((friend) => <option key={friend.id} value={friend.id}>{friend.name}</option>)}
             </select>
           )}
-          {payerType === 'multiple' && (
+          {audience === 'friends' && payerType === 'multiple' && (
             <div className="mb-5 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3">
               <p className="text-xs text-[var(--color-text-muted)]">Enter each payment. The total must equal the bill.</p>
               {[{ id: 'owner', label: 'You' }, ...friends.filter((friend) => selected.includes(friend.id)).map((friend) => ({ id: friend.id, label: friend.name }))].map((payer) => (
@@ -477,7 +519,6 @@ export function AddExpense() {
           </div>
 
           <div className="flex flex-col gap-3 mb-6">
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title (e.g. Dinner at Truffles)" className="input" />
             <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Restaurant / place (optional)" className="input" />
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="input resize-none" />
           </div>
@@ -492,6 +533,10 @@ export function AddExpense() {
               <span className="flex items-center gap-2"><CalendarDays size={16} className="text-[var(--color-text-secondary)]" />{expenseDateLabel(date)}</span>
               <span className="text-xs text-[var(--color-text-muted)]">Change</span>
             </button>
+            <label className="mt-3 block text-sm font-medium text-[var(--color-text-secondary)]">
+              Time
+              <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="input mt-2" />
+            </label>
           </div>
 
           <div className="bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-6 text-sm text-[var(--color-text-secondary)]">

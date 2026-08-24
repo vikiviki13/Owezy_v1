@@ -43,6 +43,7 @@ function emptyData(user: User): StoredData {
     profile: {
       id: user.id,
       full_name: metadataName || user.email?.split('@')[0] || 'You',
+      onboarding_completed: false,
       email: user.email,
       default_currency: 'INR',
       created_at: now,

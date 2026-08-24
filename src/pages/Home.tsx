@@ -33,7 +33,7 @@ export function Home() {
   const owing = balances.slice(0, 8);
 
   const activity = [
-    ...listExpenses().slice(0, 6).map((e) => ({ type: 'expense' as const, id: e.id, title: e.title, amount: e.recoverable_amount, date: e.expense_date, time: e.expense_time, occurredAt: e.occurred_at, status: e.status })),
+    ...listExpenses().slice(0, 6).map((e) => ({ type: 'expense' as const, id: e.id, title: e.title, amount: e.expense_type === 'personal' ? e.total_amount : e.recoverable_amount, date: e.expense_date, time: e.expense_time, occurredAt: e.occurred_at, status: e.status })),
     ...listAllRepayments().slice(0, 6).map((r) => ({ type: 'repayment' as const, id: r.id, title: 'Payment received', amount: r.amount, date: r.repayment_date, time: r.repayment_time, occurredAt: r.occurred_at, status: undefined })),
   ]
     .sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time))

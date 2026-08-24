@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AlertCircle, CloudOff, Database, LoaderCircle, Wallet } from 'lucide-react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
 import { PreferencesProvider } from './components/PreferencesProvider';
 import { SecurityProvider } from './components/SecurityProvider';
+import { useSecurity } from './components/SecurityContext';
 import { AppLockGuard } from './components/AppLockGuard';
 import { LockScreen } from './components/security/LockScreen';
 import { Auth } from './pages/Auth';
@@ -31,8 +32,8 @@ import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
 import { ShareAppSettings } from './pages/settings/ShareAppPage';
 import { clearCloudRuntimeState, initializeCloudData, LegacyDataChoiceRequired, stopCloudData, type LegacyMigrationDecision } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { clearSensitiveLocalData } from './lib/db';
-import { clearAllLocalSecurityState, clearLocalSecurityState } from './lib/securityService';
+import { clearSensitiveLocalData, getProfile } from './lib/db';
+import { clearUnlockGrant } from './lib/securityService';
 import { clearContactImportDraft } from './lib/contactImport';
 import { privateDataErrorMessage } from './lib/safeErrors';
 import { AppUpdatePrompt } from './components/AppUpdatePrompt';
@@ -50,9 +51,7 @@ export default function App() {
     async function activate(nextUser: User | null) {
       if (!nextUser) {
         clearCloudRuntimeState();
-        if (currentUserId) clearLocalSecurityState(currentUserId);
-        clearAllLocalSecurityState();
-        clearSensitiveLocalData();
+        if (currentUserId) clearUnlockGrant(currentUserId);
         void clearContactImportDraft();
         currentUserId = null;
         if (mounted) {
@@ -63,7 +62,7 @@ export default function App() {
         return;
       }
       if (currentUserId && currentUserId !== nextUser.id) {
-        clearLocalSecurityState(currentUserId);
+        clearUnlockGrant(currentUserId);
         clearSensitiveLocalData();
         await clearContactImportDraft();
       }
@@ -106,7 +105,7 @@ function AuthenticatedApp({ user }: { user: User }) {
       <SecurityProvider userId={user.id}>
         <HashRouter>
           <Routes>
-            <Route path="/unlock" element={<LockScreen />} />
+            <Route path="/unlock" element={<UnlockRoute />} />
             <Route path="/account-recovery" element={<AccountRecoveryPage />} />
             <Route path="*" element={<AppLockGuard><PrivateDataApp user={user} /></AppLockGuard>} />
           </Routes>
@@ -126,7 +125,7 @@ function PrivateDataApp({ user }: { user: User }) {
   const [legacyPending, setLegacyPending] = useState(false);
 
   useEffect(() => {
-    setOnboarded(localStorage.getItem(onboardingKey) === '1');
+    setOnboarded(localStorage.getItem(onboardingKey) === '1' || getProfile().onboarding_completed === true);
   }, [onboardingKey]);
 
   useEffect(() => {
@@ -135,6 +134,12 @@ function PrivateDataApp({ user }: { user: User }) {
     setDataError('');
     setLegacyPending(false);
     void initializeCloudData(user)
+      .then(() => {
+        if (active && getProfile().onboarding_completed === true) {
+          localStorage.setItem(onboardingKey, '1');
+          setOnboarded(true);
+        }
+      })
       .catch((caught) => {
         if (!active) return;
         if (caught instanceof LegacyDataChoiceRequired) setLegacyPending(true);
@@ -241,6 +246,13 @@ function PrivateDataApp({ user }: { user: User }) {
       </PreferencesProvider>
     </>
   );
+}
+
+function UnlockRoute() {
+  const { loading, isLocked } = useSecurity();
+  if (loading) return <LoadingScreen />;
+  if (!isLocked) return <Navigate to="/" replace />;
+  return <LockScreen />;
 }
 
 function LoadingScreen() {

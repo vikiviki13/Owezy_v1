@@ -9,43 +9,33 @@ import { BottomSheet } from '../components/BottomSheet';
 import { SettingsRow, SettingsSection } from '../components/SettingsUI';
 import { usePreferences } from '../components/PreferencesContext';
 import { useToast } from '../components/ToastContext';
-import { clearCloudRuntimeState, flushCloudData } from '../lib/cloudData';
-import { clearLegacyLocalData, clearSensitiveLocalData, getProfile, onDBChange } from '../lib/db';
+import { flushCloudData } from '../lib/cloudData';
+import { getProfile, onDBChange } from '../lib/db';
 import { currencySymbol, formatDateTime, nowTime, todayDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { t } from '../lib/i18n';
-import { clearAllLocalSecurityState, revokeAllSecuritySessions } from '../lib/securityService';
 import { useSecurity } from '../components/SecurityContext';
-import { clearContactImportDraft } from '../lib/contactImport';
 
 export function Profile() {
   const [profile, setProfile] = useState(getProfile);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const { preferences } = usePreferences();
-  const { userId, status } = useSecurity();
+  const { status } = useSecurity();
   const toast = useToast();
 
   useEffect(() => onDBChange(() => setProfile({ ...getProfile() })), []);
 
   async function signOut() {
     setSigningOut(true);
-    let remoteFailure = false;
     try {
       try { await flushCloudData(); } catch { toast('Some changes could not be synced.'); }
-      try { await revokeAllSecuritySessions(userId); } catch { remoteFailure = true; }
       const { error } = await supabase.auth.signOut({ scope: 'global' });
-      if (error) remoteFailure = true;
+      if (error) toast('Could not fully sign out from the server.');
     } finally {
-      // Local privacy cleanup must never depend on network or Edge Function
-      // availability. A final local-only sign-out removes any residual token.
+      // Supabase may retain a local token if the network sign-out fails; the
+      // local fallback still guarantees that this browser returns to Auth.
       await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
-      clearCloudRuntimeState();
-      clearSensitiveLocalData();
-      clearLegacyLocalData();
-      clearAllLocalSecurityState();
-      await clearContactImportDraft(userId);
-      if (remoteFailure) toast('Local data was cleared. The server could not confirm every session revocation.');
       window.location.reload();
     }
   }
