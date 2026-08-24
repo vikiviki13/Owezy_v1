@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Security Setup - Create App PIN</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:47px 20px 28px;box-sizing:border-box;">
+    <!-- Flow header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.68px;color:#a8a29e;">Security Setup</span>
+      <button style="width:44px;height:44px;border-radius:22px;background:none;border:none;display:flex;align-items:center;justify-content:center;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+      </button>
+    </div>
+
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <section>
+        <!-- Icon + security note -->
+        <div style="text-align:center;margin-bottom:24px;">
+          <div style="width:64px;height:64px;border-radius:16px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+          </div>
+          <p style="font-size:12px;line-height:20px;color:#a8a29e;margin:16px 0 0;">Your PIN is Argon2id-hashed on the server with a unique salt. It is never stored in plain text.</p>
+        </div>
+
+        <!-- PIN pad (create step) -->
+        <div style="max-width:320px;margin:0 auto;text-align:center;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <h2 style="font-size:18px;font-weight:700;margin:0;color:#1c1917;">Create App PIN</h2>
+            <p style="font-size:14px;line-height:20px;color:#57534e;margin:6px 0 0;">Choose a 6-digit PIN you can remember. It will be securely hashed and cannot be recovered.</p>
+          </div>
+
+          <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;">
+            <div style="width:12px;height:12px;border-radius:6px;background:#059669;border:1px solid #059669;"></div>
+            <div style="width:12px;height:12px;border-radius:6px;background:#059669;border:1px solid #059669;"></div>
+            <div style="width:12px;height:12px;border-radius:6px;background:#059669;border:1px solid #059669;"></div>
+            <div style="width:12px;height:12px;border-radius:6px;background:transparent;border:1px solid #a8a29e;"></div>
+            <div style="width:12px;height:12px;border-radius:6px;background:transparent;border:1px solid #a8a29e;"></div>
+            <div style="width:12px;height:12px;border-radius:6px;background:transparent;border:1px solid #a8a29e;"></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">1</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">2</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">3</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">4</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">5</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">6</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">7</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">8</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">9</button>
+            <span></span>
+            <button style="min-height:56px;border:none;border-radius:16px;background:#f4f2ec;font-size:20px;font-weight:600;color:#1c1917;">0</button>
+            <button style="min-height:56px;border:none;border-radius:16px;background:transparent;display:flex;align-items:center;justify-content:center;">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H11l-8 7 8 7h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><path d="m14 9-4 4"/><path d="m10 9 4 4"/></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

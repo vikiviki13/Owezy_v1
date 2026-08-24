@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Sync Error Banner</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+    <!-- Sync error banner (fixed top) -->
+    <div style="position:absolute;top:0;left:0;right:0;z-index:50;background:#dc2626;color:#ffffff;font-size:12px;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.72 7A6.85 6.85 0 0 1 19 12c0 1.77-.78 3.34-2 4.5"/><path d="M18 19.5C20 17.87 21.5 15.11 21.5 12a9.5 9.5 0 0 0-5.28-8.62"/><path d="m2 2 20 20"/><path d="M6.26 6.26A5.86 5.86 0 0 0 5 12c0 1.66.47 3.2 1.29 4.5S9 18.73 10 20a2 2 0 1 0 4.05-.01"/></svg>
+      Changes are saved on this device but cloud sync failed.
+    </div>
+
+    <!-- Home content below banner -->
+    <div style="padding:33px 16px 120px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:24px;">
+        <div>
+          <p style="font-size:14px;color:#a8a29e;margin:0;">Good morning,</p>
+          <h1 style="font-size:20px;font-weight:600;margin:0;color:#1c1917;">Arjun Mehta</h1>
+        </div>
+        <!-- Sync failed badge -->
+        <button style="display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600;border:1px solid #e7e3d8;background:#ffffff;color:#dc2626;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+          Sync failed · Retry
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+        </button>
+      </div>
+
+      <!-- Balance card -->
+      <div style="position:relative;overflow:hidden;border-radius:24px;background:#059669;padding:24px;">
+        <div style="position:absolute;top:-32px;right:-32px;width:128px;height:128px;border-radius:64px;background:rgba(255,255,255,0.1);"></div>
+        <p style="font-size:14px;font-weight:500;color:rgba(255,255,255,0.8);letter-spacing:0.04em;text-transform:uppercase;margin:0;">You'll get back</p>
+        <p style="font-size:36px;line-height:40px;font-weight:800;margin:4px 0 0;color:#ffffff;">₹8,500.00</p>
+        <p style="font-size:14px;color:rgba(255,255,255,0.8);margin:4px 0 0;">From 3 friends</p>
+      </div>
+    </div>
+
+    <!-- Floating add button -->
+    <div style="position:absolute;bottom:80px;right:20px;width:56px;height:56px;border-radius:28px;background:#059669;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 15px -3px rgba(0,0,0,0.2);">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+    </div>
+
+    <!-- Bottom navigation -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#ffffff;border-top:1px solid #e7e3d8;padding-bottom:env(safe-area-inset-bottom,0px);">
+      <div style="display:flex;align-items:stretch;justify-content:space-around;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span style="font-size:11px;font-weight:500;color:#059669;">Home</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span style="font-size:11px;font-weight:500;color:#a8a29e;">Friends</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span style="font-size:11px;font-weight:500;color:#a8a29e;">Activity</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+          <span style="font-size:11px;font-weight:500;color:#a8a29e;">Groups</span>
+        </div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span style="font-size:11px;font-weight:500;color:#a8a29e;">Profile</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

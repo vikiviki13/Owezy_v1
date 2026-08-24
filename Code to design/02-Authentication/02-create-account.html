@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Create Account</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;display:flex;align-items:center;padding:47px 20px 40px;box-sizing:border-box;">
+    <div style="width:100%;max-width:350px;margin:0 auto;">
+      <!-- Logo and app name -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
+        <img src="/icon.png" alt="Owezy" style="width:48px;height:48px;border-radius:16px;object-fit:cover;">
+        <div>
+          <h1 style="font-size:24px;font-weight:700;margin:0;color:#1c1917;">Owezy</h1>
+          <p style="font-size:14px;color:#a8a29e;margin:4px 0 0;">You Pay, We Remember.</p>
+        </div>
+      </div>
+
+      <!-- Card -->
+      <div style="background:#ffffff;border:1px solid #e7e3d8;border-radius:24px;padding:20px;">
+        <!-- Mode toggle -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#f4f2ec;border-radius:12px;padding:4px;margin-bottom:24px;">
+          <button style="background:none;border:none;font-size:12px;font-weight:600;color:#57534e;padding:8px;border-radius:8px;">Sign in</button>
+          <button style="background:#ffffff;color:#1c1917;font-size:12px;font-weight:600;border:none;border-radius:8px;padding:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">Create account</button>
+        </div>
+
+        <!-- Form -->
+        <form>
+          <label style="display:block;margin-bottom:16px;">
+            <span style="display:block;font-size:14px;font-weight:500;color:#1c1917;margin-bottom:6px;">Name</span>
+            <input type="text" placeholder="Your name" maxlength="120" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;">
+          </label>
+
+          <label style="display:block;margin-bottom:16px;">
+            <span style="display:block;font-size:14px;font-weight:500;color:#1c1917;margin-bottom:6px;">Email</span>
+            <input type="email" placeholder="you@example.com" maxlength="254" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;">
+          </label>
+
+          <label style="display:block;margin-bottom:20px;">
+            <span style="display:block;font-size:14px;font-weight:500;color:#1c1917;margin-bottom:6px;">Password</span>
+            <input type="password" placeholder="At least 8 characters" minlength="8" maxlength="128" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;">
+          </label>
+
+          <button type="submit" style="width:100%;background:#059669;color:#ffffff;font-size:16px;font-weight:500;border:none;border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:center;gap:8px;">
+            Create account
+          </button>
+        </form>
+      </div>
+
+      <!-- Footer note -->
+      <p style="font-size:12px;text-align:center;color:#a8a29e;margin:20px 0 0;line-height:1.5;">Your account keeps your expense data private and synced across devices.</p>
+    </div>
+  </div>
+</body>
+</html>
