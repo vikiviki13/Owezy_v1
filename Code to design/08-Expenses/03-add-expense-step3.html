@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Add Expense - Step 3</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+    <div style="height:47px;"></div>
+
+    <!-- Content -->
+    <div style="padding:24px 16px 32px;">
+      <!-- Header with step dots -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+        <button style="width:36px;height:36px;border-radius:18px;background:#ffffff;border:1px solid #e7e3d8;display:flex;align-items:center;justify-content:center;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        </button>
+        <h1 style="font-size:18px;font-weight:600;margin:0;color:#1c1917;">Add Expense</h1>
+        <div style="margin-left:auto;display:flex;gap:4px;">
+          <div style="width:6px;height:6px;border-radius:3px;background:#e7e3d8;"></div>
+          <div style="width:6px;height:6px;border-radius:3px;background:#e7e3d8;"></div>
+          <div style="width:24px;height:6px;border-radius:3px;background:#059669;"></div>
+        </div>
+      </div>
+
+      <!-- Who paid -->
+      <p style="font-size:14px;color:#57534e;margin:0 0 12px;">Who paid?</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button style="flex:1;border:none;border-radius:12px;padding:8px 0;font-size:12px;font-weight:500;background:#059669;color:#ffffff;">I paid</button>
+        <button style="flex:1;border:none;border-radius:12px;padding:8px 0;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">Friend paid</button>
+        <button style="flex:1;border:none;border-radius:12px;padding:8px 0;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">Multiple</button>
+      </div>
+
+      <!-- Category -->
+      <p style="font-size:14px;color:#57534e;margin:16px 0 12px;">What was it for?</p>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #059669;background:#ecfdf5;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#047857;">Food</span>
+        </button>
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #e7e3d8;background:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#57534e;">Travel</span>
+        </button>
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #e7e3d8;background:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 12h18"/><path d="M3 7.5h4"/><path d="M17 7.5h4"/><path d="M3 16.5h4"/><path d="M17 16.5h4"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#57534e;">Movie</span>
+        </button>
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #e7e3d8;background:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#57534e;">Shopping</span>
+        </button>
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #e7e3d8;background:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#57534e;">Stay</span>
+        </button>
+        <button style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px;border-radius:12px;border:1px solid #e7e3d8;background:none;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#57534e"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>
+          <span style="font-size:12px;font-weight:500;color:#57534e;">Other</span>
+        </button>
+      </div>
+
+      <!-- Purpose -->
+      <label style="display:block;margin-bottom:16px;">
+        <span style="display:block;font-size:14px;font-weight:500;color:#57534e;">Purpose / Reason</span>
+        <input type="text" placeholder="e.g. Team lunch, monthly rent, personal dinner" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;margin-top:8px;">
+      </label>
+
+      <!-- Merchant + notes -->
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
+        <input type="text" placeholder="Restaurant / place (optional)" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;">
+        <textarea rows="2" placeholder="Notes (optional)" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;resize:none;"></textarea>
+      </div>
+
+      <!-- Date and time -->
+      <div style="margin-bottom:24px;">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:500;color:#57534e;">Expense date</p>
+        <button style="width:100%;display:flex;align-items:center;justify-content:space-between;border-radius:12px;border:1px solid #e7e3d8;background:#ffffff;padding:14px 16px;font-weight:500;box-sizing:border-box;">
+          <span style="display:flex;align-items:center;gap:8px;font-size:16px;color:#1c1917;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Today · 24 Aug 2026</span>
+          <span style="font-size:12px;color:#a8a29e;">Change</span>
+        </button>
+        <label style="margin-top:12px;display:block;font-size:14px;font-weight:500;color:#57534e;">
+          Time
+          <input type="time" value="19:30" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;box-sizing:border-box;margin-top:8px;">
+        </label>
+      </div>
+
+      <!-- Summary -->
+      <div style="background:#f4f2ec;border-radius:12px;padding:12px;margin-bottom:24px;font-size:14px;color:#57534e;">Today · Paid by you · ₹1,250.00 total</div>
+
+      <!-- Save -->
+      <button style="width:100%;background:#059669;color:#ffffff;font-size:16px;font-weight:500;border:none;border-radius:12px;padding:14px;">Add Expense</button>
+    </div>
+  </div>
+</body>
+</html>

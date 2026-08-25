@@ -3,53 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Authentication - Sign In</title>
+  <title>Sign In</title>
 </head>
 <body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
-  <div style="width:390px;min-height:844px;margin:0 auto;background:#ffffff;position:relative;overflow:hidden;">
-    <div style="height:env(safe-area-inset-top, 44px);"></div>
-    
-    <main style="padding:40px 20px;display:flex;flex-direction:column;align-items:center;min-height:calc(100% - env(safe-area-inset-top, 44px));">
-      <div style="width:100%;max-width:342px;">
-        <!-- Logo and title -->
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
-          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2'%3E%3Cpath d='M21 12V7H5'/%3E%3Cpath d='M3 5v14a2 2 0 0 0 2 2h16v-5'/%3E%3Cpath d='M18 12a2 2 0 0 0 0-4 2 2 0 0 0 0 4z'/%3E%3C/svg%3E" alt="Owezy" style="width:48px;height:48px;border-radius:32px;object-fit:cover;">
-          <div>
-            <h1 style="font-size:28px;font-weight:700;color:#1c1917;margin:0;line-height:1.2;">Owezy</h1>
-            <p style="font-size:14px;color:#a8a29e;margin:4px 0 0;">You Pay, We Remember.</p>
-          </div>
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#ffffff;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:47px 20px 40px;box-sizing:border-box;">
+    <div style="width:100%;max-width:350px;margin:0 auto;">
+      <!-- Logo and app name -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:32px;">
+        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2'%3E%3Cpath d='M21 12V7H5'/%3E%3Cpath d='M3 5v14a2 2 0 0 0 2 2h16v-5'/%3E%3Cpath d='M18 12a2 2 0 0 0 0-4 2 2 0 0 0 0 4z'/%3E%3C/svg%3E" alt="Owezy" style="width:48px;height:48px;border-radius:16px;object-fit:cover;">
+        <div>
+          <h1 style="font-size:28px;font-weight:700;color:#1c1917;margin:0;line-height:1.2;">Owezy</h1>
+          <p style="font-size:14px;color:#a8a29e;margin:4px 0 0;">You Pay, We Remember.</p>
         </div>
-        
+      </div>
+
+      <!-- Card -->
+      <div style="background:#ffffff;border:1px solid #e7e3d8;border-radius:24px;padding:20px;">
         <!-- Mode toggle -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#f4f2ec;border-radius:16px;padding:4px;margin-bottom:24px;">
           <button style="background:#ffffff;color:#1c1917;font-size:12px;font-weight:600;font-family:inherit;border:none;border-radius:12px;padding:10px;box-shadow:0 1px 2px rgba(0,0,0,0.05);">Sign in</button>
-          <button style="background:none;color:#57534e;font-size:12px;font-weight:600;font-family:inherit;border:none;border-radius:12px;padding:10px;">Create account</button>
+          <button style="background:none;border:none;font-size:12px;font-weight:600;color:#57534e;padding:10px;border-radius:12px;">Create account</button>
         </div>
-        
-        <!-- Form card -->
-        <div style="background:#ffffff;border:1px solid #e7e3d8;border-radius:24px;padding:20px;">
-          <!-- Email field -->
+
+        <!-- Form -->
+        <form>
           <label style="display:block;margin-bottom:16px;">
             <span style="display:block;font-size:14px;font-weight:500;color:#1c1917;margin-bottom:6px;">Email</span>
-            <input type="email" value="arun@example.com" placeholder="you@example.com" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:14px 16px;font-size:15px;color:#1c1917;font-family:inherit;box-sizing:border-box;">
+            <input type="email" placeholder="you@example.com" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:14px 16px;font-size:15px;color:#1c1917;font-family:inherit;outline:none;box-sizing:border-box;">
           </label>
-          
-          <!-- Password field -->
+
           <label style="display:block;margin-bottom:20px;">
             <span style="display:block;font-size:14px;font-weight:500;color:#1c1917;margin-bottom:6px;">Password</span>
-            <input type="password" value="••••••••" placeholder="At least 8 characters" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:14px 16px;font-size:15px;color:#1c1917;font-family:inherit;box-sizing:border-box;">
+            <input type="password" placeholder="At least 8 characters" style="width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:14px 16px;font-size:15px;color:#1c1917;font-family:inherit;outline:none;box-sizing:border-box;">
           </label>
-          
-          <!-- Submit button -->
-          <button style="width:100%;background:#059669;color:#ffffff;font-size:16px;font-weight:500;font-family:inherit;border:none;border-radius:16px;padding:16px 24px;display:flex;align-items:center;justify-content:center;gap:8px;">
+
+          <button type="submit" style="width:100%;background:#059669;color:#ffffff;font-size:16px;font-weight:500;font-family:inherit;border:none;border-radius:16px;padding:16px 24px;display:flex;align-items:center;justify-content:center;gap:8px;">
             Sign in
           </button>
-        </div>
-        
-        <!-- Footer note -->
-        <p style="font-size:12px;text-align:center;color:#a8a29e;margin:20px 0 0;">Your account keeps your expense data private and synced across devices.</p>
+        </form>
       </div>
-    </main>
+
+      <!-- Footer note -->
+      <p style="font-size:12px;text-align:center;color:#a8a29e;margin:20px 0 0;line-height:1.5;">Your account keeps your expense data private and synced across devices.</p>
+    </div>
   </div>
 </body>
 </html>

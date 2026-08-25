@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Export Data Settings</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+  <div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+    <!-- Sticky header -->
+    <header style="position:absolute;top:47px;left:0;right:0;z-index:20;height:56px;display:flex;align-items:center;background:rgba(251,250,247,0.95);border-bottom:1px solid #e7e3d8;padding:0 12px;box-sizing:border-box;">
+      <button style="width:44px;height:44px;border-radius:22px;background:none;border:none;display:flex;align-items:center;justify-content:center;">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+      </button>
+      <h1 style="font-size:18px;font-weight:600;margin:0 0 0 4px;color:#1c1917;">Export Your Data</h1>
+    </header>
+
+    <!-- Content -->
+    <div style="padding:120px 16px 40px;box-sizing:border-box;">
+      <p style="font-size:14px;line-height:24px;color:#57534e;margin:0 0 20px;">Export and download your financial information.</p>
+
+      <!-- Date range -->
+      <section style="margin-bottom:28px;">
+        <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;color:#a8a29e;margin:0 0 8px 4px;">Date Range</h2>
+        <div style="position:relative;">
+          <select style="width:100%;min-height:48px;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:11px 14px;font-size:14px;color:#1c1917;outline:none;appearance:none;box-sizing:border-box;">
+            <option>All Time</option>
+            <option>Today</option>
+            <option>This Week</option>
+            <option selected>This Month</option>
+            <option>Last Month</option>
+            <option>Custom Date Range</option>
+          </select>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:14px;top:17px;pointer-events:none;"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+      </section>
+
+      <!-- Format options -->
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:28px;">
+        <button style="position:relative;border-radius:16px;border:2px solid #059669;background:#ecfdf5;padding:16px;min-height:144px;text-align:left;box-sizing:border-box;width:100%;">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <p style="font-size:16px;font-weight:700;color:#1c1917;margin:0;">Export Report</p>
+          <p style="font-size:12px;line-height:20px;color:#a8a29e;margin:4px 0 0;">Simple expense and balance report.</p>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:12px;top:12px;"><path d="M20 6 9 17l-5-5"/></svg>
+        </button>
+
+        <button style="position:relative;border-radius:16px;border:2px solid #e7e3d8;background:#ffffff;padding:16px;min-height:144px;text-align:left;box-sizing:border-box;width:100%;">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M10 12.5 8 15l2 2.5"/><path d="m14 12.5 2 2.5-2 2.5"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/></svg>
+          <p style="font-size:16px;font-weight:700;color:#1c1917;margin:0;">Full Backup</p>
+          <p style="font-size:12px;line-height:20px;color:#a8a29e;margin:4px 0 0;">Complete backup for restoring your data.</p>
+        </button>
+
+        <button style="position:relative;border-radius:16px;border:2px solid #e7e3d8;background:#ffffff;padding:16px;min-height:144px;text-align:left;box-sizing:border-box;width:100%;">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="#57534e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+          <p style="font-size:16px;font-weight:700;color:#1c1917;margin:0;">Financial Statement</p>
+          <p style="font-size:12px;line-height:20px;color:#a8a29e;margin:4px 0 0;">Simple summary for viewing or sharing.</p>
+        </button>
+
+        <div></div>
+      </div>
+
+      <!-- Info note -->
+      <div style="border-radius:16px;background:#f4f2ec;padding:16px;margin-bottom:28px;font-size:12px;line-height:20px;color:#57534e;">This month. Includes financial summaries, friends, balances, expenses, repayments, categories, and safe backup metadata. Authentication and security credentials are never exported.</div>
+
+      <!-- Download button -->
+      <button style="width:100%;min-height:48px;border:none;border-radius:12px;background:#059669;color:#ffffff;font-size:16px;font-weight:600;">Download CSV</button>
+    </div>
+  </div>
+</body>
+</html>
