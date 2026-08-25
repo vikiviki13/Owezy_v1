@@ -747,13 +747,7 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
         <button onClick={() => setShowProfile(true)} className="text-sm font-medium text-[var(--color-text-muted)]">Skip</button>
       </div>
       <div className="flex flex-col items-center text-center max-w-sm mx-auto">
-        {slide.render ? (
-          slide.render()
-        ) : (
-          <div className="w-20 h-20 rounded-3xl bg-[var(--color-primary-soft)] flex items-center justify-center mb-6">
-            {slide.icon && <slide.icon size={34} className="text-[var(--color-primary)]" />}
-          </div>
-        )}
+        {slide.render()}
         <h1 className="text-2xl font-bold mb-2">{slide.title}</h1>
         <p className="text-[var(--color-text-secondary)]">{slide.body}</p>
       </div>
