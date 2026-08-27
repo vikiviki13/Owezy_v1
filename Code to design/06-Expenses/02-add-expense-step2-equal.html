@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Add Expense — Step 2 (Equal Split)</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:24px 16px 32px;box-sizing:border-box;min-height:844px;display:flex;flex-direction:column;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button style="width:36px;height:36px;border-radius:9999px;background:#ffffff;border:1px solid #e7e3d8;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <h1 style="font-size:18px;font-weight:600;margin:0;">Add Expense</h1>
+      <div style="margin-left:auto;display:flex;gap:4px;">
+        <div style="height:6px;width:6px;border-radius:9999px;background:#e7e3d8;"></div>
+        <div style="height:6px;width:24px;border-radius:9999px;background:#059669;"></div>
+        <div style="height:6px;width:6px;border-radius:9999px;background:#e7e3d8;"></div>
+      </div>
+    </div>
+
+    <!-- Amount -->
+    <p style="font-size:14px;color:#57534e;margin:0 0 8px;">Total bill amount</p>
+    <div style="display:flex;align-items:center;gap:4px;margin-bottom:24px;">
+      <span style="font-size:30px;font-weight:700;color:#a8a29e;">₹</span>
+      <span style="font-size:36px;font-weight:800;">2,400</span>
+    </div>
+
+    <!-- Expense name -->
+    <label style="display:block;margin-bottom:20px;">
+      <span style="font-size:14px;font-weight:500;color:#57534e;">Expense Name</span>
+      <input type="text" value="Team dinner at Barbeque Nation" placeholder="e.g. Barbeque Nation, Taj Hotel, PVR" style="margin-top:8px;width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+    </label>
+
+    <!-- Note box -->
+    <div style="border-radius:12px;background:#ecfdf5;padding:12px;margin-bottom:16px;font-size:14px;color:#57534e;">
+      Your share is always included in this expense. Add friends only when the bill was shared.
+    </div>
+
+    <!-- Split mode toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <span style="flex:1;padding:8px 0;border-radius:12px;font-size:14px;font-weight:500;text-align:center;background:#059669;color:#ffffff;">equal split</span>
+      <span style="flex:1;padding:8px 0;border-radius:12px;font-size:14px;font-weight:500;text-align:center;background:#f4f2ec;color:#57534e;">custom split</span>
+    </div>
+
+    <!-- Equal share rows -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px;">
+        <span style="font-weight:500;font-size:14px;">You</span>
+        <span style="font-weight:600;font-size:14px;">₹800</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px;">
+        <span style="font-weight:500;font-size:14px;">Jiya Mehta</span>
+        <span style="font-weight:600;font-size:14px;">₹800</span>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px;">
+        <span style="font-weight:500;font-size:14px;">Arun Kumar</span>
+        <span style="font-weight:600;font-size:14px;">₹800</span>
+      </div>
+    </div>
+
+    <!-- Continue button -->
+    <button style="width:100%;margin-top:16px;background:#059669;color:#ffffff;font-size:15px;font-weight:500;border:none;border-radius:12px;padding:14px 0;font-family:'Inter',Arial,sans-serif;">Continue</button>
+
+  </div>
+</div>
+
+</body>
+</html>

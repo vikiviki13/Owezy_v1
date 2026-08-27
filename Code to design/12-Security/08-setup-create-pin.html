@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Security Setup — Create PIN</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;display:flex;flex-direction:column;">
+  <!-- Top bar -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:28px 20px 0;">
+    <span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:#a8a29e;">Security Setup</span>
+    <button style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- Centered content -->
+  <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 20px 32px;">
+    <!-- Icon + note -->
+    <div style="text-align:center;margin-bottom:24px;">
+      <span style="width:64px;height:64px;border-radius:16px;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5"/></svg>
+      </span>
+      <p style="font-size:12px;line-height:20px;color:#a8a29e;margin-top:16px;">Your PIN is Argon2id-hashed on the server with a unique salt. It is never stored in plain text.</p>
+    </div>
+
+    <!-- PIN creation pad -->
+    <div style="width:100%;max-width:320px;margin:0 auto;">
+      <!-- Title -->
+      <div style="text-align:center;margin-bottom:20px;">
+        <h2 style="font-size:18px;font-weight:700;margin:0;">Create App PIN</h2>
+        <p style="font-size:14px;line-height:20px;color:#57534e;margin-top:6px;">Choose a 6-digit PIN you can remember. It will be securely hashed and cannot be recovered.</p>
+      </div>
+
+      <!-- Dots (2 entered) -->
+      <div style="display:flex;justify-content:center;gap:12px;margin-bottom:20px;">
+        <span style="width:12px;height:12px;border-radius:9999px;background:#059669;border:1px solid #059669;"></span>
+        <span style="width:12px;height:12px;border-radius:9999px;background:#059669;border:1px solid #059669;"></span>
+        <span style="width:12px;height:12px;border-radius:9999px;border:1px solid #a8a29e;"></span>
+        <span style="width:12px;height:12px;border-radius:9999px;border:1px solid #a8a29e;"></span>
+        <span style="width:12px;height:12px;border-radius:9999px;border:1px solid #a8a29e;"></span>
+        <span style="width:12px;height:12px;border-radius:9999px;border:1px solid #a8a29e;"></span>
+      </div>
+
+      <!-- Error placeholder space -->
+      <p style="min-height:20px;text-align:center;font-size:12px;margin:0 0 12px;">&nbsp;</p>
+
+      <!-- Keypad -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">1</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">2</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">3</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">4</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">5</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">6</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">7</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">8</button>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">9</button>
+        <span></span>
+        <button style="min-height:56px;border-radius:16px;background:#f4f2ec;border:none;font-size:20px;font-weight:600;font-family:'Inter',Arial,sans-serif;color:#1c1917;">0</button>
+        <button style="min-height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 0 0-1.344.519l-6.328 5.74a1 1 0 0 0 0 1.481l6.328 5.741A2 2 0 0 0 10 19h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2z"/><path d="m12 9 6 6"/><path d="m18 9-6 6"/></svg>
+        </button>
+      </div>
+
+      <!-- Forgot pin -->
+      <button style="min-height:44px;padding:0 16px;margin:16px auto 0;font-size:14px;font-weight:600;color:#059669;border:none;background:transparent;display:block;font-family:'Inter',Arial,sans-serif;">Forgot PIN?</button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

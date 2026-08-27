@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Contact Import — Review Friends</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:20px 16px 150px;box-sizing:border-box;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;margin-left:-4px;border:none;background:transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div style="min-width:0;flex:1;">
+        <h1 style="font-size:20px;font-weight:700;margin:0;">Review Friends</h1>
+        <p style="font-size:14px;color:#57534e;margin:2px 0 0;">3 contacts selected</p>
+      </div>
+    </div>
+
+    <!-- Summary counts (review phase) -->
+    <section style="margin-top:20px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+        <div style="min-width:0;border-radius:16px;padding:12px;background:#ecfdf5;">
+          <p style="font-size:20px;font-weight:700;margin:0;">3</p>
+          <p style="margin-top:4px;font-size:12px;line-height:16px;font-weight:600;color:#059669;break-word:normal;">Ready to Add</p>
+        </div>
+        <div style="min-width:0;border-radius:16px;padding:12px;background:#f0f9ff;">
+          <p style="font-size:20px;font-weight:700;margin:0;">1</p>
+          <p style="margin-top:4px;font-size:12px;line-height:16px;font-weight:600;color:#0284c7;">Already Added</p>
+        </div>
+        <div style="min-width:0;border-radius:16px;padding:12px;background:#fffbeb;">
+          <p style="font-size:20px;font-weight:700;margin:0;">1</p>
+          <p style="margin-top:4px;font-size:12px;line-height:16px;font-weight:600;color:#d97706;">Needs Attention</p>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div style="display:flex;gap:8px;margin-top:12px;overflow:hidden;">
+        <span style="min-height:40px;flex-shrink:0;border-radius:9999px;padding:0 16px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;background:#1c1917;color:#fbfaf7;">All</span>
+        <span style="min-height:40px;flex-shrink:0;border-radius:9999px;padding:0 16px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;background:#f4f2ec;color:#57534e;">Ready</span>
+        <span style="min-height:40px;flex-shrink:0;border-radius:9999px;padding:0 16px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;background:#f4f2ec;color:#57534e;">Already Added</span>
+        <span style="min-height:40px;flex-shrink:0;border-radius:9999px;padding:0 16px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;background:#f4f2ec;color:#57534e;">Needs Attention</span>
+      </div>
+    </section>
+
+    <!-- Search -->
+    <div style="position:relative;margin-top:16px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:15px;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="Search selected contacts" style="width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:13px 16px 13px 40px;font-size:14px;min-height:44px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+    </div>
+
+    <!-- Select all row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);align-items:center;margin-top:12px;">
+      <button style="min-height:40px;font-size:14px;font-weight:600;color:#059669;border:none;background:transparent;text-align:left;font-family:'Inter',Arial,sans-serif;">Select All</button>
+      <button style="min-height:40px;font-size:14px;font-weight:600;color:#57534e;border:none;background:transparent;text-align:left;font-family:'Inter',Arial,sans-serif;">Deselect All</button>
+      <button style="min-height:40px;font-size:14px;font-weight:600;color:#dc2626;border:none;background:transparent;text-align:left;font-family:'Inter',Arial,sans-serif;">Clear Selection</button>
+    </div>
+
+    <!-- Contact rows -->
+    <section style="margin-top:8px;display:flex;flex-direction:column;gap:12px;">
+      <!-- Ready contact -->
+      <article style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:14px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <!-- Checkbox checked -->
+          <span style="width:44px;height:44px;display:grid;place-items:center;margin:-8px 0 0 -8px;flex-shrink:0;">
+            <span style="width:20px;height:20px;display:grid;place-items:center;border-radius:6px;border:2px solid #059669;background:#059669;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          </span>
+          <div style="width:42px;height:42px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#ffffff;background:hsl(160,55%,45%);">RN</div>
+          <div style="min-width:0;flex:1;">
+            <p style="font-weight:600;margin:0;">Ravi Nair</p>
+            <p style="margin-top:2px;font-size:14px;color:#57534e;">+91 98765 43210</p>
+            <p style="margin-top:2px;font-size:12px;color:#a8a29e;">ravi.nair@example.com</p>
+            <p style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#059669;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> WhatsApp number found
+            </p>
+          </div>
+          <button style="margin:-8px -8px 0 0;width:44px;height:44px;display:grid;place-items:center;border:none;background:transparent;font-size:12px;font-weight:600;color:#dc2626;font-family:'Inter',Arial,sans-serif;">
+            <span style="display:inline-flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Remove</span>
+          </button>
+        </div>
+      </article>
+
+      <!-- Needs attention contact -->
+      <article style="border-radius:16px;border:1px solid #fcd34d;background:#ffffff;padding:14px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="width:44px;height:44px;display:grid;place-items:center;margin:-8px 0 0 -8px;flex-shrink:0;">
+            <span style="width:20px;height:20px;display:grid;place-items:center;border-radius:6px;border:2px solid #059669;background:#059669;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          </span>
+          <div style="width:42px;height:42px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#ffffff;background:hsl(25,55%,45%);">SK</div>
+          <div style="min-width:0;flex:1;">
+            <p style="font-weight:600;margin:0;">Sana Khan</p>
+            <p style="margin-top:2px;font-size:14px;color:#d97706;">WhatsApp number required</p>
+            <p style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#d97706;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> No WhatsApp number on this contact
+            </p>
+          </div>
+          <button style="margin:-8px -8px 0 0;width:44px;height:44px;display:grid;place-items:center;border:none;background:transparent;font-size:12px;font-weight:600;color:#dc2626;font-family:'Inter',Arial,sans-serif;">
+            <span style="display:inline-flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Remove</span>
+          </button>
+        </div>
+        <!-- Fix details button -->
+        <button style="margin-top:12px;margin-left:54px;min-height:40px;padding:0 12px;border-radius:12px;background:#f4f2ec;border:none;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;color:#1c1917;font-family:'Inter',Arial,sans-serif;">
+          Fix Details <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+      </article>
+
+      <!-- Deselected contact -->
+      <article style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:14px;opacity:0.6;box-sizing:border-box;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="width:44px;height:44px;display:grid;place-items:center;margin:-8px 0 0 -8px;flex-shrink:0;">
+            <span style="width:20px;height:20px;display:block;border-radius:6px;border:2px solid #a8a29e;"></span>
+          </span>
+          <div style="width:42px;height:42px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#ffffff;background:hsl(260,55%,45%);">DP</div>
+          <div style="min-width:0;flex:1;">
+            <p style="font-weight:600;margin:0;">Deepa Pillai</p>
+            <p style="margin-top:2px;font-size:14px;color:#a8a29e;">Not selected</p>
+          </div>
+          <button style="margin:-8px -8px 0 0;width:44px;height:44px;display:grid;place-items:center;border:none;background:transparent;font-size:12px;font-weight:600;color:#dc2626;font-family:'Inter',Arial,sans-serif;">
+            <span style="display:inline-flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Remove</span>
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <!-- Privacy note -->
+    <aside style="margin-top:20px;display:flex;align-items:flex-start;gap:12px;border-radius:16px;background:#ecfdf5;padding:16px;font-size:14px;line-height:20px;color:#57534e;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px;flex-shrink:0;"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><circle cx="12" cy="16" r="1"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
+      <p style="margin:0;">Only the friends you confirm here will be saved to your account. Your other device contacts stay on your device.</p>
+    </aside>
+
+  </div>
+
+  <!-- Sticky bottom action bar -->
+  <div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid #e7e3d8;background:#fbfaf7;padding:12px 16px;">
+    <p style="text-align:center;font-size:12px;font-weight:500;color:#d97706;margin:0 0 8px;">Fix or remove 1 contact that need attention.</p>
+    <button style="width:100%;min-height:48px;border-radius:12px;background:#059669;opacity:0.4;color:#ffffff;font-weight:600;padding:0 16px;border:none;font-family:'Inter',Arial,sans-serif;">Add 3 Friends</button>
+  </div>
+
+</div>
+
+</body>
+</html>

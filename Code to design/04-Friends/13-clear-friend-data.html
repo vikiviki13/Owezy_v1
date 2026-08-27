@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Clear Friend Data</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:24px 16px 32px;box-sizing:border-box;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button style="width:36px;height:36px;border-radius:9999px;background:#ffffff;border:1px solid #e7e3d8;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <h1 style="font-size:18px;font-weight:600;margin:0;">Clear Friend Data</h1>
+    </div>
+
+    <!-- Warning card -->
+    <div style="border:1px solid #dc2626;border-radius:16px;background:#fef2f2;padding:16px;margin-bottom:20px;box-sizing:border-box;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>
+        <p style="font-weight:600;font-size:14px;margin:0;">This action cannot be undone.</p>
+      </div>
+      <p style="font-size:14px;line-height:24px;color:#57534e;margin:0;">This will permanently remove <span style="font-weight:600;">Jiya Mehta</span>'s financial history from your account:</p>
+      <!-- List of removed items -->
+      <ul style="margin-top:12px;display:flex;flex-direction:column;gap:6px;font-size:14px;color:#57534e;list-style:none;padding:0;">
+        <li style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Expenses linked to this friend</li>
+        <li style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Repayments and settlement history</li>
+        <li style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Statements and reminders</li>
+        <li style="display:flex;align-items:center;gap:8px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg> Attachments for those transactions</li>
+      </ul>
+      <p style="margin-top:12px;font-size:14px;color:#57534e;">The friend profile itself is kept — use Delete Friend to remove it too.</p>
+    </div>
+
+    <!-- Confirm input -->
+    <label style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      <span style="font-size:14px;font-weight:500;color:#57534e;">Type <span style="font-weight:700;letter-spacing:0.1em;">CLEAR</span> to continue</span>
+      <input type="text" placeholder="CLEAR" value="CLEA" style="box-sizing:border-box;width:100%;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px 14px;font-size:14px;letter-spacing:0.1em;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+    </label>
+
+    <!-- Confirm button (disabled state) -->
+    <button style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;background:#dc2626;opacity:0.4;color:#ffffff;font-weight:600;border:none;border-radius:12px;padding:14px 0;font-family:'Inter',Arial,sans-serif;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+      Clear Data Permanently
+    </button>
+
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Contact Import — Fix Details (Editing)</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:20px 16px 150px;box-sizing:border-box;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;">
+      <button style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;margin-left:-4px;border:none;background:transparent;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div style="min-width:0;flex:1;">
+        <h1 style="font-size:20px;font-weight:700;margin:0;">Review Friends</h1>
+        <p style="font-size:14px;color:#57534e;margin:2px 0 0;">2 contacts selected</p>
+      </div>
+    </div>
+
+    <!-- Contact card in editing state -->
+    <section style="margin-top:20px;display:flex;flex-direction:column;gap:12px;">
+      <article style="border-radius:16px;border:1px solid #fcd34d;background:#ffffff;padding:14px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;">
+          <span style="width:44px;height:44px;display:grid;place-items:center;margin:-8px 0 0 -8px;flex-shrink:0;">
+            <span style="width:20px;height:20px;display:grid;place-items:center;border-radius:6px;border:2px solid #059669;background:#059669;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+          </span>
+          <div style="width:42px;height:42px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#ffffff;background:hsl(25,55%,45%);">SK</div>
+          <div style="min-width:0;flex:1;">
+            <p style="font-weight:600;margin:0;">Sana Khan</p>
+            <p style="margin-top:2px;font-size:14px;color:#d97706;">WhatsApp number required</p>
+          </div>
+          <button style="margin:-8px -8px 0 0;width:44px;height:44px;display:grid;place-items:center;border:none;background:transparent;font-size:12px;font-weight:600;color:#dc2626;font-family:'Inter',Arial,sans-serif;">
+            <span style="display:inline-flex;align-items:center;gap:4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg> Remove</span>
+          </button>
+        </div>
+
+        <!-- Editing form -->
+        <div style="margin-top:16px;border-top:1px solid #e7e3d8;padding-top:16px;display:flex;flex-direction:column;gap:16px;">
+          <!-- Name -->
+          <label style="display:block;">
+            <span style="font-size:14px;font-weight:600;color:#57534e;">Name <span style="color:#dc2626;">*</span></span>
+            <input type="text" value="Sana Khan" placeholder="Friend's name" style="margin-top:6px;min-height:44px;width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #059669;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+          </label>
+
+          <!-- Choose WhatsApp number radio options -->
+          <fieldset style="border:none;padding:0;margin:0;">
+            <legend style="font-size:14px;font-weight:600;color:#57534e;padding:0;">Choose WhatsApp Number <span style="color:#dc2626;">*</span></legend>
+            <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">
+              <!-- Selected option -->
+              <label style="display:flex;min-height:56px;align-items:center;gap:12px;border-radius:12px;border:1px solid #059669;background:#ecfdf5;padding:12px;">
+                <input type="radio" checked style="width:16px;height:16px;">
+                <span style="min-width:0;">
+                  <span style="display:block;font-size:12px;font-weight:600;color:#a8a29e;">Mobile</span>
+                  <span style="display:block;font-size:14px;font-weight:500;margin-top:2px;">+91 98200 12345</span>
+                </span>
+              </label>
+              <!-- Unselected option -->
+              <label style="display:flex;min-height:56px;align-items:center;gap:12px;border-radius:12px;border:1px solid #e7e3d8;background:#ffffff;padding:12px;">
+                <input type="radio" style="width:16px;height:16px;">
+                <span style="min-width:0;">
+                  <span style="display:block;font-size:12px;font-weight:600;color:#a8a29e;">Home</span>
+                  <span style="display:block;font-size:14px;font-weight:500;margin-top:2px;">+91 22 2640 1122</span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Manual number -->
+          <label style="display:block;">
+            <span style="font-size:14px;font-weight:600;color:#57534e;">Use another number <span style="color:#dc2626;">*</span></span>
+            <input type="text" placeholder="e.g. +91 98765 43210" inputmode="text" style="margin-top:6px;min-height:44px;width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+            <span style="margin-top:6px;display:block;font-size:12px;color:#a8a29e;">Include the country code. Indian 10-digit numbers use +91 automatically.</span>
+          </label>
+
+          <!-- Done button -->
+          <button style="min-height:44px;width:100%;border-radius:12px;background:#1c1917;color:#fbfaf7;font-size:14px;font-weight:600;border:none;font-family:'Inter',Arial,sans-serif;">Done</button>
+        </div>
+      </article>
+    </section>
+
+  </div>
+
+  <!-- Sticky bottom action bar (disabled) -->
+  <div style="position:absolute;left:0;right:0;bottom:0;border-top:1px solid #e7e3d8;background:#fbfaf7;padding:12px 16px;">
+    <button style="width:100%;min-height:48px;border-radius:12px;background:#059669;opacity:0.4;color:#ffffff;font-weight:600;padding:0 16px;border:none;font-family:'Inter',Arial,sans-serif;">Add 1 Friend</button>
+  </div>
+
+</div>
+
+</body>
+</html>

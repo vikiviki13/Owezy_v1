@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Onboarding — Profile Setup</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:16px 24px 32px;box-sizing:border-box;">
+
+  <!-- Background glow -->
+  <div style="position:absolute;top:-60px;left:35px;width:320px;height:320px;border-radius:9999px;background:#ecfdf5;opacity:0.5;"></div>
+
+  <div style="flex:1;display:flex;flex-direction:column;position:relative;z-index:1;">
+    <!-- Progress pip -->
+    <div style="display:flex;justify-content:center;margin-bottom:24px;">
+      <div style="width:40px;height:4px;background:#059669;border-radius:9999px;"></div>
+    </div>
+
+    <!-- Illustration scene -->
+    <div style="position:relative;width:100%;height:230px;display:flex;align-items:center;justify-content:center;margin-bottom:24px;flex-shrink:0;">
+      <!-- Background blob -->
+      <div style="position:absolute;top:50%;left:50%;margin-left:-100px;margin-top:-100px;width:200px;height:200px;border-radius:9999px;background:#ecfdf5;"></div>
+
+      <!-- Dotted ring -->
+      <svg width="250" height="250" viewBox="0 0 250 250" style="position:absolute;top:50%;left:50%;margin-left:-125px;margin-top:-125px;">
+        <circle cx="125" cy="125" r="114" fill="none" stroke="#d1fae5" stroke-width="1.5" stroke-dasharray="2 8" stroke-linecap="round"/>
+      </svg>
+
+      <!-- Wave badge top left -->
+      <div style="position:absolute;top:10px;left:20px;width:46px;height:46px;background:#ffffff;border:1px solid #e7e3d8;border-radius:16px;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:22px;line-height:1;">👋</span>
+      </div>
+
+      <!-- Avatar stack top right -->
+      <div style="position:absolute;top:16px;right:16px;">
+        <div style="display:flex;align-items:center;">
+          <div style="width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2.5px solid #ffffff;background:#ddd6fe;color:#5b21b6;">A</div>
+          <div style="width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2.5px solid #ffffff;background:#fde68a;color:#92400e;margin-left:-8px;">J</div>
+          <div style="width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:2.5px solid #ffffff;margin-left:-8px;background:#ecfdf5;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+        </div>
+        <div style="margin-top:5px;background:#ffffff;border:1px solid #e7e3d8;border-radius:8px;padding:4px 8px;">
+          <span style="font-size:10px;font-weight:600;color:#57534e;">Your group</span>
+        </div>
+      </div>
+
+      <!-- You're in chip bottom right -->
+      <div style="position:absolute;bottom:20px;right:16px;">
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;padding:7px 12px;display:flex;align-items:center;gap:6px;">
+          <div style="width:16px;height:16px;background:#059669;border-radius:9999px;display:flex;align-items:center;justify-content:center;">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span style="font-size:11px;font-weight:600;color:#059669;">You're in!</span>
+        </div>
+      </div>
+
+      <!-- Accent dots -->
+      <div style="position:absolute;bottom:44px;left:22px;width:9px;height:9px;background:#a7f3d0;border-radius:9999px;"></div>
+      <div style="position:absolute;top:96px;left:36px;width:5px;height:5px;background:#e7e3d8;border-radius:9999px;"></div>
+      <div style="position:absolute;bottom:28px;left:54px;width:5px;height:5px;background:#d1fae5;border-radius:9999px;"></div>
+
+      <!-- Mini balance stub card behind -->
+      <div style="position:absolute;width:138px;height:80px;background:#ffffff;border:1px solid #e7e3d8;border-radius:16px;left:150px;top:130px;padding:14px;box-sizing:border-box;">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+          <div style="width:20px;height:20px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;background:#fecaca;color:#991b1b;">R</div>
+          <div style="height:6px;width:48px;background:#e7e3d8;border-radius:3px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="height:5px;width:36px;background:#f4f2ec;border-radius:3px;"></div>
+          <span style="font-size:11px;font-weight:700;color:#059669;">+$22</span>
+        </div>
+      </div>
+
+      <!-- Main profile setup card -->
+      <div style="position:relative;width:186px;height:218px;background:#ffffff;border:1px solid #e7e3d8;border-radius:20px;z-index:2;padding:16px;box-sizing:border-box;">
+        <!-- App brand strip -->
+        <div style="border-radius:10px;padding:9px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;background:#059669;">
+          <span style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.95);letter-spacing:0.12em;">OWEZY</span>
+          <div style="display:flex;gap:3px;">
+            <div style="width:5px;height:5px;background:rgba(255,255,255,0.5);border-radius:9999px;"></div>
+            <div style="width:5px;height:5px;background:rgba(255,255,255,0.3);border-radius:9999px;"></div>
+            <div style="width:5px;height:5px;background:rgba(255,255,255,0.2);border-radius:9999px;"></div>
+          </div>
+        </div>
+
+        <!-- Avatar + name area -->
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <div style="width:36px;height:36px;border-radius:9999px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid #a7f3d0;background:#ecfdf5;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div style="flex:1;">
+            <div style="height:7px;background:#e7e3d8;border-radius:4px;margin-bottom:5px;position:relative;">
+              <div style="position:absolute;right:0;top:0;bottom:0;width:2px;background:#059669;border-radius:1px;"></div>
+            </div>
+            <div style="height:5px;width:44px;background:#f4f2ec;border-radius:3px;"></div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <div style="flex:1;background:#f4f2ec;border-radius:8px;padding:7px 8px;">
+            <div style="font-size:9px;color:#a8a29e;font-weight:500;margin-bottom:3px;">Expenses</div>
+            <div style="font-size:13px;font-weight:700;color:#1c1917;">0</div>
+          </div>
+          <div style="flex:1;background:#f4f2ec;border-radius:8px;padding:7px 8px;">
+            <div style="font-size:9px;color:#a8a29e;font-weight:500;margin-bottom:3px;">Friends</div>
+            <div style="font-size:13px;font-weight:700;color:#1c1917;">0</div>
+          </div>
+          <div style="flex:1;background:#ecfdf5;border:1px solid #d1fae5;border-radius:8px;padding:7px 8px;box-sizing:border-box;">
+            <div style="font-size:9px;color:#059669;font-weight:500;margin-bottom:3px;">Owed</div>
+            <div style="font-size:13px;font-weight:700;color:#059669;">₹0</div>
+          </div>
+        </div>
+
+        <!-- Dashed divider -->
+        <div style="border-top:1px dashed #e7e3d8;margin-bottom:10px;"></div>
+
+        <!-- Currency + edit row -->
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:16px;height:16px;background:#ecfdf5;border-radius:5px;display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:9px;font-weight:700;color:#059669;">₹</span>
+            </div>
+            <span style="font-size:10px;font-weight:600;color:#57534e;">INR</span>
+          </div>
+          <div style="background:#059669;border-radius:7px;padding:4px 9px;display:flex;align-items:center;gap:4px;">
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            <span style="font-size:10px;font-weight:600;color:#ffffff;">Edit</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div style="max-width:342px;width:100%;margin:0 auto;">
+      <h1 style="font-size:24px;font-weight:700;margin:0 0 4px;letter-spacing:-0.02em;">What should we call you?</h1>
+      <p style="font-size:14px;color:#a8a29e;margin:0 0 20px;">You can change this anytime in Profile.</p>
+
+      <!-- Name input with icon -->
+      <div style="position:relative;margin-bottom:12px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;left:14px;top:16px;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <input type="text" placeholder="Your name" value="Alex" style="width:100%;box-sizing:border-box;background:#ffffff;border:1px solid #059669;border-radius:12px;padding:12px 14px 12px 38px;font-size:14px;color:#1c1917;font-family:'Inter',Arial,sans-serif;">
+      </div>
+
+      <!-- Currency note -->
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:20px;">
+        <span style="font-size:14px;color:#57534e;">Default currency:</span>
+        <span style="display:inline-flex;align-items:center;background:#ecfdf5;border:1px solid #d1fae5;border-radius:9999px;padding:2px 10px;font-size:13px;font-weight:600;color:#059669;">INR ₹</span>
+      </div>
+
+      <!-- Actions -->
+      <button style="width:100%;background:#059669;color:#ffffff;font-size:16px;font-weight:500;border:none;border-radius:12px;padding:14px 0;margin-bottom:8px;font-family:'Inter',Arial,sans-serif;">Get Started</button>
+      <button style="width:100%;background:transparent;color:#a8a29e;font-size:14px;font-weight:500;border:none;padding:8px 0;font-family:'Inter',Arial,sans-serif;">Skip for now</button>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

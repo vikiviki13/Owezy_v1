@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Edit Profile</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <!-- Sticky header -->
+  <div style="position:absolute;top:0;left:0;right:0;z-index:20;height:56px;background:#fbfaf7;border-bottom:1px solid #e7e3d8;display:flex;align-items:center;padding:0 12px;">
+    <button style="width:44px;height:44px;border-radius:9999px;display:flex;align-items:center;justify-content:center;border:none;background:transparent;">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </button>
+    <h1 style="font-size:18px;font-weight:600;margin-left:4px;">Edit Profile</h1>
+  </div>
+
+  <!-- Body -->
+  <div style="padding:76px 16px 100px;box-sizing:border-box;min-height:844px;">
+
+    <!-- Avatar + change photo -->
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
+      <div style="position:relative;">
+        <div style="width:88px;height:88px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:600;color:#ffffff;background:hsl(160,55%,45%);">AS</div>
+        <span style="position:absolute;right:-4px;bottom:-4px;width:36px;height:36px;border-radius:9999px;background:#059669;color:#ffffff;border:4px solid #fbfaf7;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+        </span>
+      </div>
+      <span style="margin-top:12px;font-size:14px;font-weight:600;color:#059669;min-height:36px;display:inline-flex;align-items:center;">Change photo</span>
+    </div>
+
+    <!-- Full Name field -->
+    <label style="display:block;margin-bottom:20px;">
+      <span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px;">Full Name <span style="color:#dc2626;">*</span></span>
+      <input type="text" value="Alex Sharma" style="width:100%;box-sizing:border-box;min-height:48px;background:#ffffff;border:1px solid #059669;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+    </label>
+
+    <!-- Email field -->
+    <label style="display:block;margin-bottom:20px;">
+      <span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px;">Email</span>
+      <input type="text" value="alex@example.com" style="width:100%;box-sizing:border-box;min-height:48px;background:#ffffff;border:1px solid #e7e3d8;border-radius:12px;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+      <span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;margin-top:8px;color:#059669;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg> Verified
+      </span>
+    </label>
+
+    <!-- Phone field with +91 prefix -->
+    <label style="display:block;margin-bottom:112px;">
+      <span style="display:block;font-size:14px;font-weight:600;margin-bottom:8px;">Phone Number <span style="font-weight:400;color:#a8a29e;">(optional)</span></span>
+      <span style="display:flex;">
+        <span style="height:48px;padding:0 12px;display:flex;align-items:center;border:1px solid #e7e3d8;border-right:none;border-radius:12px 0 0 12px;background:#f4f2ec;font-size:14px;font-weight:500;">+91</span>
+        <input type="text" value="98765 12340" placeholder="98765 43210" style="flex:1;min-width:0;box-sizing:border-box;height:48px;background:#ffffff;border:1px solid #e7e3d8;border-radius:0 12px 12px 0;padding:12px 14px;font-size:14px;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+      </span>
+    </label>
+
+  </div>
+
+  <!-- Fixed save bar -->
+  <div style="position:absolute;bottom:0;left:0;right:0;z-index:20;background:#fbfaf7;border-top:1px solid #e7e3d8;padding:16px;">
+    <button style="width:100%;min-height:48px;border-radius:12px;background:#059669;color:#ffffff;font-weight:600;border:none;font-family:'Inter',Arial,sans-serif;">Save Changes</button>
+  </div>
+
+</div>
+
+</body>
+</html>

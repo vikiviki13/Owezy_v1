@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Expense Detail</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:24px 16px 32px;box-sizing:border-box;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button style="width:36px;height:36px;border-radius:9999px;background:#ffffff;border:1px solid #e7e3d8;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div style="flex:1;min-width:0;">
+        <h1 style="font-size:16px;font-weight:600;margin:0;">Team dinner at Barbeque Nation</h1>
+        <p style="font-size:12px;color:#a8a29e;margin:2px 0 0;">26 Aug 2026 · 8:30 PM</p>
+      </div>
+      <span style="background:#fef3c7;color:#92400e;border-radius:9999px;padding:2px 8px;font-size:12px;font-weight:500;">Pending</span>
+    </div>
+
+    <!-- Amount card -->
+    <div style="border-radius:24px;background:#ffffff;border:1px solid #e7e3d8;padding:20px;margin-bottom:20px;text-align:center;">
+      <p style="font-size:30px;font-weight:800;margin:0;">₹2,400</p>
+      <p style="font-size:14px;color:#a8a29e;margin-top:4px;">Paid by Me at Barbeque Nation</p>
+    </div>
+
+    <!-- Metrics grid -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px;">
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:12px;">
+        <p style="font-size:12px;color:#a8a29e;margin:0;">My share</p>
+        <p style="margin-top:4px;font-weight:600;">₹800</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:12px;">
+        <p style="font-size:12px;color:#a8a29e;margin:0;">Friends' share</p>
+        <p style="margin-top:4px;font-weight:600;">₹1,600</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:12px;">
+        <p style="font-size:12px;color:#a8a29e;margin:0;">Paid by me</p>
+        <p style="margin-top:4px;font-weight:600;">₹2,400</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:12px;">
+        <p style="font-size:12px;color:#a8a29e;margin:0;">Paid by friends</p>
+        <p style="margin-top:4px;font-weight:600;">₹0</p>
+      </div>
+    </div>
+
+    <!-- Participants -->
+    <p style="font-size:14px;font-weight:600;margin:0 0 8px;">Participants</p>
+    <div style="background:#ffffff;border:1px solid #e7e3d8;border-radius:16px;margin-bottom:24px;">
+      <!-- You row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid #e7e3d8;">
+        <span style="font-weight:500;font-size:14px;">You</span>
+        <span style="font-weight:600;font-size:14px;">₹800</span>
+      </div>
+      <!-- Friend row -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px;border-bottom:1px solid #e7e3d8;">
+        <div style="width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#ffffff;background:hsl(160,55%,45%);">JM</div>
+        <div style="flex:1;">
+          <p style="font-weight:500;font-size:14px;margin:0;">Jiya Mehta</p>
+          <p style="font-size:11px;color:#a8a29e;margin:2px 0 0;">Received ₹400 · Pending ₹420</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="font-weight:600;font-size:14px;margin:0;">₹800</p>
+          <span style="display:inline-block;background:#dbeafe;color:#1e40af;border-radius:9999px;padding:2px 8px;font-size:12px;font-weight:500;margin-top:2px;">Partial</span>
+        </div>
+      </div>
+      <!-- Friend row -->
+      <div style="display:flex;align-items:center;gap:12px;padding:16px;">
+        <div style="width:32px;height:32px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#ffffff;background:hsl(190,55%,45%);">AK</div>
+        <div style="flex:1;">
+          <p style="font-weight:500;font-size:14px;margin:0;">Arun Kumar</p>
+          <p style="font-size:11px;color:#a8a29e;margin:2px 0 0;">Received ₹0 · Pending ₹800</p>
+        </div>
+        <div style="text-align:right;">
+          <p style="font-weight:600;font-size:14px;margin:0;">₹800</p>
+          <span style="display:inline-block;background:#fef3c7;color:#92400e;border-radius:9999px;padding:2px 8px;font-size:12px;font-weight:500;margin-top:2px;">Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="margin-bottom:24px;">
+      <p style="font-size:14px;font-weight:600;margin:0 0 4px;">Notes</p>
+      <p style="font-size:14px;color:#57534e;margin:0;">Celebrated the Q3 launch with the design team.</p>
+    </div>
+
+    <!-- Purpose / Reason -->
+    <div style="margin-bottom:24px;">
+      <p style="font-size:14px;font-weight:600;margin:0 0 4px;">Purpose / Reason</p>
+      <p style="font-size:14px;color:#57534e;margin:0;">Team dinner</p>
+    </div>
+
+    <!-- Actions -->
+    <div style="display:flex;gap:12px;">
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#f4f2ec;border:none;font-weight:500;border-radius:12px;padding:12px 0;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg> Edit
+      </button>
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#f4f2ec;border:none;font-weight:500;border-radius:12px;padding:12px 0;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share
+      </button>
+      <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:#fef2f2;color:#dc2626;border:none;font-weight:500;border-radius:12px;padding:12px 0;font-family:'Inter',Arial,sans-serif;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg> Delete
+      </button>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

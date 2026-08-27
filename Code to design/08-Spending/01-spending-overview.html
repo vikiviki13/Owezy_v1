@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Spending Overview</title>
+</head>
+<body style="margin:0;padding:0;background:#fbfaf7;font-family:'Inter',Arial,sans-serif;color:#1c1917;">
+
+<div style="width:390px;min-height:844px;margin:0 auto;background:#fbfaf7;position:relative;overflow:hidden;">
+  <div style="padding:24px 16px 40px;box-sizing:border-box;">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;">
+      <button style="width:36px;height:36px;border-radius:9999px;background:#ffffff;border:1px solid #e7e3d8;display:flex;align-items:center;justify-content:center;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1c1917" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div>
+        <h1 style="font-size:20px;font-weight:600;margin:0;">Spending Overview</h1>
+        <p style="font-size:14px;color:#a8a29e;margin-top:4px;">Review your spending at month end.</p>
+      </div>
+    </div>
+
+    <!-- Range chips -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <span style="flex-shrink:0;border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">today</span>
+      <span style="flex-shrink:0;border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">week</span>
+      <span style="flex-shrink:0;border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:500;background:#059669;color:#ffffff;">month</span>
+      <span style="flex-shrink:0;border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">last month</span>
+      <span style="flex-shrink:0;border-radius:9999px;padding:6px 12px;font-size:12px;font-weight:500;background:#f4f2ec;color:#57534e;">custom</span>
+    </div>
+
+    <!-- Date range label -->
+    <p style="font-size:12px;color:#a8a29e;margin:0 0 16px;">2026-08-01 → 2026-08-26</p>
+
+    <!-- Summary metric grid -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">My actual spending</p>
+        <p style="margin-top:8px;font-weight:600;">₹18,240</p>
+      </div>
+      <!-- Self spending (active filter) -->
+      <button style="border-radius:16px;border:1px solid #059669;background:#ecfdf5;padding:16px;text-align:left;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Self spending</p>
+        <p style="margin-top:8px;font-weight:600;color:#047857;">₹6,420</p>
+      </button>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Spent for friends</p>
+        <p style="margin-top:8px;font-weight:600;">₹11,820</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Paid by friends for me</p>
+        <p style="margin-top:8px;font-weight:600;">₹2,100</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Net personal spending</p>
+        <p style="margin-top:8px;font-weight:600;">₹14,520</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Total paid by me</p>
+        <p style="margin-top:8px;font-weight:600;">₹30,060</p>
+      </div>
+      <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+        <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Total paid by friends</p>
+        <p style="margin-top:8px;font-weight:600;">₹2,100</p>
+      </div>
+    </div>
+
+    <!-- Spending statement section -->
+    <section style="margin-top:32px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="font-size:16px;font-weight:600;margin:0;">My self spending</h2>
+        <span style="font-size:12px;font-weight:600;color:#059669;">Show all</span>
+      </div>
+
+      <!-- Category breakdown -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+          <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Food</p>
+          <p style="margin-top:8px;font-weight:600;">₹3,180</p>
+        </div>
+        <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+          <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Movie</p>
+          <p style="margin-top:8px;font-weight:600;">₹1,240</p>
+        </div>
+        <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+          <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Travel</p>
+          <p style="margin-top:8px;font-weight:600;">₹1,400</p>
+        </div>
+        <div style="border-radius:16px;border:1px solid #e7e3d8;background:#ffffff;padding:16px;text-align:left;">
+          <p style="font-size:12px;line-height:16px;color:#a8a29e;margin:0;">Shopping</p>
+          <p style="margin-top:8px;font-weight:600;">₹600</p>
+        </div>
+      </div>
+
+      <!-- Statement list -->
+      <div style="border:1px solid #e7e3d8;border-radius:16px;background:#ffffff;">
+        <button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;text-align:left;border:none;background:transparent;border-bottom:1px solid #e7e3d8;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;">
+          <div style="min-width:0;">
+            <p style="font-weight:500;margin:0;">Weekend brunch</p>
+            <p style="font-size:12px;color:#a8a29e;margin-top:4px;">Food · Self · 23 Aug 2026</p>
+          </div>
+          <p style="flex-shrink:0;font-weight:600;">₹680</p>
+        </button>
+        <button style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px;text-align:left;border:none;background:transparent;font-family:'Inter',Arial,sans-serif;box-sizing:border-box;">
+          <div style="min-width:0;">
+            <p style="font-weight:500;margin:0;">Gym membership</p>
+            <p style="font-size:12px;color:#a8a29e;margin-top:4px;">Other · Self · 05 Aug 2026</p>
+          </div>
+          <p style="flex-shrink:0;font-weight:600;">₹1,200</p>
+        </button>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+</body>
+</html>
