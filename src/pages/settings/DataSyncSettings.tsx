@@ -51,12 +51,9 @@ export function DataSyncSettings() {
 
   useEffect(() => {
     const update = (event: Event) => setSnapshot((event as CustomEvent<SyncStatusSnapshot>).detail);
-    setSnapshot(getSyncSnapshot(userId));
-    setPendingItems(listQueueItems());
     window.addEventListener('tab-sync-state', update);
     const visible = () => {
       if (document.visibilityState === 'visible') {
-        setSnapshot(getSyncSnapshot(userId));
         setPendingItems(listQueueItems());
       }
     };

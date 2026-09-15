@@ -23,7 +23,6 @@ export function RequireReauthentication({
 
   useEffect(() => {
     if (!open) return;
-    setChecking(true);
     let active = true;
     void hasRecentAuthentication(userId)
       .then(({ fresh }) => { if (active && fresh) void onVerified(); })

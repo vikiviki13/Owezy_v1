@@ -30,9 +30,12 @@ export function ShareAppSettings() {
 
   useEffect(() => {
     let active = true;
-    setQrError(false);
     QRCode.toDataURL(url, { width: 512, margin: 2, color: { dark: '#1c1917', light: '#ffffff' } })
-      .then((dataUrl) => { if (active) setQrDataUrl(dataUrl); })
+      .then((dataUrl) => {
+        if (!active) return;
+        setQrError(false);
+        setQrDataUrl(dataUrl);
+      })
       .catch(() => { if (active) { setQrDataUrl(''); setQrError(true); } });
     return () => { active = false; };
   }, [url]);
