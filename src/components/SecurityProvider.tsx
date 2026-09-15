@@ -51,7 +51,6 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
   useEffect(() => {
     let active = true;
     clearLegacySecurityStorage();
-    if (cachedAppLock !== false) setLoading(true);
     getSecurityStatus(userId)
       .then((next) => {
         if (!active) return;

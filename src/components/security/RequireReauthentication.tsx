@@ -17,14 +17,12 @@ export function RequireReauthentication({
 }) {
   const { userId, status, unlockWithDevice, unlockWithPin } = useSecurity();
   const [checking, setChecking] = useState(false);
-  const [method, setMethod] = useState<'choose' | 'pin'>('choose');
+  const [method, setMethod] = useState<'choose' | 'pin'>(() => status?.webAuthnAvailableHere ? 'choose' : 'pin');
   const [message, setMessage] = useState('');
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setMethod(status?.webAuthnAvailableHere ? 'choose' : 'pin');
-    setMessage('');
     setChecking(true);
     let active = true;
     void hasRecentAuthentication(userId)
@@ -32,7 +30,7 @@ export function RequireReauthentication({
       .catch(() => undefined)
       .finally(() => { if (active) setChecking(false); });
     return () => { active = false; };
-  }, [onVerified, open, status?.webAuthnAvailableHere, userId]);
+  }, [onVerified, open, userId]);
 
   useEffect(() => {
     if (!open) return;

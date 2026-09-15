@@ -30,7 +30,6 @@ export function SyncStatusBadge() {
 
   useEffect(() => {
     const update = (event: Event) => setSnapshot((event as CustomEvent<SyncStatusSnapshot>).detail);
-    setSnapshot(getSyncSnapshot(userId));
     window.addEventListener('tab-sync-state', update);
     return () => window.removeEventListener('tab-sync-state', update);
   }, [userId]);

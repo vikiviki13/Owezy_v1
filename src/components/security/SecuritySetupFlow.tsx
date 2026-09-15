@@ -40,7 +40,7 @@ export function SecuritySetupFlow({ onDone, onCancel }: { onDone: () => void; on
       if (caught instanceof SecurityServiceError && caught.code === 'authentication_cancelled') setError('');
       else setError(caught instanceof Error ? caught.message : 'Device Security could not be set up.');
     } finally { setBusy(false); }
-  }, [status?.pinEnabled, stepUpToken, userId]);
+  }, [status, stepUpToken, userId]);
 
   const savePin = useCallback(async (pin: string) => {
     setBusy(true); setError('');

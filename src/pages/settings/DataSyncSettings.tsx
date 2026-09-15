@@ -48,7 +48,6 @@ export function DataSyncSettings() {
   const [pendingItems, setPendingItems] = useState<SyncQueueItem[]>(() => listQueueItems());
   const [syncing, setSyncing] = useState(false);
   const hadPendingRef = useRef(false);
-  hadPendingRef.current = snapshot.pendingCount > 0;
 
   useEffect(() => {
     const update = (event: Event) => setSnapshot((event as CustomEvent<SyncStatusSnapshot>).detail);
@@ -67,6 +66,10 @@ export function DataSyncSettings() {
       document.removeEventListener('visibilitychange', visible);
     };
   }, [userId]);
+
+  useEffect(() => {
+    hadPendingRef.current = snapshot.pendingCount > 0;
+  }, [snapshot.pendingCount]);
 
   const runSync = useCallback(async () => {
     setSyncing(true);

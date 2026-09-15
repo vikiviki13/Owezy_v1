@@ -36,9 +36,9 @@ export interface HorizontalSwipeHandlers {
 
 export function useHorizontalSwipe(handlers: HorizontalSwipeHandlers, enabled: boolean) {
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
 
   useEffect(() => {
+    handlersRef.current = handlers;
     if (!enabled) return;
 
     let startX = 0;
@@ -120,5 +120,5 @@ export function useHorizontalSwipe(handlers: HorizontalSwipeHandlers, enabled: b
       window.removeEventListener('pointercancel', onPointerCancel);
       window.removeEventListener('click', onClick, true);
     };
-  }, [enabled]);
+  }, [enabled, handlers]);
 }

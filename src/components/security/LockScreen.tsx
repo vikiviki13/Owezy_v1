@@ -13,7 +13,7 @@ export function LockScreen() {
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState('');
   const [retryUntil, setRetryUntil] = useState(() => status?.lockedUntil ? new Date(status.lockedUntil).getTime() : 0);
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(0);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetPassword, setResetPassword] = useState('');
   const [resetBusy, setResetBusy] = useState(false);
@@ -22,6 +22,7 @@ export function LockScreen() {
   useEffect(() => { void isPlatformAuthenticatorAvailable().then(setPlatformAvailable); }, []);
   useEffect(() => { if (!isLocked) navigate('/', { replace: true }); }, [isLocked, navigate]);
   useEffect(() => {
+    setNow(Date.now());
     if (retryUntil <= Date.now()) return;
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);

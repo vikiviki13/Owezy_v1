@@ -119,21 +119,14 @@ function AuthenticatedApp({ user }: { user: User }) {
 function PrivateDataApp({ user }: { user: User }) {
   const userId = user.id;
   const onboardingKey = `tab_onboarded_v2_${userId}`;
-  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(onboardingKey) === '1');
+  const [onboarded, setOnboarded] = useState(() => localStorage.getItem(onboardingKey) === '1' || getProfile().onboarding_completed === true);
   const [syncError, setSyncError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [legacyPending, setLegacyPending] = useState(false);
 
   useEffect(() => {
-    setOnboarded(localStorage.getItem(onboardingKey) === '1' || getProfile().onboarding_completed === true);
-  }, [onboardingKey]);
-
-  useEffect(() => {
     let active = true;
-    setDataLoading(true);
-    setDataError('');
-    setLegacyPending(false);
     void initializeCloudData(user)
       .then(() => {
         if (active && getProfile().onboarding_completed === true) {
@@ -148,7 +141,7 @@ function PrivateDataApp({ user }: { user: User }) {
       })
       .finally(() => { if (active) setDataLoading(false); });
     return () => { active = false; stopCloudData(); };
-  }, [user]);
+  }, [onboardingKey, user]);
 
   async function resolveLegacyData(decision: LegacyMigrationDecision) {
     setDataLoading(true);
