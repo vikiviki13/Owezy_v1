@@ -511,7 +511,7 @@ export function AddExpense() {
             {CATEGORIES.map((c) => (
               <button
                 key={c.key}
-                onClick={() => { setCategory(c.key); if (!title) setTitle(c.key); }}
+                onClick={() => setCategory(c.key)}
                 className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${category === c.key ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
               >
                 {c.icon}
