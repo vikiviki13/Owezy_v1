@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronDown, ExternalLink, Mail, MessageCircleQuestion, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { SettingsPage, SettingsSection } from '../../components/SettingsUI';
 import { useToast } from '../../components/ToastContext';
 import { APP_VERSION, latestReleaseNotes } from '../../lib/appRelease';
 import { checkForAppUpdate } from '../../lib/pwaUpdate';
+import { checkForGitHubUpdates } from '../../services/githubNotifications';
 
 const HELP_TOPICS = [
   ['Getting Started', 'Set up your profile, add your first friend, and record an expense.'],
@@ -19,17 +21,29 @@ const HELP_TOPICS = [
 
 export function HelpSupport() {
   const toast = useToast();
+  useEffect(() => {
+    void checkForGitHubUpdates(toast);
+  }, [toast]);
   return <SettingsPage title="Help & Support" description="Find answers or get in touch with the Tab team.">
     <SettingsSection title="Help Topics">{HELP_TOPICS.map(([title, answer]) => <details key={title} className="group"><summary className="list-none min-h-14 px-4 py-3 flex items-center gap-3 cursor-pointer"><span className="flex-1 font-medium text-sm">{title}</span><ChevronDown size={17} className="text-[var(--color-text-muted)] transition-transform group-open:rotate-180" /></summary><p className="px-4 pb-4 text-xs leading-5 text-[var(--color-text-secondary)]">{answer}</p></details>)}</SettingsSection>
     <SettingsSection title="Contact">
       <SupportAction icon={Mail} title="Contact Support" onClick={() => { window.location.href = 'mailto:support@tab.app?subject=Tab%20Support'; }} />
-      <SupportAction icon={MessageCircleQuestion} title="Report a Problem" onClick={() => { window.location.href = 'mailto:support@tab.app?subject=Problem%20Report'; }} />
+      <SupportAction icon={MessageCircleQuestion} title="Report a Bug" to="/profile/bug" />
       <SupportAction icon={Send} title="Send Feedback" onClick={() => toast('Thanks—your feedback helps make Tab better')} />
     </SettingsSection>
   </SettingsPage>;
 }
 
-function SupportAction({ icon: Icon, title, onClick }: { icon: typeof Mail; title: string; onClick: () => void }) { return <button onClick={onClick} className="w-full min-h-14 px-4 flex items-center gap-3 text-left"><Icon size={18} className="text-[var(--color-text-secondary)]" /><span className="flex-1 font-medium text-sm">{title}</span><ExternalLink size={15} className="text-[var(--color-text-muted)]" /></button>; }
+function SupportAction({ icon: Icon, title, onClick, to }: { icon: typeof Mail; title: string; onClick?: () => void; to?: string }) {
+  const content = (
+    <div className="w-full min-h-14 px-4 flex items-center gap-3 text-left">
+      <Icon size={18} className="text-[var(--color-text-secondary)]" />
+      <span className="flex-1 font-medium text-sm">{title}</span>
+      <ExternalLink size={15} className="text-[var(--color-text-muted)]" />
+    </div>
+  );
+  return to ? <Link to={to}>{content}</Link> : <button type="button" onClick={onClick}>{content}</button>;
+}
 
 export function AboutSettings() {
   const toast = useToast();

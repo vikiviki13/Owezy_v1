@@ -30,6 +30,7 @@ import { DataStorageSettings, ExportDataSettings, InstallAppSettings, Notificati
 import { DataSyncSettings } from './pages/settings/DataSyncSettings';
 import { AccountRecoveryPage, AppLockSettings, ChangePinPage, SecurityActivityPage, SecurityDevices, SecuritySettings } from './pages/settings/SecurityPages';
 import { AboutSettings, HelpSupport } from './pages/settings/SupportPages';
+import { BugReportPage } from './pages/settings/BugReportPage';
 import { ShareAppSettings } from './pages/settings/ShareAppPage';
 import { clearCloudRuntimeState, initializeCloudData, LegacyDataChoiceRequired, stopCloudData, type LegacyMigrationDecision } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
@@ -233,6 +234,7 @@ function PrivateDataApp({ user }: { user: User }) {
             <Route path="/profile/export" element={<ExportDataSettings />} />
             <Route path="/profile/install" element={<InstallAppSettings />} />
             <Route path="/profile/help" element={<HelpSupport />} />
+            <Route path="/profile/bug" element={<BugReportPage />} />
             <Route path="/profile/about" element={<AboutSettings />} />
             <Route path="/profile/share" element={<ShareAppSettings />} />
             </Routes>
