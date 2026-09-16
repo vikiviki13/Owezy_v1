@@ -41,7 +41,7 @@ import {
 import { listFriends } from '../lib/db';
 import { useSecurity } from '../components/SecurityContext';
 
-type Phase = 'select' | 'review' | 'saving' | 'result' | 'success';
+type Phase = 'select' | 'saving' | 'result' | 'success';
 type ReviewFilter = 'all' | 'ready' | 'already' | 'attention';
 
 function plural(count: number, singular: string, pluralValue = `${singular}s`) {
@@ -107,7 +107,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
   const visibleReviews = reviews.filter((review) => {
     const haystack = `${review.item.name} ${review.item.phones.map((phone) => phone.value).join(' ')} ${review.item.manualPhone}`.toLowerCase();
     if (query.trim() && !haystack.includes(query.trim().toLowerCase())) return false;
-    if (phase !== 'review' || filter === 'all') return true;
+    if (filter === 'all') return true;
     if (filter === 'attention') return review.status === 'attention' || review.status === 'failed';
     return review.status === filter;
   });
@@ -221,10 +221,6 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
   }
 
   function goBack() {
-    if (phase === 'review') {
-      setPhase('select');
-      return;
-    }
     void clearContactImportDraft(userId);
     navigate(origin === 'expense' ? '/add-expense' : '/friends');
   }
@@ -274,7 +270,7 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
     const attempted = completed.length + lastFailures.length;
     return (
       <main className="px-4 pt-6 pb-10 safe-top min-h-screen">
-        <button onClick={() => { setFailures({}); setPhase('review'); }} className="size-11 -ml-1 rounded-full grid place-items-center" aria-label="Back to review"><ArrowLeft size={20} /></button>
+         <button onClick={() => { setFailures({}); setPhase('select'); }} className="size-11 -ml-1 rounded-full grid place-items-center" aria-label="Back to selection"><ArrowLeft size={20} /></button>
         <div className="mt-3">
           <span className="grid size-14 place-items-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300"><CircleAlert size={28} /></span>
           <h1 className="text-2xl font-bold mt-5">{completed.length} of {attempted} friends added</h1>
@@ -306,103 +302,96 @@ export function ContactImport({ initialDraft }: { initialDraft?: ContactImportDr
     );
   }
 
-  const isReview = phase === 'review';
-  return (
-    <main className="min-h-screen px-4 pt-5 pb-36 safe-top">
-      <header className="flex items-center gap-3">
-        <button onClick={goBack} className="size-11 -ml-1 rounded-full grid place-items-center" aria-label="Go back"><ArrowLeft size={20} /></button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold">{isReview ? 'Review Friends' : 'Add Friends'}</h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">{plural(selectedCount, 'contact')} selected</p>
-        </div>
-        {!isReview && (
-          <button onClick={() => void chooseContacts()} disabled={pickerBusy} className="min-h-11 px-3 rounded-xl text-sm font-semibold text-[var(--color-primary)] inline-flex items-center gap-2 disabled:opacity-50">
-            {pickerBusy ? <LoaderCircle size={17} className="animate-spin" /> : <UserRoundPlus size={17} />} Add more
-          </button>
-        )}
-      </header>
+   return (
+     <main className="min-h-screen px-4 pt-5 pb-36 safe-top">
+       <header className="flex items-center gap-3">
+         <button onClick={goBack} className="size-11 -ml-1 rounded-full grid place-items-center" aria-label="Go back"><ArrowLeft size={20} /></button>
+         <div className="min-w-0 flex-1">
+           <h1 className="text-xl font-bold">Add Friends</h1>
+           <p className="text-sm text-[var(--color-text-secondary)]">{plural(selectedCount, 'contact')} selected</p>
+         </div>
+         <button onClick={() => void chooseContacts()} disabled={pickerBusy} className="min-h-11 px-3 rounded-xl text-sm font-semibold text-[var(--color-primary)] inline-flex items-center gap-2 disabled:opacity-50">
+           {pickerBusy ? <LoaderCircle size={17} className="animate-spin" /> : <UserRoundPlus size={17} />} Add more
+         </button>
+       </header>
 
-      {!draft?.items.length ? (
-        <section className="min-h-[62vh] grid place-items-center text-center">
-          <div className="max-w-sm">
-            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><Users size={27} /></span>
-            <h2 className="text-lg font-bold mt-4">Choose friends from your contacts</h2>
-            <p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-2">You'll review names and WhatsApp numbers before anything is saved.</p>
-            <button onClick={() => void chooseContacts()} disabled={pickerBusy} className="mt-6 min-h-12 px-5 rounded-xl bg-[var(--color-primary)] text-white font-semibold inline-flex items-center gap-2 disabled:opacity-50">
-              {pickerBusy ? <LoaderCircle size={18} className="animate-spin" /> : <Phone size={18} />} Select contacts
-            </button>
-            {pickerError && <p role="alert" className="text-sm leading-5 text-[var(--color-error)] mt-4">{pickerError}</p>}
-          </div>
-        </section>
-      ) : (
-        <>
-          {isReview && (
-            <section className="mt-5">
-              <div className="grid grid-cols-3 gap-2">
-                <SummaryCount label="Ready to Add" value={ready.length} tone="ready" />
-                <SummaryCount label="Already Added" value={already.length} tone="already" />
-                <SummaryCount label="Needs Attention" value={attention.length} tone="attention" />
-              </div>
-              <div className="flex gap-2 mt-3 overflow-x-auto pb-1" aria-label="Filter contacts">
-                {(['all', 'ready', 'already', 'attention'] as ReviewFilter[]).map((value) => (
-                  <button key={value} onClick={() => setFilter(value)} aria-pressed={filter === value} className={`min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold ${filter === value ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
-                    {value === 'all' ? 'All' : value === 'already' ? 'Already Added' : value === 'attention' ? 'Needs Attention' : 'Ready'}
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
+       {!draft?.items.length ? (
+         <section className="min-h-[62vh] grid place-items-center text-center">
+           <div className="max-w-sm">
+             <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-[var(--color-primary-soft)] text-[var(--color-primary)]"><Users size={27} /></span>
+             <h2 className="text-lg font-bold mt-4">Choose friends from your contacts</h2>
+             <p className="text-sm leading-6 text-[var(--color-text-secondary)] mt-2">You can review and edit details before adding.</p>
+             <button onClick={() => void chooseContacts()} disabled={pickerBusy} className="mt-6 min-h-12 px-5 rounded-xl bg-[var(--color-primary)] text-white font-semibold inline-flex items-center gap-2 disabled:opacity-50">
+               {pickerBusy ? <LoaderCircle size={18} className="animate-spin" /> : <Phone size={18} />} Select contacts
+             </button>
+             {pickerError && <p role="alert" className="text-sm leading-5 text-[var(--color-error)] mt-4">{pickerError}</p>}
+           </div>
+         </section>
+       ) : (
+         <>
+           <section className="mt-5">
+             <div className="grid grid-cols-3 gap-2">
+               <SummaryCount label="Ready to Add" value={ready.length} tone="ready" />
+               <SummaryCount label="Already Added" value={already.length} tone="already" />
+               <SummaryCount label="Needs Attention" value={attention.length} tone="attention" />
+             </div>
+             <div className="flex gap-2 mt-3 overflow-x-auto pb-1" aria-label="Filter contacts">
+               {(['all', 'ready', 'already', 'attention'] as ReviewFilter[]).map((value) => (
+                 <button key={value} onClick={() => setFilter(value)} aria-pressed={filter === value} className={`min-h-10 shrink-0 rounded-full px-4 text-sm font-semibold ${filter === value ? 'bg-[var(--color-text-primary)] text-[var(--color-bg)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
+                   {value === 'all' ? 'All' : value === 'already' ? 'Already Added' : value === 'attention' ? 'Needs Attention' : 'Ready'}
+                 </button>
+               ))}
+             </div>
+           </section>
 
-          <div className="relative mt-4">
-            <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input value={query} maxLength={120} onChange={(event) => setQuery(event.target.value)} className="input !pl-10 min-h-11" placeholder="Search selected contacts" aria-label="Search selected contacts" />
-          </div>
+           <div className="relative mt-4">
+             <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+             <input value={query} maxLength={120} onChange={(event) => setQuery(event.target.value)} className="input !pl-10 min-h-11" placeholder="Search contacts" aria-label="Search contacts" />
+           </div>
 
-          <div className="mt-3 grid grid-cols-3 items-center">
-            <button onClick={() => setDraft((value) => value ? { ...value, items: value.items.map((item) => ({ ...item, included: true })) } : value)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-primary)]">Select All</button>
-            <button onClick={() => setDraft((value) => value ? { ...value, items: value.items.map((item) => ({ ...item, included: false })) } : value)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-text-secondary)]">Deselect All</button>
-            <button onClick={() => setConfirmClear(true)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-error)]">Clear Selection</button>
-          </div>
+           <div className="mt-3 grid grid-cols-3 items-center">
+             <button onClick={() => setDraft((value) => value ? { ...value, items: value.items.map((item) => ({ ...item, included: true })) } : value)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-primary)]">Select All</button>
+             <button onClick={() => setDraft((value) => value ? { ...value, items: value.items.map((item) => ({ ...item, included: false })) } : value)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-text-secondary)]">Deselect All</button>
+             <button onClick={() => setConfirmClear(true)} className="min-h-10 text-xs sm:text-sm font-semibold text-[var(--color-error)]">Clear Selection</button>
+           </div>
 
-          {pickerError && <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-950/40 p-3 text-sm text-[var(--color-error)] mt-2">{pickerError}</p>}
+           {pickerError && <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-950/40 p-3 text-sm text-[var(--color-error)] mt-2">{pickerError}</p>}
 
-          <section className="mt-2 flex flex-col gap-3" aria-live="polite">
-            {visibleReviews.length ? visibleReviews.map((review) => (
-              <ContactReviewRow
-                key={review.item.id}
-                review={review}
-                editing={editingId === review.item.id}
-                onToggle={() => updateItem(review.item.id, { included: !review.item.included })}
-                onEdit={() => setEditingId((value) => value === review.item.id ? undefined : review.item.id)}
-                onUpdate={(patch) => updateItem(review.item.id, patch)}
-                onRemove={() => removeItem(review.item.id)}
-              />
-            )) : (
-              <p className="py-12 text-center text-sm text-[var(--color-text-muted)]">No contacts match this view.</p>
-            )}
-          </section>
+           <section className="mt-2 flex flex-col gap-3" aria-live="polite">
+             {visibleReviews.length ? visibleReviews.map((review) => (
+               <ContactReviewRow
+                 key={review.item.id}
+                 review={review}
+                 editing={editingId === review.item.id}
+                 onToggle={() => updateItem(review.item.id, { included: !review.item.included })}
+                 onEdit={() => setEditingId((value) => value === review.item.id ? undefined : review.item.id)}
+                 onUpdate={(patch) => updateItem(review.item.id, patch)}
+                 onRemove={() => removeItem(review.item.id)}
+               />
+             )) : (
+               <p className="py-12 text-center text-sm text-[var(--color-text-muted)]">No contacts match this view.</p>
+             )}
+           </section>
 
-          {isReview && (
-            <aside className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--color-primary-soft)] p-4 text-sm leading-5 text-[var(--color-text-secondary)]">
-              <LockKeyhole size={18} className="mt-0.5 shrink-0 text-[var(--color-primary)]" />
-              <p>Only the friends you confirm here will be saved to your account. Your other device contacts stay on your device.</p>
-            </aside>
-          )}
+           <aside className="mt-5 flex items-start gap-3 rounded-2xl bg-[var(--color-primary-soft)] p-4 text-sm leading-5 text-[var(--color-text-secondary)]">
+             <LockKeyhole size={18} className="mt-0.5 shrink-0 text-[var(--color-primary)]" />
+             <p>Only the friends you confirm will be saved. Your other contacts stay on your device.</p>
+           </aside>
 
-          <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
-            <div className="mx-auto max-w-2xl">
-              {isReview && attention.length > 0 && <p className="mb-2 text-center text-xs font-medium text-[var(--color-warning)]">Fix or remove {plural(attention.length, 'contact')} that need attention.</p>}
-              <button
-                onClick={() => isReview ? requestImport() : setPhase('review')}
-                disabled={isReview ? ready.length === 0 || attention.length > 0 : selectedCount === 0}
-                className="min-h-12 w-full rounded-xl bg-[var(--color-primary)] px-4 text-white font-semibold disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {isReview ? `Add ${plural(ready.length, 'Friend')}` : `Review ${plural(selectedCount, 'Contact')}`}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+           <div className="fixed inset-x-0 bottom-0 z-20 border-t border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] backdrop-blur md:static md:mt-6 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+             <div className="mx-auto max-w-2xl">
+               {attention.length > 0 && <p className="mb-2 text-center text-xs font-medium text-[var(--color-warning)]">Fix or remove {plural(attention.length, 'contact')} that need attention.</p>}
+               <button
+                 onClick={requestImport}
+                 disabled={ready.length === 0 || attention.length > 0 || selectedCount === 0}
+                 className="min-h-12 w-full rounded-xl bg-[var(--color-primary)] px-4 text-white font-semibold disabled:cursor-not-allowed disabled:opacity-40"
+               >
+                 {selectedCount > 0 ? `Add ${plural(ready.length, 'Friend')}` : 'Select friends to add'}
+               </button>
+             </div>
+           </div>
+         </>
+       )}
 
       {confirmClear && (
         <ConfirmDialog
@@ -473,9 +462,9 @@ function ContactReviewRow({
             {item.included && <Check size={13} strokeWidth={3} />}
           </span>
         </button>
-        <Avatar name={item.name || '?'} size={42} />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold truncate">{item.name || 'Name required'}</p>
+         <Avatar name={item.name || item.rawName || '?'} size={42} />
+         <div className="min-w-0 flex-1">
+           <p className="font-semibold truncate">{item.name || item.rawName || 'Name required'}</p>
           <p className={`mt-0.5 text-sm truncate ${review.whatsappE164 ? 'text-[var(--color-text-secondary)]' : 'text-[var(--color-warning)]'}`}>{displayPhone}</p>
           {item.email && <p className="mt-0.5 text-xs text-[var(--color-text-muted)] truncate">{item.email}</p>}
           <p className={`mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${status.className}`}><StatusIcon size={14} /> {status.label}</p>

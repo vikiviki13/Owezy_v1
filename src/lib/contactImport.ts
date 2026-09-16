@@ -18,6 +18,7 @@ export interface ContactImportItem {
   selectedPhoneId?: string;
   manualPhone: string;
   included: boolean;
+  rawName?: string;
 }
 
 export interface ContactImportDraft {
@@ -136,9 +137,17 @@ export function createContactImportDraft(
         label: phoneValues.length === 1 ? 'Phone' : `Phone ${index + 1}`,
         value,
       }));
+      let nameStr = '';
+      if (Array.isArray(contact.name)) {
+        nameStr = contact.name.find((v) => v.trim())?.trim() || '';
+      } else {
+        nameStr = (contact.name as string | undefined)?.trim() ?? '';
+      }
+      const name = nameStr.slice(0, 120);
       return {
         id: uid(),
-        name: contact.name?.find((value) => value.trim())?.trim().slice(0, 120) || '',
+        name,
+        rawName: nameStr || undefined,
         email: contact.email?.find((value) => value.trim())?.trim().slice(0, 254) || undefined,
         phones,
         selectedPhoneId: phones.length === 1 ? phones[0].id : undefined,

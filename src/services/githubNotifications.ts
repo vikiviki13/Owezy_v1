@@ -92,8 +92,9 @@ export async function checkForGitHubUpdates(
   markChecked();
 
   const notes = parseReleaseNotes(release);
+  const hasUpdates = notes.changes.length > 0 || notes.bugsFixed.length > 0;
 
-  if (notes.changes.length > 0 || notes.bugsFixed.length > 0) {
+  if (hasUpdates) {
     let message = `New update available: ${notes.version}`;
     if (notes.bugsFixed.length > 0) {
       message += ` - ${notes.bugsFixed.length} bug fix(es)`;
