@@ -60,6 +60,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
         const locked = next.appLockEnabled && (!next.grantValid || locallyExpired);
         setLocked(locked);
         if (locked) { clearLockedData(); void clearContactImportDraft(userId); }
+        else if (next.appLockEnabled === false) { clearLegacyLocalData(); void clearContactImportDraft(userId); }
         if (locallyExpired) void lockApp(userId);
       })
       .catch(() => {
@@ -70,7 +71,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
         const cachedLocked = getCachedAppLockEnabled(userId);
         setStatus(null);
         setLocked(cachedLocked === true);
-        if (cachedLocked === true) { clearLockedData(); void clearContactImportDraft(userId); }
+        if (cachedLocked) { clearLockedData(); void clearContactImportDraft(userId); }
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
