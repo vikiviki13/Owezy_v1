@@ -544,14 +544,19 @@ Deno.serve(async (request) => {
           failures.push({ clientId, name: name.slice(0, 120), reason: 'Name and a valid WhatsApp number are required.' });
           continue;
         }
-        const { data: row, error } = await admin.from('friends').insert({
+        // Upsert instead of insert: a friend the user deleted earlier still
+        // holds a row here (deletions only affect the synced app document), so
+        // re-adding the same contact would otherwise collide with the
+        // (owner_id, whatsapp_e164) unique constraint. Re-import reuses the
+        // existing row with the contact's current details.
+        const { data: row, error } = await admin.from('friends').upsert({
           owner_id: user.id,
           name,
           nickname: nickname || null,
           whatsapp_e164: whatsapp,
           phone_number: phone,
           email: email || null,
-        }).select('id, owner_id, name, nickname, whatsapp_e164, phone_number, email, created_at').single();
+        }, { onConflict: 'owner_id,whatsapp_e164' }).select('id, owner_id, name, nickname, whatsapp_e164, phone_number, email, created_at').single();
         if (error || !row) {
           failures.push({
             clientId,

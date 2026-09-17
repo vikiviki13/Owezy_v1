@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import type { Friend } from '../types';
 import {
   classifyContactDraft,
@@ -8,6 +8,25 @@ import {
   normalizePhoneToE164,
   saveContactImportDraft,
 } from './contactImport';
+import { createFriend, deleteFriend, listFriends, resetDB } from './db';
+
+function stubStorage() {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+    clear: () => store.clear(),
+  };
+  vi.stubGlobal('sessionStorage', storage);
+  vi.stubGlobal('localStorage', storage);
+  vi.stubGlobal('window', { dispatchEvent: () => true });
+}
+
+beforeEach(() => {
+  stubStorage();
+  resetDB();
+});
 
 function friend(overrides: Partial<Friend>): Friend {
   return {
@@ -59,6 +78,16 @@ describe('contact import validation', () => {
   it('requires both a name and WhatsApp number', () => {
     const draft = createContactImportDraft([{ name: [], tel: [] }], 'friends', 'user-1');
     expect(classifyContactDraft(draft.items, [])[0]).toMatchObject({ status: 'attention', message: 'Add a name' });
+  });
+
+  it('cannot re-import a contact while the friend still exists, but can after deleting them', () => {
+    const existing = createFriend({ name: 'Arun', whatsapp_number: '+91 98765 43210', phone: '+91 98765 43210' });
+    const draft = createContactImportDraft([{ name: ['Arun'], tel: ['+91 98765 43210'] }], 'friends', 'user-1');
+
+    expect(classifyContactDraft(draft.items, listFriends())[0]).toMatchObject({ status: 'already' });
+
+    deleteFriend(existing.id);
+    expect(classifyContactDraft(draft.items, listFriends())[0]).toMatchObject({ status: 'ready' });
   });
 
   it('keeps an active draft in local memory when IndexedDB is unavailable', async () => {

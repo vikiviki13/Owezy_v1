@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, CloudOff, LoaderCircle, RefreshCw, AlertTriangle, Database } from 'lucide-react';
 import { SettingsPage, SettingsSection, ToggleRow } from '../../components/SettingsUI';
 import { useSecurity } from '../../components/SecurityContext';
@@ -23,24 +23,6 @@ const ENTITY_LABELS: Record<string, string> = {
   attachment: 'Attachment',
 };
 
-function pendingDetail(item: SyncQueueItem): string | null {
-  if (item.entityType !== 'expense' && item.entityType !== 'repayment' && item.entityType !== 'friend') return null;
-  try {
-    const raw = localStorage.getItem('tab_db_session_v2');
-    if (!raw) return null;
-    const doc = JSON.parse(raw) as Record<string, unknown>;
-    const records = (doc[item.entityType === 'repayment' ? 'repayments' : item.entityType === 'expense' ? 'expenses' : 'friends'] as Array<Record<string, unknown>> | undefined) ?? [];
-    const record = records.find((entry) => entry.id === item.entityId);
-    if (!record) return null;
-    if (item.entityType === 'friend') return String(record.name ?? '');
-    const description = item.entityType === 'repayment' ? 'Settlement' : String(record.description ?? '');
-    const amount = typeof record.amount === 'number' ? `₹${record.amount.toLocaleString('en-IN')}` : '';
-    return [description, amount].filter(Boolean).join(' — ');
-  } catch {
-    return null;
-  }
-}
-
 export function DataSyncSettings() {
   const { userId } = useSecurity();
   const toast = useToast();
@@ -48,6 +30,35 @@ export function DataSyncSettings() {
   const [pendingItems, setPendingItems] = useState<SyncQueueItem[]>(() => listQueueItems());
   const [syncing, setSyncing] = useState(false);
   const hadPendingRef = useRef(false);
+
+  const detailLookup = useMemo(() => {
+    const details = new Map<string, string>();
+    if (pendingItems.length === 0) return details;
+    try {
+      const raw = localStorage.getItem('tab_db_session_v2');
+      if (!raw) return details;
+      const doc = JSON.parse(raw) as Record<string, Array<Record<string, unknown>> | undefined>;
+      const sections: Array<{ kind: SyncQueueItem['entityType']; key: string }> = [
+        { kind: 'friend', key: 'friends' },
+        { kind: 'expense', key: 'expenses' },
+        { kind: 'repayment', key: 'repayments' },
+      ];
+      for (const { kind, key } of sections) {
+        for (const record of doc[key] ?? []) {
+          const id = String(record.id ?? '');
+          if (!id) continue;
+          if (kind === 'friend') {
+            details.set(id, String(record.name ?? ''));
+          } else {
+            const description = kind === 'repayment' ? 'Settlement' : String(record.description ?? '');
+            const amount = typeof record.amount === 'number' ? `₹${record.amount.toLocaleString('en-IN')}` : '';
+            details.set(id, [description, amount].filter(Boolean).join(' — '));
+          }
+        }
+      }
+    } catch { /* ignore malformed cache */ }
+    return details;
+  }, [pendingItems]);
 
   useEffect(() => {
     const update = (event: Event) => setSnapshot((event as CustomEvent<SyncStatusSnapshot>).detail);
@@ -143,14 +154,16 @@ export function DataSyncSettings() {
       {pendingItems.length > 0 && (
         <SettingsSection title={`Pending Changes (${pendingItems.length})`}>
           <ul className="divide-y divide-[var(--color-border)]">
-            {pendingItems.map((item) => (
+            {pendingItems.map((item) => {
+              const detail = detailLookup.get(item.entityId);
+              return (
               <li key={item.id} className="px-4 py-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className={`size-2 rounded-full shrink-0 ${item.status === 'FAILED' ? 'bg-[var(--color-error)]' : 'bg-[var(--color-text-muted)]'}`} />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate">
                       {ENTITY_LABELS[item.entityType] ?? item.entityType}
-                      {pendingDetail(item) ? ` — ${pendingDetail(item)}` : ''}
+                      {detail ? ` — ${detail}` : ''}
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
                       {item.operation.toLowerCase()} · saved on this device · waiting to sync
@@ -161,7 +174,8 @@ export function DataSyncSettings() {
                   <p className="text-[10px] leading-4 text-[var(--color-error)] text-right shrink-0 max-w-32 truncate" title={item.lastError}>{item.lastError}</p>
                 )}
               </li>
-            ))}
+              );
+            })}
           </ul>
           <p className="px-4 pb-4 text-xs text-[var(--color-text-muted)]">Changes are uploaded to Supabase in order: new records first, then edits, then deletions. Nothing is lost when sync fails.</p>
         </SettingsSection>

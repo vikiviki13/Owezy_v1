@@ -1,4 +1,4 @@
-import { useCallback, useState, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, ReactNode } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { ToastContext } from './ToastContext';
 
@@ -9,11 +9,21 @@ interface ToastItem {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const timersRef = useRef<number[]>([]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => timers.forEach((timer) => window.clearTimeout(timer));
+  }, []);
 
   const show = useCallback((message: string) => {
     const id = Date.now() + Math.random();
     setToasts((t) => [...t, { id, message }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2600);
+    const timer = window.setTimeout(() => {
+      timersRef.current = timersRef.current.filter((t) => t !== timer);
+      setToasts((t) => t.filter((x) => x.id !== id));
+    }, 2600);
+    timersRef.current.push(timer);
   }, []);
 
   return (

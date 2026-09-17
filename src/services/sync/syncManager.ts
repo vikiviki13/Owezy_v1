@@ -39,6 +39,10 @@ let periodicTimer: number | undefined = undefined;
 let realtimeTimer: number | undefined = undefined;
 let realtimeDirty = false;
 let realtimeUnsub: (() => void) | null = null;
+// Set around window.dispatchEvent inside writeDoc() so the sync manager does
+// not schedule another push in response to its own cache writes (which would
+// otherwise cause a redundant pull/merge network round-trip after every sync).
+let suppressDbChangedPush = false;
 
 const listeners = {
   dbChanged: null as (() => void) | null,
@@ -65,6 +69,7 @@ function writeDoc(doc: StoredDoc) {
     // The cache document changed (cloud records downloaded / tombstones
     // applied): drop db.ts's in-memory copy and refresh the UI.
     invalidateCache();
+    suppressDbChangedPush = true;
     window.dispatchEvent(new CustomEvent('tab-db-changed'));
   }
 }
@@ -247,7 +252,13 @@ function startPeriodic(userId: string) {
 }
 
 function wireListeners(userId: string) {
-  listeners.dbChanged = () => schedulePush(userId);
+  listeners.dbChanged = () => {
+    if (suppressDbChangedPush) {
+      suppressDbChangedPush = false;
+      return;
+    }
+    schedulePush(userId);
+  };
   listeners.online = () => {
     if (activeUserId === userId) {
       // Fresh connection: restart the backoff sequence for automatic retries.
@@ -289,6 +300,7 @@ export async function initializeSync(userId: string, seedCloud?: StoredDoc | nul
 
 export function stopSync() {
   unwireListeners();
+  suppressDbChangedPush = false;
   window.clearTimeout(retryTimer);
   window.clearTimeout(pushTimer);
   window.clearInterval(periodicTimer);

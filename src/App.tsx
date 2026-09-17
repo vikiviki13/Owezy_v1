@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { AlertCircle, CloudOff, Database, LoaderCircle, Wallet } from 'lucide-react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -34,11 +34,13 @@ import { BugReportPage } from './pages/settings/BugReportPage';
 import { ShareAppSettings } from './pages/settings/ShareAppPage';
 import { clearCloudRuntimeState, initializeCloudData, LegacyDataChoiceRequired, stopCloudData, type LegacyMigrationDecision } from './lib/cloudData';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
-import { clearSensitiveLocalData, getProfile } from './lib/db';
+import { clearSensitiveLocalData, getProfile, listAllRepayments, listExpenses, listFriends, updateProfile } from './lib/db';
 import { clearUnlockGrant } from './lib/securityService';
 import { clearContactImportDraft } from './lib/contactImport';
 import { privateDataErrorMessage } from './lib/safeErrors';
 import { AppUpdatePrompt } from './components/AppUpdatePrompt';
+
+const ONBOARDED_KEY_PREFIX = 'tab_onboarded_v2_';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -119,19 +121,30 @@ function AuthenticatedApp({ user }: { user: User }) {
 
 function PrivateDataApp({ user }: { user: User }) {
   const userId = user.id;
-  const onboardingKey = `tab_onboarded_v2_${userId}`;
+  const onboardingKey = ONBOARDED_KEY_PREFIX + userId;
   const [onboarded, setOnboarded] = useState(() => localStorage.getItem(onboardingKey) === '1' || getProfile().onboarding_completed === true);
   const [syncError, setSyncError] = useState('');
   const [dataLoading, setDataLoading] = useState(true);
   const [dataError, setDataError] = useState('');
   const [legacyPending, setLegacyPending] = useState(false);
 
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; });
+
   useEffect(() => {
     let active = true;
-    void initializeCloudData(user)
+    void initializeCloudData(userRef.current)
       .then(() => {
-        if (active && getProfile().onboarding_completed === true) {
-          localStorage.setItem(onboardingKey, '1');
+        if (!active) return;
+        // Existing accounts must never be sent back through the new-user tour.
+        // Trust the completion flag, but also treat an account that already
+        // holds real data as onboarded and repair a missing flag so the cloud
+        // copy heals and future logins (even on fresh devices) skip the tour.
+        const profile = getProfile();
+        const accountHasData = listFriends().length > 0 || listExpenses().length > 0 || listAllRepayments().length > 0;
+        if (profile.onboarding_completed === true || accountHasData) {
+          if (profile.onboarding_completed !== true) updateProfile({ onboarding_completed: true });
+          localStorage.setItem(ONBOARDED_KEY_PREFIX + userId, '1');
           setOnboarded(true);
         }
       })
@@ -142,7 +155,7 @@ function PrivateDataApp({ user }: { user: User }) {
       })
       .finally(() => { if (active) setDataLoading(false); });
     return () => { active = false; stopCloudData(); };
-  }, [onboardingKey, user]);
+  }, [userId]);
 
   async function resolveLegacyData(decision: LegacyMigrationDecision) {
     setDataLoading(true);

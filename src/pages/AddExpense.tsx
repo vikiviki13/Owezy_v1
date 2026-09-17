@@ -59,7 +59,6 @@ export function AddExpense() {
   ]));
   type ExpenseAudience = 'self' | 'friends';
   const [audience, setAudience] = useState<ExpenseAudience>(initialFriendIds.length ? 'friends' : 'self');
-  const [friendSelectionMode, setFriendSelectionMode] = useState<'friend' | 'friends'>('friends');
   const [step, setStep] = useState<1 | 2 | 3>(contactHandoff?.newFriendIds.length ? 2 : 1);
   const [selected, setSelected] = useState<string[]>(initialFriendIds);
   const [search, setSearch] = useState('');
@@ -92,9 +91,8 @@ export function AddExpense() {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
 
-  function chooseAudience(next: ExpenseAudience, selectionMode?: 'friend' | 'friends') {
+  function chooseAudience(next: ExpenseAudience) {
     setAudience(next);
-    if (selectionMode) setFriendSelectionMode(selectionMode);
     if (next === 'self') {
       setSelected([]);
       setSplitMode('equal');
@@ -289,8 +287,7 @@ export function AddExpense() {
           <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who is this expense for?</p>
           <div className="flex gap-2 mb-4">
             <button onClick={() => chooseAudience('self')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'self' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Self</button>
-            <button onClick={() => chooseAudience('friends', 'friend')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'friends' && friendSelectionMode === 'friend' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Friend</button>
-            <button onClick={() => chooseAudience('friends', 'friends')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'friends' && friendSelectionMode === 'friends' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Friends</button>
+            <button onClick={() => chooseAudience('friends')} className={`flex-1 rounded-xl py-2.5 text-sm font-medium ${audience === 'friends' ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>Friends</button>
           </div>
           {audience === 'friends' && <>
           <div className="relative mb-3">
