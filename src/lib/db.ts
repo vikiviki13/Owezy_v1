@@ -353,6 +353,13 @@ export function clearFriendData(friendId: string) {
 
   const removedRepaymentIds = db.repayments.filter((r) => r.friend_id === friendId).map((r) => r.id);
   const deletedItemIds = new Set(db.expenseItems.filter((i) => expenseIdsToDelete.has(i.expense_id)).map((i) => i.id));
+  // Participant rows removed from shared expenses (which survive) and group
+  // memberships must be tombstoned + queued so the removals propagate to other
+  // devices during sync, just like the fully-deleted expenses.
+  const removedParticipantIds = db.expenseParticipants
+    .filter((p) => p.friend_id === friendId && !expenseIdsToDelete.has(p.expense_id))
+    .map((p) => p.id);
+  const removedGroupMemberIds = db.groupMembers.filter((m) => m.friend_id === friendId).map((m) => m.id);
   db.expenseItems = db.expenseItems.filter((i) => !expenseIdsToDelete.has(i.expense_id));
   db.expenseItemAssignments = db.expenseItemAssignments.filter((a) => !deletedItemIds.has(a.expense_item_id) && a.friend_id !== friendId);
   db.expenseAdjustments = db.expenseAdjustments.filter((a) => !expenseIdsToDelete.has(a.expense_id));
@@ -362,11 +369,14 @@ export function clearFriendData(friendId: string) {
   db.repayments = db.repayments.filter((r) => r.friend_id !== friendId);
   db.groupMembers = db.groupMembers.filter((m) => m.friend_id !== friendId);
 
-  recordTombstone('friend', friendId);
   expenseIdsToDelete.forEach((expenseId) => recordTombstone('expense', expenseId));
   removedRepaymentIds.forEach((repaymentId) => recordTombstone('repayment', repaymentId));
-  enqueue('friend', friendId, 'DELETE');
+  removedParticipantIds.forEach((participantId) => recordTombstone('expenseParticipant', participantId));
+  removedGroupMemberIds.forEach((memberId) => recordTombstone('groupMember', memberId));
   expenseIdsToDelete.forEach((expenseId) => enqueue('expense', expenseId, 'DELETE'));
+  removedRepaymentIds.forEach((repaymentId) => enqueue('repayment', repaymentId, 'DELETE'));
+  removedParticipantIds.forEach((participantId) => enqueue('expenseParticipant', participantId, 'DELETE'));
+  removedGroupMemberIds.forEach((memberId) => enqueue('groupMember', memberId, 'DELETE'));
 
   persist();
 }
@@ -375,6 +385,9 @@ export function deleteFriend(id: string) {
   clearFriendData(id);
   const db = load();
   db.friends = db.friends.filter((f) => f.id !== id);
+  // Only a real delete removes the friend itself; clearing history doesn't.
+  recordTombstone('friend', id);
+  enqueue('friend', id, 'DELETE');
   persist();
 }
 
@@ -574,9 +587,24 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
   if (!friend) throw new Error('Friend not found.');
   const direction = input.direction || 'from_friend';
   const balance = calculateFriendBalance(input.friend_id);
-  const pending = direction === 'to_friend' ? balance.iOweThem : input.expense_id
-    ? db.expenseParticipants.find((participant) => participant.expense_id === input.expense_id && participant.friend_id === input.friend_id)?.pending_amount || 0
-    : db.expenseParticipants.filter((participant) => participant.friend_id === input.friend_id).reduce((sum, participant) => sum + participant.pending_amount, 0);
+  // Validation is contribution-aware: if the friend already paid part of an
+  // expense at purchase time, that amount is not outstanding, so it must not
+  // be allowed as a repayment target either.
+  const contributionFor = (participant: { expense_id: string }): number => {
+    const expense = db.expenses.find((e) => e.id === participant.expense_id);
+    return expense ? amountPaidBy(expense, input.friend_id) : 0;
+  };
+  let pending = 0;
+  if (direction === 'to_friend') {
+    pending = balance.iOweThem;
+  } else if (input.expense_id) {
+    const participant = db.expenseParticipants.find((p) => p.expense_id === input.expense_id && p.friend_id === input.friend_id);
+    pending = participant ? Math.max(0, participant.pending_amount - contributionFor(participant)) : 0;
+  } else {
+    pending = db.expenseParticipants
+      .filter((participant) => participant.friend_id === input.friend_id)
+      .reduce((total, participant) => total + Math.max(0, participant.pending_amount - contributionFor(participant)), 0);
+  }
   if (amount > roundCurrency(pending)) throw new Error('Repayment cannot exceed the selected outstanding balance.');
   const now = new Date().toISOString();
   const repaymentDate = input.repayment_date || todayDate();
@@ -617,7 +645,8 @@ export function recordRepayment(input: RecordRepaymentInput): Repayment {
 
   for (const participant of targets) {
     if (remaining <= 0) break;
-    const applied = Math.min(remaining, participant.pending_amount);
+    const cap = Math.max(0, participant.pending_amount - contributionFor(participant));
+    const applied = Math.min(remaining, cap);
     participant.paid_amount = roundCurrency(participant.paid_amount + applied);
     participant.pending_amount = roundCurrency(participant.pending_amount - applied);
     participant.status = participant.pending_amount <= 0 ? 'settled' : 'partial';
@@ -798,18 +827,58 @@ export function calculateProportionalAdjustment(amount: number, weights: number[
 
 export function friendLedger(friendId: string): LedgerEntry[] {
   const db = load();
-  const expenses = listExpensesForFriend(friendId).map((e) => {
-    const part = db.expenseParticipants.find((p) => p.expense_id === e.id && p.friend_id === friendId)!;
-    return { kind: 'expense' as const, date: e.expense_date, time: e.expense_time, title: e.title, amount: part.share_amount, refId: e.id, status: part.status, sortKey: e.expense_date + e.expense_time + '_1' };
-  });
-  const repayments = listRepaymentsForFriend(friendId).map((r) => ({
-    kind: 'repayment' as const, date: r.repayment_date, time: r.repayment_time, title: 'Payment received', amount: r.amount, refId: r.id, status: undefined, sortKey: r.repayment_date + r.repayment_time + '_0',
-  }));
-  const merged = [...expenses, ...repayments].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  const entries: LedgerEntry[] = [];
+
+  const participantRows = db.expenseParticipants.filter((p) => p.friend_id === friendId);
+  for (const part of participantRows) {
+    const expense = db.expenses.find((e) => e.id === part.expense_id);
+    if (!expense) continue;
+    // A friend-paid expense is recorded on the "advanced for me" side below,
+    // not as an amount they owe us.
+    if (payerType(expense) === 'friend') continue;
+    const contributed = amountPaidBy(expense, friendId);
+    // Gross share minus what the friend contributed at purchase time. Received
+    // repayments are listed as separate ledger rows, so subtracting them here
+    // as well (pending_amount) would double-count.
+    const owed = roundCurrency(Math.max(0, part.share_amount - contributed));
+    if (owed > 0) {
+      entries.push({
+        id: uid(), kind: 'expense', date: expense.expense_date, time: expense.expense_time,
+        title: expense.title, amount: owed, sign: 1, runningBalance: 0, status: part.status, refId: expense.id,
+      });
+    }
+  }
+
+  // Money this friend advanced toward the user's own share is money we owe
+  // them, so it reduces the running balance (sign -1).
+  for (const expense of db.expenses) {
+    if (payerType(expense) === 'me') continue;
+    const friendPaid = amountPaidBy(expense, friendId);
+    const advancedForMe = roundCurrency(Math.min(expense.owner_share, friendPaid));
+    if (advancedForMe > 0) {
+      entries.push({
+        id: uid(), kind: 'expense', date: expense.expense_date, time: expense.expense_time,
+        title: `Advanced for you — ${expense.title}`, amount: advancedForMe, sign: -1,
+        runningBalance: 0, status: undefined, refId: expense.id,
+      });
+    }
+  }
+
+  for (const r of listRepaymentsForFriend(friendId)) {
+    const received = r.direction !== 'to_friend';
+    entries.push({
+      id: uid(), kind: 'repayment', date: r.repayment_date, time: r.repayment_time,
+      title: received ? 'Payment received' : 'Paid to friend',
+      amount: r.amount, direction: r.direction, sign: received ? -1 : 1,
+      runningBalance: 0, status: undefined, refId: r.id,
+    });
+  }
+
+  const sorted = entries.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   let running = 0;
-  return merged.map((entry) => {
-    running = roundCurrency(entry.kind === 'expense' ? running + entry.amount : running - entry.amount);
-    return { id: uid(), kind: entry.kind, date: entry.date, time: entry.time, title: entry.title, amount: entry.amount, runningBalance: running, status: entry.status, refId: entry.refId };
+  return sorted.map((entry) => {
+    running = roundCurrency(running + entry.sign * entry.amount);
+    return { ...entry, runningBalance: running };
   });
 }
 
@@ -824,6 +893,8 @@ export interface StatementResult {
   openingBalance: number;
   periodExpenses: number;
   periodRepayments: number;
+  periodPaidToFriend: number;
+  periodAdvanced: number;
   closingBalance: number;
   entries: LedgerEntry[];
 }
@@ -832,10 +903,12 @@ export function calculateStatement(friendId: string, fromDate: string, toDate: s
   const ledger = friendLedger(friendId);
   const opening = calculateStatementOpeningBalance(friendId, fromDate);
   const inRange = ledger.filter((e) => e.date >= fromDate && e.date <= toDate);
-  const periodExpenses = roundCurrency(inRange.filter((e) => e.kind === 'expense').reduce((s, e) => s + e.amount, 0));
-  const periodRepayments = roundCurrency(inRange.filter((e) => e.kind === 'repayment').reduce((s, e) => s + e.amount, 0));
-  const closing = roundCurrency(opening + periodExpenses - periodRepayments);
-  return { openingBalance: opening, periodExpenses, periodRepayments, closingBalance: closing, entries: inRange };
+  const periodExpenses = roundCurrency(inRange.filter((e) => e.kind === 'expense' && e.sign > 0).reduce((s, e) => s + e.amount, 0));
+  const periodRepayments = roundCurrency(inRange.filter((e) => e.kind === 'repayment' && e.sign < 0).reduce((s, e) => s + e.amount, 0));
+  const periodPaidToFriend = roundCurrency(inRange.filter((e) => e.kind === 'repayment' && e.sign > 0).reduce((s, e) => s + e.amount, 0));
+  const periodAdvanced = roundCurrency(inRange.filter((e) => e.kind === 'expense' && e.sign < 0).reduce((s, e) => s + e.amount, 0));
+  const closing = roundCurrency(opening + inRange.reduce((s, e) => s + e.sign * e.amount, 0));
+  return { openingBalance: opening, periodExpenses, periodRepayments, periodPaidToFriend, periodAdvanced, closingBalance: closing, entries: inRange };
 }
 
 export function calculateStatementClosingBalance(friendId: string, fromDate: string, toDate: string): number {

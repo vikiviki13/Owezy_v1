@@ -115,10 +115,12 @@ export function FriendDetail() {
               {repayments.map((r) => (
                 <div key={r.id} className="flex items-center justify-between bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-4">
                   <div>
-                    <p className="font-medium">{r.payment_method}</p>
+                    <p className="font-medium">{r.direction === 'to_friend' ? 'Paid to friend' : 'Payment received'} · {r.payment_method}</p>
                     <p className="text-xs text-[var(--color-text-muted)]">{r.occurred_at ? formatTimestamp(r.occurred_at) : `${formatDateShort(r.repayment_date)} · ${formatTime(r.repayment_time)}`}</p>
                   </div>
-                  <p className="font-semibold amount-tabular text-[var(--color-primary)]">+{formatCurrency(r.amount)}</p>
+                  <p className={`font-semibold amount-tabular ${r.direction === 'to_friend' ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-primary)]'}`}>
+                    {r.direction === 'to_friend' ? '-' : '+'}{formatCurrency(r.amount)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -158,8 +160,8 @@ function LedgerList({ ledger }: { ledger: ReturnType<typeof friendLedger> }) {
             <p className="text-xs text-[var(--color-text-muted)]">{formatDateShort(entry.date)}</p>
           </div>
           <div className="text-right">
-            <p className={`font-semibold amount-tabular ${entry.kind === 'repayment' ? 'text-[var(--color-primary)]' : ''}`}>
-              {entry.kind === 'repayment' ? '+' : ''}{formatCurrency(entry.amount)}
+            <p className={`font-semibold amount-tabular ${entry.sign < 0 ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-primary)]'}`}>
+              {entry.sign < 0 ? '-' : '+'}{formatCurrency(entry.amount)}
             </p>
             <p className="text-[11px] text-[var(--color-text-muted)]">Balance {formatCurrency(entry.runningBalance)}</p>
           </div>

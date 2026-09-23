@@ -47,8 +47,8 @@ export function Statement() {
 
   const message = buildStatementMessage(friend, range.from, range.to, stmt);
 
-  const pending = stmt.entries.filter((e) => e.kind === 'expense' && e.status !== 'settled');
-  const settled = stmt.entries.filter((e) => e.kind === 'expense' && e.status === 'settled');
+  const pending = stmt.entries.filter((e) => e.kind === 'expense' && e.sign > 0 && e.status !== 'settled');
+  const settled = stmt.entries.filter((e) => e.kind === 'expense' && e.sign > 0 && e.status === 'settled');
 
   return (
     <div className="px-4 pt-6 pb-10 safe-top">
@@ -90,6 +90,8 @@ export function Statement() {
           <SummaryRow label="Opening Balance" value={stmt.openingBalance} />
           <SummaryRow label="You Paid" value={stmt.periodExpenses} />
           <SummaryRow label="Received" value={stmt.periodRepayments} />
+          {stmt.periodPaidToFriend > 0 && <SummaryRow label="Paid to Friend" value={stmt.periodPaidToFriend} />}
+          {stmt.periodAdvanced > 0 && <SummaryRow label="You Owe (Friend Paid)" value={stmt.periodAdvanced} />}
           <SummaryRow label="Closing Balance" value={stmt.closingBalance} highlight />
         </div>
       </div>
@@ -122,11 +124,11 @@ export function Statement() {
             {stmt.entries.map((e) => (
               <div key={e.id} className="flex items-center justify-between p-4">
                 <div>
-                  <p className="font-medium text-sm">{e.kind === 'repayment' ? 'Payment received' : e.title}</p>
+                  <p className="font-medium text-sm">{e.kind === 'repayment' ? (e.direction === 'to_friend' ? 'Paid to friend' : 'Payment received') : e.title}</p>
                   <p className="text-xs text-[var(--color-text-muted)]">{formatDateShort(e.date)}</p>
                 </div>
-                <p className={`font-semibold amount-tabular text-sm ${e.kind === 'repayment' ? 'text-[var(--color-primary)]' : ''}`}>
-                  {e.kind === 'repayment' ? '-' : ''}{formatCurrency(e.amount)}
+                <p className={`font-semibold amount-tabular text-sm ${e.sign < 0 ? 'text-[var(--color-text-muted)]' : 'text-[var(--color-primary)]'}`}>
+                  {e.sign < 0 ? '-' : '+'}{formatCurrency(e.amount)}
                 </p>
               </div>
             ))}

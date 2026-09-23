@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import {
-  archiveFriend, calculateFriendBalance, clearFriendData, clearFriendDues, createExpense,
-  createFriend, deleteFriend, listExpensesForFriend, listFriends, listRepaymentsForFriend, recordRepayment, resetDB,
+  archiveFriend, calculateFriendBalance, calculateStatement, clearFriendData, clearFriendDues, createExpense,
+  createFriend, deleteFriend, friendLedger, listExpensesForFriend, listFriends, listRepaymentsForFriend, recordRepayment, resetDB,
 } from './db';
 
 function stubStorage() {
@@ -58,6 +58,83 @@ describe('clearFriendDues', () => {
     expect(() => recordRepayment({ friend_id: friend.id, amount: 301, expense_id: expense.id })).toThrow(/exceed/);
     expect(listRepaymentsForFriend(friend.id)).toHaveLength(0);
     expect(calculateFriendBalance(friend.id).pending).toBe(300);
+  });
+
+  it('rejects repayments beyond the net amount after a purchase-time contribution', () => {
+    const friend = createFriend({ name: 'Divya' });
+    createExpense({
+      title: 'Trip', category: 'Travel', total_amount: 1000, owner_share: 400,
+      expense_date: '2026-08-10',
+      participants: [{ friend_id: friend.id, share_amount: 600 }],
+      payer_type: 'multiple',
+      payment_contributions: [{ id: 'c1', payer_id: 'owner', amount: 700 }, { id: 'c2', payer_id: friend.id, amount: 300 }],
+    });
+    // The friend already contributed 300, so only 300 of the 600 share is outstanding.
+    expect(calculateFriendBalance(friend.id).theyOweMe).toBe(300);
+    expect(() => recordRepayment({ friend_id: friend.id, amount: 301 })).toThrow(/exceed/);
+    recordRepayment({ friend_id: friend.id, amount: 300 });
+    expect(calculateFriendBalance(friend.id).pending).toBe(0);
+  });
+});
+
+describe('friendLedger direction awareness', () => {
+  it('marks a repayment received from a friend as reducing the balance', () => {
+    const friend = createFriend({ name: 'Meera' });
+    createExpense({
+      title: 'Dinner', category: 'Food', total_amount: 1000, owner_share: 400,
+      expense_date: '2026-08-10',
+      participants: [{ friend_id: friend.id, share_amount: 600 }],
+    });
+    recordRepayment({ friend_id: friend.id, amount: 200 });
+
+    const entry = friendLedger(friend.id).find((e) => e.kind === 'repayment')!;
+    expect(entry.title).toBe('Payment received');
+    expect(entry.direction).toBe('from_friend');
+    expect(entry.sign).toBe(-1);
+  });
+
+  it('marks a repayment paid to a friend as increasing the balance', () => {
+    const friend = createFriend({ name: 'Meera' });
+    createExpense({
+      title: 'Dinner', category: 'Food', total_amount: 1000, owner_share: 400,
+      expense_date: '2026-08-10',
+      participants: [{ friend_id: friend.id, share_amount: 600 }],
+      payer_type: 'friend', payer_friend_id: friend.id,
+      payment_contributions: [{ id: 'p1', payer_id: friend.id, amount: 1000 }],
+    });
+    recordRepayment({ friend_id: friend.id, amount: 400, direction: 'to_friend' });
+
+    const ledger = friendLedger(friend.id);
+    const repayment = ledger.find((e) => e.kind === 'repayment')!;
+    expect(repayment.title).toBe('Paid to friend');
+    expect(repayment.direction).toBe('to_friend');
+    expect(repayment.sign).toBe(1);
+    expect(repayment.runningBalance).toBe(0);
+  });
+
+  it('separates money received from money paid to the friend in the statement', () => {
+    const friend = createFriend({ name: 'Ravi' });
+    createExpense({
+      title: 'Dinner', category: 'Food', total_amount: 1000, owner_share: 400,
+      expense_date: '2026-08-10',
+      participants: [{ friend_id: friend.id, share_amount: 600 }],
+    });
+    recordRepayment({ friend_id: friend.id, amount: 200, repayment_date: '2026-08-12' });
+    createExpense({
+      title: 'Lunch', category: 'Food', total_amount: 1500, owner_share: 500,
+      expense_date: '2026-08-11',
+      participants: [{ friend_id: friend.id, share_amount: 1000 }],
+      payer_type: 'friend', payer_friend_id: friend.id,
+      payment_contributions: [{ id: 'p1', payer_id: friend.id, amount: 1500 }],
+    });
+    recordRepayment({ friend_id: friend.id, amount: 500, direction: 'to_friend', repayment_date: '2026-08-13' });
+
+    const stmt = calculateStatement(friend.id, '2026-08-01', '2026-08-31');
+    expect(stmt.periodRepayments).toBe(200);
+    expect(stmt.periodPaidToFriend).toBe(500);
+    // Ledger: +600 (owed) -200 (received) -500 (advanced for me) +500 (paid back to friend).
+    expect(stmt.closingBalance).toBe(400);
+    expect(calculateFriendBalance(friend.id).pending).toBe(400);
   });
 });
 

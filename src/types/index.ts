@@ -215,6 +215,12 @@ export interface LedgerEntry {
   time: string;
   title: string;
   amount: number;
+  // Direction of a repayment, when the entry is one.
+  direction?: 'from_friend' | 'to_friend';
+  // How the entry moves the running balance: +1 increases the balance the
+  // friend owes us (expense share, repayment to the friend), -1 decreases it
+  // (money received, money the friend advanced for us).
+  sign: -1 | 1;
   runningBalance: number;
   status?: ExpenseStatus;
   refId: UUID;

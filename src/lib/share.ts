@@ -13,6 +13,8 @@ export function buildStatementMessage(friend: Friend, fromDate: string, toDate: 
   lines.push(`Opening Balance: ${formatCurrency(stmt.openingBalance)}`);
   lines.push(`Expenses Added: ${formatCurrency(stmt.periodExpenses)}`);
   lines.push(`Amount Received: ${formatCurrency(stmt.periodRepayments)}`);
+  if (stmt.periodPaidToFriend > 0) lines.push(`Amount Paid to Friend: ${formatCurrency(stmt.periodPaidToFriend)}`);
+  if (stmt.periodAdvanced > 0) lines.push(`Friend Paid Towards Your Share: ${formatCurrency(stmt.periodAdvanced)}`);
   lines.push('');
   lines.push(`Pending Amount: ${formatCurrency(stmt.closingBalance)}`);
 
@@ -21,8 +23,11 @@ export function buildStatementMessage(friend: Friend, fromDate: string, toDate: 
     lines.push('Transactions:');
     lines.push('');
     stmt.entries.forEach((e) => {
-      const label = e.kind === 'repayment' ? 'Received' : e.title;
-      lines.push(`${formatDateShort(e.date)} — ${label} — ${formatCurrency(e.amount)}`);
+      const label = e.kind === 'repayment'
+        ? (e.direction === 'to_friend' ? 'Paid to friend' : 'Received')
+        : e.title;
+      const sign = e.sign < 0 ? '-' : '+';
+      lines.push(`${formatDateShort(e.date)} — ${label} — ${sign}${formatCurrency(e.amount)}`);
     });
   }
 

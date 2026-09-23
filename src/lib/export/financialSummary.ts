@@ -24,16 +24,17 @@ function dateInRange(date: string, range: ExportDateRange) {
   return date >= range.from && date <= range.to;
 }
 
-function initialOwed(expense: Expense) {
-  if (payerType(expense) === 'me') return expense.recoverable_amount;
+function initialOwed(expense: Expense, shareAmount: number, friendId: string) {
+  // Mirror calculateFriendBalance: friend-paid expenses are owed to the paying
+  // friend (not by every participant), and purchase-time contributions reduce
+  // THIS friend's share, so the receivable must be attributed per friend.
   if (payerType(expense) === 'friend') return 0;
-  const friendPaid = payments(expense).filter((payment) => payment.payer_id !== 'owner').reduce((sum, payment) => sum + payment.amount, 0);
-  return Math.max(0, expense.recoverable_amount - friendPaid);
+  return Math.max(0, shareAmount - paidBy(expense, friendId));
 }
 
-function initialPayable(expense: Expense) {
+function initialPayable(expense: Expense, friendId: string) {
   if (payerType(expense) === 'me') return 0;
-  const friendPaid = payments(expense).filter((payment) => payment.payer_id !== 'owner').reduce((sum, payment) => sum + payment.amount, 0);
+  const friendPaid = paidBy(expense, friendId);
   return Math.min(expense.owner_share, friendPaid);
 }
 
@@ -81,8 +82,8 @@ export function buildFriendReport(source: ExportSourceData, friendId: string, ra
   const friendShare = roundCurrency(expenses.reduce((sum, expense) => sum + (parts.find((part) => part.expense_id === expense.id)?.share_amount || 0), 0));
   const totalPaidByMe = roundCurrency(expenses.reduce((sum, expense) => sum + (payerType(expense) === 'friend' ? 0 : paidBy(expense, 'owner')), 0));
   const totalPaidByFriend = roundCurrency(expenses.reduce((sum, expense) => sum + paidBy(expense, friendId), 0));
-  const owedBeforeRepayment = roundCurrency(expenses.reduce((sum, expense) => sum + initialOwed(expense), 0));
-  const payableBeforeRepayment = roundCurrency(expenses.reduce((sum, expense) => sum + initialPayable(expense), 0));
+  const owedBeforeRepayment = roundCurrency(expenses.reduce((sum, expense) => sum + initialOwed(expense, parts.find((part) => part.expense_id === expense.id)?.share_amount || 0, friendId), 0));
+  const payableBeforeRepayment = roundCurrency(expenses.reduce((sum, expense) => sum + initialPayable(expense, friendId), 0));
   const amountOwedToMe = roundCurrency(Math.max(0, owedBeforeRepayment - received));
   const creditAmount = roundCurrency(Math.max(0, received - owedBeforeRepayment));
   const amountIOwe = roundCurrency(Math.max(0, payableBeforeRepayment - toFriend) + creditAmount);

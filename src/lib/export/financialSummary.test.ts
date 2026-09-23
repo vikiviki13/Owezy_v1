@@ -51,4 +51,26 @@ describe('financial export reporting', () => {
   it('builds category totals from transaction data', () => {
     expect(buildCategories(source(), range)).toEqual([{ category: 'Food', yourShare: 400, friendsShare: 600, total: 1000 }]);
   });
+
+  it('attributes receivables per friend on multi-participant expenses', () => {
+    const friend2: Friend = { ...friend, id: 'f2', name: 'Bala' };
+    const participantF1: ExpenseParticipant = { ...participant, share_amount: 300, pending_amount: 300 };
+    const participantF2: ExpenseParticipant = { ...participant, id: 'ep2', friend_id: 'f2', share_amount: 300, pending_amount: 300 };
+    const data = source({ friends: [friend, friend2], expenseParticipants: [participantF1, participantF2] });
+    const report = buildFriendReport(data, 'f1', range);
+    expect(report.friendShare).toBe(300);
+    expect(report.amountOwedToMe).toBe(300);
+    expect(report.netBalance).toBe(300);
+    expect(buildFinancialSummary(data, range).friendsOweMe).toBe(600);
+  });
+
+  it('never counts a friend-paid bill as owed by another participant', () => {
+    const friend2: Friend = { ...friend, id: 'f2', name: 'Bala' };
+    const expense = { ...baseExpense, payer_type: 'friend' as const, payment_contributions: [{ id: 'p2', payer_id: 'f2', amount: 1000 }] };
+    const data = source({ friends: [friend, friend2], expenses: [expense], expenseParticipants: [participant, { ...participant, id: 'ep2', friend_id: 'f2', share_amount: 300, pending_amount: 0 }] });
+    const reportF1 = buildFriendReport(data, 'f1', range);
+    expect(reportF1.amountOwedToMe).toBe(0);
+    const reportF2 = buildFriendReport(data, 'f2', range);
+    expect(reportF2.amountIOwe).toBe(400);
+  });
 });

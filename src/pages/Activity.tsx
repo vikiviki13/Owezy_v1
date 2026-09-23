@@ -29,7 +29,8 @@ export function Activity() {
     const repayments = listAllRepayments().map((r) => ({
       type: 'repayment' as const,
       id: r.id,
-      title: 'Payment received',
+      title: r.direction === 'to_friend' ? 'Paid to friend' : 'Payment received',
+      received: r.direction !== 'to_friend',
       subtitle: `${getFriend(r.friend_id)?.name || ''} · ${r.payment_method}`,
       amount: r.amount,
       date: r.repayment_date,
@@ -86,8 +87,8 @@ export function Activity() {
                       <p className="text-xs text-[var(--color-text-muted)] truncate">{r.subtitle} · {r.occurredAt ? formatTimestampTime(r.occurredAt) : formatTime(r.time)}</p>
                     </div>
                     <div className="text-right shrink-0 ml-3">
-                      <p className={`font-semibold amount-tabular ${r.type === 'repayment' ? 'text-[var(--color-primary)]' : ''}`}>
-                        {r.type === 'repayment' ? '+' : ''}{formatCurrency(r.amount)}
+                      <p className={`font-semibold amount-tabular ${r.type === 'expense' ? '' : r.received ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}>
+                        {r.type === 'expense' ? '' : r.received ? '+' : '-'}{formatCurrency(r.amount)}
                       </p>
                       {r.status && <StatusBadge status={r.status} />}
                     </div>

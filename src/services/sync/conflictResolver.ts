@@ -112,7 +112,7 @@ function mergeRecordArray(local: Record<string, unknown>[], cloud: Record<string
   return { records: [...byId.values()], localOnly, cloudOnly };
 }
 
-function mergeTombstones(local: Tombstone[], cloud: Tombstone[]): { tombstones: Tombstone[]; changed: boolean } {
+function mergeTombstones(local: Tombstone[], cloud: Tombstone[], nowMs: number): { tombstones: Tombstone[]; changed: boolean } {
   const byKey = new Map<string, Tombstone>();
   for (const tombstone of [...local, ...cloud]) {
     if (!tombstone || typeof tombstone.id !== 'string' || !tombstone.id) continue;
@@ -120,7 +120,7 @@ function mergeTombstones(local: Tombstone[], cloud: Tombstone[]): { tombstones: 
     const existing = byKey.get(key);
     if (!existing || tombstone.deletedAt > existing.deletedAt) byKey.set(key, tombstone);
   }
-  const cutoff = new Date(Date.now() - TOMBSTONE_RETENTION_MS).toISOString();
+  const cutoff = new Date(nowMs - TOMBSTONE_RETENTION_MS).toISOString();
   const retained = [...byKey.values()].filter((tombstone) => tombstone.deletedAt >= cutoff);
   return { tombstones: retained, changed: retained.length !== [...byKey.values()].length };
 }
@@ -169,7 +169,7 @@ function mergeObject(local: Record<string, unknown>, cloud: Record<string, unkno
   return local;
 }
 
-export function mergeAppData(local: StoredDoc, cloud: StoredDoc): MergeResult {
+export function mergeAppData(local: StoredDoc, cloud: StoredDoc, nowMs: number = Date.now()): MergeResult {
   const result: StoredDoc = {
     rev: Math.max(typeof local.rev === 'number' ? local.rev : 0, typeof cloud.rev === 'number' ? cloud.rev : 0),
     updated_at: [local.updated_at || '', cloud.updated_at || ''].sort().pop() || new Date().toISOString(),
@@ -196,7 +196,7 @@ export function mergeAppData(local: StoredDoc, cloud: StoredDoc): MergeResult {
     localOnly = localOnly || merged.localOnly;
   }
 
-  const tombstones = mergeTombstones(local.deleted || [], cloud.deleted || []);
+  const tombstones = mergeTombstones(local.deleted || [], cloud.deleted || [], nowMs);
   result.deleted = tombstones.tombstones;
   const cloudTombstones = (cloud.deleted || []).map((entry) => `${entry.entityType}:${entry.id}`);
   void localOnly;
