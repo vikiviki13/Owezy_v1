@@ -117,7 +117,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
       if (document.hidden) {
         document.documentElement.classList.add('privacy-mode');
         markActive(userId);
-        if (status?.autoLockDuration === 'immediately') void lock();
+        if (status?.appLockEnabled && status.autoLockDuration === 'immediately') void lock();
         return;
       }
       const expired = status?.appLockEnabled && shouldAutoLock(status.autoLockDuration, getLastActive(userId), Date.now(), true);
@@ -129,7 +129,7 @@ export function SecurityProvider({ userId, children }: { userId: string; childre
     events.forEach((event) => window.addEventListener(event, onActivity, { passive: true }));
     window.addEventListener('focus', onActivity);
     document.addEventListener('visibilitychange', onVisibility);
-    const onPageHide = () => { if (status?.autoLockDuration === 'immediately') void lock(); };
+    const onPageHide = () => { if (status?.appLockEnabled && status.autoLockDuration === 'immediately') void lock(); };
     window.addEventListener('pagehide', onPageHide);
     return () => {
       window.clearTimeout(timer.current);
