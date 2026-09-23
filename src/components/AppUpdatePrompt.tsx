@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { CheckCircle2, LoaderCircle, RefreshCw, Sparkles, WifiOff, X } from 'lucide-react';
+import { usePreferences } from './PreferencesContext';
 import { APP_VERSION, isRequiredUpdate, latestReleaseNotes } from '../lib/appRelease';
 
 type UpdatePhase = 'idle' | 'updating' | 'failed';
@@ -13,8 +14,9 @@ export function AppUpdatePrompt() {
     offlineReady: [offlineReady, setOfflineReady],
     updateServiceWorker,
   } = useRegisterSW();
+  const { preferences } = usePreferences();
   const [phase, setPhase] = useState<UpdatePhase>('idle');
-  const [showNotes, setShowNotes] = useState(false);
+  const [showNotes, setShowNotes] = useState(true);
   const [online, setOnline] = useState(() => navigator.onLine);
   const refreshingRef = useRef(false);
 
@@ -108,6 +110,10 @@ export function AppUpdatePrompt() {
   }
 
   if (!needRefresh) return null;
+
+  // Critical updates are always shown. The informational "new update available"
+  // prompt respects the App Updates toggle in settings.
+  if (!required && !preferences.app_updates_enabled) return null;
 
   if (required) {
     return (

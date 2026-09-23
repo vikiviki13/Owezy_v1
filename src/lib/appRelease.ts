@@ -8,6 +8,14 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
+    version: '1.1.0',
+    notes: [
+      'New update notifications — you\u2019ll be asked to install every new version right in the app',
+      'Fixed App Lock appearing for people who never enabled it',
+      'More reliable friend balances, repayment tracking and statement history',
+    ],
+  },
+  {
     version: '1.0.0',
     notes: [
       'Expense dates — pick any past date when adding an expense',
