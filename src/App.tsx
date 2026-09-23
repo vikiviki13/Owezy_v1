@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { AlertCircle, CloudOff, Database, LoaderCircle, Wallet } from 'lucide-react';
+import { AlertCircle, CloudOff, Database, Wallet } from 'lucide-react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Shell } from './components/Shell';
 import { ToastProvider } from './components/Toast';
@@ -39,6 +39,7 @@ import { clearUnlockGrant } from './lib/securityService';
 import { clearContactImportDraft } from './lib/contactImport';
 import { privateDataErrorMessage } from './lib/safeErrors';
 import { AppUpdatePrompt } from './components/AppUpdatePrompt';
+import { AppSplash } from './components/AppSplash';
 
 const ONBOARDED_KEY_PREFIX = 'tab_onboarded_v2_';
 
@@ -266,7 +267,11 @@ function UnlockRoute() {
 }
 
 function LoadingScreen() {
-  return <div className="min-h-screen flex flex-col items-center justify-center gap-3 text-[var(--color-text-secondary)]"><LoaderCircle className="animate-spin text-[var(--color-primary)]" /><p className="text-sm">Loading your account…</p></div>;
+  let status = 'Loading your account…';
+  try {
+    if (sessionStorage.getItem('tab_boot_mode') === 'updating') status = 'Applying update…';
+  } catch { /* storage may be unavailable */ }
+  return <AppSplash status={status} />;
 }
 
 function ConfigurationRequired() {

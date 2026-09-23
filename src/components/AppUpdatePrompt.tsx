@@ -65,10 +65,13 @@ export function AppUpdatePrompt() {
     if (!online) return;
     setPhase('updating');
     setShowNotes(false);
+    // Flag the next page load so the boot splash shows "Applying update…".
+    try { sessionStorage.setItem('tab_boot_mode', 'updating'); } catch { /* ignore */ }
     try {
       await updateServiceWorker(true);
       // controllerchange listener reloads once the new worker activates.
     } catch {
+      try { sessionStorage.removeItem('tab_boot_mode'); } catch { /* ignore */ }
       setPhase('failed');
     }
   }

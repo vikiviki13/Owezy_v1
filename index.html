@@ -11,8 +11,125 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
     <title>Owezy — Friend Expense Tracker</title>
+    <style>
+      #boot-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.1rem;
+        background: #fbfaf7;
+        color: #1c1917;
+        transition: opacity 400ms ease;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      html.dark #boot-splash { background: #14120f; color: #f5f4f0; }
+      #boot-splash.is-hiding { opacity: 0; pointer-events: none; }
+      #boot-splash .boot-logo {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 5.25rem;
+        height: 5.25rem;
+        border-radius: 1.625rem;
+        background: linear-gradient(135deg, #059669, #047857);
+        color: #fff;
+        box-shadow: 0 14px 34px rgba(5, 150, 105, 0.35);
+        animation: boot-pop 560ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      html.dark #boot-splash .boot-logo {
+        background: linear-gradient(135deg, #10b981, #047857);
+        box-shadow: 0 14px 34px rgba(16, 185, 129, 0.3);
+      }
+      #boot-splash .boot-ring {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 3px solid rgba(5, 150, 105, 0.55);
+        animation: boot-ring 1.7s ease-out infinite;
+      }
+      html.dark #boot-splash .boot-ring { border-color: rgba(16, 185, 129, 0.55); }
+      #boot-splash .boot-title {
+        margin: 0;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 1.5rem;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        animation: boot-pop 560ms 70ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      #boot-splash .boot-dots { display: flex; gap: 0.45rem; }
+      #boot-splash .boot-dots i {
+        width: 0.55rem;
+        height: 0.55rem;
+        border-radius: 9999px;
+        background: #059669;
+        animation: boot-dot 1.15s ease-in-out infinite;
+      }
+      html.dark #boot-splash .boot-dots i { background: #10b981; }
+      #boot-splash .boot-dots i:nth-child(2) { animation-delay: 150ms; }
+      #boot-splash .boot-dots i:nth-child(3) { animation-delay: 300ms; }
+      #boot-splash .boot-status {
+        margin: 0;
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 0.8rem;
+        color: #57534e;
+        animation: boot-pop 560ms 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      html.dark #boot-splash .boot-status { color: #b8b3a8; }
+      @keyframes boot-pop {
+        from { opacity: 0; transform: translateY(14px) scale(0.94); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      @keyframes boot-ring {
+        0% { transform: scale(1); opacity: 0.85; }
+        70%, 100% { transform: scale(1.6); opacity: 0; }
+      }
+      @keyframes boot-dot {
+        0%, 60%, 100% { transform: translateY(0); }
+        30% { transform: translateY(-0.5rem); }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-splash, #boot-splash * {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+    <script>
+      // Apply the saved theme before first paint so the splash and the app
+      // never flash a mismatched background.
+      try {
+        var t = localStorage.getItem('tab_theme');
+        if (t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) { /* ignore */ }
+      // A service-worker update reloads the page; tell the splash to say so.
+      try {
+        if (sessionStorage.getItem('tab_boot_mode') === 'updating') {
+          document.addEventListener('DOMContentLoaded', function () {
+            var s = document.getElementById('boot-splash-status');
+            if (s) s.textContent = 'Applying update…';
+          });
+        }
+      } catch (e) { /* ignore */ }
+    </script>
   </head>
   <body>
+    <div id="boot-splash" aria-hidden="true">
+      <div class="boot-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+        <span class="boot-ring"></span>
+      </div>
+      <p class="boot-title">Owezy</p>
+      <div class="boot-dots"><i></i><i></i><i></i></div>
+      <p id="boot-splash-status" class="boot-status">Loading your account…</p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
