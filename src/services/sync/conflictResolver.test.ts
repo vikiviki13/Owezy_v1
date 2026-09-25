@@ -81,6 +81,20 @@ describe('conflict resolver', () => {
     expect(needsPush).toBe(true);
   });
 
+  it('a re-imported friend with a fresh updated_at survives its own earlier tombstone', () => {
+    // Re-importing a deleted contact reuses the same server row, so its
+    // `created_at` still predates the deletion. The friend survives only when
+    // the client stamps a newer `updated_at` than the tombstone recorded at
+    // deletion time.
+    const local = doc({
+      friends: [friend('a', '2026-08-18T10:40:00.000Z', { created_at: '2026-08-18T09:00:00.000Z' })],
+      deleted: [{ entityType: 'friend', id: 'a', deletedAt: '2026-08-18T10:30:00.000Z' }],
+    });
+    const cloud = doc({});
+    const { merged } = mergeAppData(local, cloud, NOW_MS);
+    expect(merged.friends.map((entry) => entry.id)).toEqual(['a']);
+  });
+
   it('reconciles children when the parent expense is tombstoned', () => {
     const participant = { id: 'p1', expense_id: 'e1', friend_id: 'f1', share_amount: 50, paid_amount: 0, pending_amount: 50, status: 'pending', created_at: '2026-08-18T09:00:00.000Z', updated_at: '2026-08-18T09:00:00.000Z' };
     const local = doc({

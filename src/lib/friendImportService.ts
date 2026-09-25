@@ -46,6 +46,42 @@ function secureBatchError(error: unknown) {
   return 'This friend could not be added. Please try again.';
 }
 
+function rowToFriend(row: FriendInsertRow): Friend {
+  // A re-imported contact reuses the server row created on its first import,
+  // so that row's own `created_at` predates the deletion that removed the
+  // friend locally. Stamp the re-add time as `updated_at`: the sync layer only
+  // keeps a record while its timestamp is newer than its deletion tombstone,
+  // otherwise the restored friend would vanish again on the next sync merge.
+  const now = new Date().toISOString();
+  return {
+    id: row.id,
+    owner_id: row.owner_id,
+    name: row.name,
+    nickname: row.nickname || undefined,
+    whatsapp_e164: row.whatsapp_e164,
+    whatsapp_number: row.whatsapp_e164,
+    phone_number: row.phone_number,
+    phone: row.phone_number,
+    email: row.email || undefined,
+    is_archived: false,
+    created_at: row.created_at,
+    updated_at: now,
+  };
+}
+
+async function claimImportedFriendRow(userId: string, input: ConfirmedFriendImport): Promise<FriendInsertRow | undefined> {
+  const whatsappE164 = normalizePhoneToE164(input.whatsappE164);
+  if (!whatsappE164) return undefined;
+  const { data, error } = await supabase
+    .from('friends')
+    .select('id, owner_id, name, nickname, whatsapp_e164, phone_number, email, created_at')
+    .eq('owner_id', userId)
+    .eq('whatsapp_e164', whatsappE164)
+    .maybeSingle();
+  if (error || !data) return undefined;
+  return data as FriendInsertRow;
+}
+
 export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]): Promise<FriendImportBatchResult> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -83,24 +119,27 @@ export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]
     const chunk = valid.slice(offset, offset + 100);
     try {
       const result = await importConfirmedFriends<FriendInsertRow>(user.id, chunk.map((entry) => entry.payload));
-      for (const failure of result.failures) failures.push(failure);
+      // Until the security Edge Function is redeployed with the re-add upsert,
+      // a number that was imported and later deleted is still rejected as a
+      // duplicate. Reclaim the account's own existing row for that number so
+      // the friend can be re-added without waiting on a back-end deploy.
+      const recoveredById = new Map<string, FriendInsertRow>();
+      for (const failure of result.failures) {
+        if (!failure.reason.toLowerCase().includes('already')) continue;
+        const target = chunk.find((entry) => entry.input.clientId === failure.clientId);
+        if (!target) continue;
+        const row = await claimImportedFriendRow(user.id, target.input);
+        if (row) recoveredById.set(failure.clientId, row);
+      }
       for (const imported of result.successes) {
-        const row = imported.row;
-        const friend: Friend = {
-          id: row.id,
-          owner_id: row.owner_id,
-          name: row.name,
-          nickname: row.nickname || undefined,
-          whatsapp_e164: row.whatsapp_e164,
-          whatsapp_number: row.whatsapp_e164,
-          phone_number: row.phone_number,
-          phone: row.phone_number,
-          email: row.email || undefined,
-          is_archived: false,
-          created_at: row.created_at,
-          updated_at: row.created_at,
-        };
-        successes.push({ clientId: imported.clientId, friend });
+        successes.push({ clientId: imported.clientId, friend: rowToFriend(imported.row) });
+      }
+      for (const failure of result.failures) {
+        if (recoveredById.has(failure.clientId)) {
+          successes.push({ clientId: failure.clientId, friend: rowToFriend(recoveredById.get(failure.clientId)!) });
+        } else {
+          failures.push(failure);
+        }
       }
     } catch (caught) {
       const reason = secureBatchError(caught);
