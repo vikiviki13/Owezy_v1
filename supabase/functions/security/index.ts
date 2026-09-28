@@ -382,6 +382,50 @@ function validateAppData(value: unknown) {
   return data;
 }
 
+const FRIEND_COLUMNS = 'id, owner_id, name, nickname, whatsapp_e164, phone_number, email, created_at';
+
+interface FriendFields {
+  name: string;
+  nickname: string;
+  whatsapp: string;
+  phone: string;
+  email: string;
+}
+
+// Mirrors the friends table CHECK constraints (schema.sql) so a row is never
+// written that the column constraints would reject.
+function parseFriendFields(value: unknown): FriendFields | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  const name = typeof input.name === 'string' ? input.name.trim() : '';
+  const nickname = typeof input.nickname === 'string' ? input.nickname.trim() : '';
+  const whatsapp = typeof input.whatsappE164 === 'string' ? input.whatsappE164.trim() : '';
+  const phone = typeof input.phoneNumber === 'string' ? input.phoneNumber.trim() : '';
+  const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+  if (!name || name.length > 120 || nickname.length > 80 || !/^\+[1-9][0-9]{7,14}$/.test(whatsapp) || !phone || phone.length > 32 || email.length > 254) return null;
+  return { name, nickname, whatsapp, phone, email };
+}
+
+// A friend the user deleted earlier still holds a row here, because deletions
+// only affect the synced app document. Re-adding that contact would collide
+// with the (owner_id, whatsapp_e164) unique constraint, so upsert and reuse
+// the existing row with the contact's current details.
+//
+// This deliberately runs on the service role rather than being read back by
+// the browser: security_enforcement.sql revokes all access to `friends` from
+// `authenticated`, so a client-side lookup of this row cannot be relied on.
+async function upsertFriendRow(admin: ReturnType<typeof adminClient>, ownerId: string, fields: FriendFields) {
+  const { data, error } = await admin.from('friends').upsert({
+    owner_id: ownerId,
+    name: fields.name,
+    nickname: fields.nickname || null,
+    whatsapp_e164: fields.whatsapp,
+    phone_number: fields.phone,
+    email: fields.email || null,
+  }, { onConflict: 'owner_id,whatsapp_e164' }).select(FRIEND_COLUMNS).single();
+  return { row: error || !data ? null : (data as Record<string, unknown>), error };
+}
+
 async function verifyPin(
   admin: ReturnType<typeof adminClient>,
   userId: string,
@@ -535,32 +579,17 @@ Deno.serve(async (request) => {
       for (const candidate of body.friends) {
         const input = candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? candidate as Record<string, unknown> : {};
         const clientId = typeof input.clientId === 'string' ? input.clientId.slice(0, 100) : '';
-        const name = typeof input.name === 'string' ? input.name.trim() : '';
-        const nickname = typeof input.nickname === 'string' ? input.nickname.trim() : '';
-        const whatsapp = typeof input.whatsappE164 === 'string' ? input.whatsappE164.trim() : '';
-        const phone = typeof input.phoneNumber === 'string' ? input.phoneNumber.trim() : '';
-        const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
-        if (!clientId || !name || name.length > 120 || nickname.length > 80 || !/^\+[1-9][0-9]{7,14}$/.test(whatsapp) || !phone || phone.length > 32 || email.length > 254) {
+        const fields = parseFriendFields(input);
+        if (!clientId || !fields) {
+          const name = typeof input.name === 'string' ? input.name.trim() : '';
           failures.push({ clientId, name: name.slice(0, 120), reason: 'Name and a valid WhatsApp number are required.' });
           continue;
         }
-        // Upsert instead of insert: a friend the user deleted earlier still
-        // holds a row here (deletions only affect the synced app document), so
-        // re-adding the same contact would otherwise collide with the
-        // (owner_id, whatsapp_e164) unique constraint. Re-import reuses the
-        // existing row with the contact's current details.
-        const { data: row, error } = await admin.from('friends').upsert({
-          owner_id: user.id,
-          name,
-          nickname: nickname || null,
-          whatsapp_e164: whatsapp,
-          phone_number: phone,
-          email: email || null,
-        }, { onConflict: 'owner_id,whatsapp_e164' }).select('id, owner_id, name, nickname, whatsapp_e164, phone_number, email, created_at').single();
-        if (error || !row) {
+        const { row, error } = await upsertFriendRow(admin, user.id, fields);
+        if (!row) {
           failures.push({
             clientId,
-            name,
+            name: fields.name,
             reason: error?.code === '23505' ? 'This WhatsApp number is already being used.' : 'This friend could not be added.',
           });
           continue;
@@ -571,6 +600,16 @@ Deno.serve(async (request) => {
         await recordEvent(admin, user.id, 'friend_import_failed', null, { failed_count: failures.length, requested_count: body.friends.length });
       }
       return reply(request, { successes, failures });
+    }
+
+    if (action === 'friends/reclaim') {
+      await requirePrivateDataAccess(admin, user.id, unlockToken);
+      await consumeRateLimit(admin, user.id, 'friends:reclaim', 10, 300, 300);
+      const fields = parseFriendFields(body.friend);
+      if (!fields) throw new HttpError(400, 'invalid_friend', 'Name and a valid WhatsApp number are required.');
+      const { row } = await upsertFriendRow(admin, user.id, fields);
+      if (!row) throw new HttpError(503, 'friend_reclaim_failed', 'This friend could not be restored.');
+      return reply(request, { row });
     }
 
     if (action === 'pin/create') {

@@ -2,7 +2,7 @@ import type { Friend } from '../types';
 import { commitImportedFriends } from './db';
 import { normalizePhoneToE164 } from './contactImport';
 import { supabase } from './supabase';
-import { importConfirmedFriends, SecurityServiceError } from './securityService';
+import { importConfirmedFriends, reclaimConfirmedFriend, SecurityServiceError } from './securityService';
 
 export interface ConfirmedFriendImport {
   clientId: string;
@@ -82,6 +82,41 @@ async function claimImportedFriendRow(userId: string, input: ConfirmedFriendImpo
   return data as FriendInsertRow;
 }
 
+function reclaimPayload(input: ConfirmedFriendImport): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    name: input.name.trim(),
+    whatsappE164: normalizePhoneToE164(input.whatsappE164) || '',
+    phoneNumber: input.phoneNumber.trim(),
+  };
+  if (input.nickname?.trim()) payload.nickname = input.nickname.trim();
+  if (input.email?.trim()) payload.email = input.email.trim();
+  return payload;
+}
+
+// Recovers a number the server rejected so the owner can add that contact
+// again. Deleting a friend only removes it from the synced app document, so
+// the account's `friends` row for that number survives and a back-end without
+// the re-add upsert reports the number as a duplicate.
+//
+// The reclaim runs on the service role inside the Edge Function. Reading the
+// row from the browser is not a valid substitute: security_enforcement.sql
+// revokes all access to `friends` from `authenticated`, so that select returns
+// a permission error and the contact can never be re-added. The direct read is
+// kept only as a fallback for a not-yet-deployed `friends/reclaim` action.
+async function reclaimImportedFriend(userId: string, input: ConfirmedFriendImport): Promise<FriendInsertRow | undefined> {
+  const whatsappE164 = normalizePhoneToE164(input.whatsappE164);
+  if (!whatsappE164) return undefined;
+  try {
+    const { row } = await reclaimConfirmedFriend<FriendInsertRow>(userId, reclaimPayload(input));
+    return row || undefined;
+  } catch (caught) {
+    if (caught instanceof SecurityServiceError && caught.code === 'unknown_action') {
+      return claimImportedFriendRow(userId, input);
+    }
+    return undefined;
+  }
+}
+
 export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]): Promise<FriendImportBatchResult> {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -119,16 +154,17 @@ export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]
     const chunk = valid.slice(offset, offset + 100);
     try {
       const result = await importConfirmedFriends<FriendInsertRow>(user.id, chunk.map((entry) => entry.payload));
-      // Until the security Edge Function is redeployed with the re-add upsert,
-      // a number that was imported and later deleted is still rejected as a
-      // duplicate. Reclaim the account's own existing row for that number so
-      // the friend can be re-added without waiting on a back-end deploy.
+      // A number the user imported and later deleted is still rejected as a
+      // duplicate by a back-end that predates the re-add upsert. Reclaim the
+      // account's own row for it so the contact can be added again. Every
+      // failure is retried rather than matched on its message text: an
+      // invalid contact is rejected again by the same field validation, so it
+      // falls through to its original reason.
       const recoveredById = new Map<string, FriendInsertRow>();
       for (const failure of result.failures) {
-        if (!failure.reason.toLowerCase().includes('already')) continue;
         const target = chunk.find((entry) => entry.input.clientId === failure.clientId);
         if (!target) continue;
-        const row = await claimImportedFriendRow(user.id, target.input);
+        const row = await reclaimImportedFriend(user.id, target.input);
         if (row) recoveredById.set(failure.clientId, row);
       }
       for (const imported of result.successes) {

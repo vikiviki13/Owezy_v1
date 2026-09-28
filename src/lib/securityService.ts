@@ -261,6 +261,16 @@ export async function importConfirmedFriends<TRow = Record<string, unknown>>(
   return invoke<SecureFriendImportResponse<TRow>>('friends/import', { friends }, userId);
 }
 
+// Restores the account's own `friends` row for a number whose profile the user
+// deleted earlier. Runs on the service role inside the Edge Function, so it
+// keeps working after direct table access to `friends` is revoked.
+export async function reclaimConfirmedFriend<TRow = Record<string, unknown>>(
+  userId: string,
+  friend: Record<string, unknown>,
+) {
+  return invoke<{ row: TRow }>('friends/reclaim', { friend }, userId);
+}
+
 export async function touchUnlockSession(userId: string) {
   markActive(userId);
   if (getUnlockGrant(userId)) await invoke('lock/touch', {}, userId);
