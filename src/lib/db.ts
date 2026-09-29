@@ -9,6 +9,7 @@ import { defaultPreferences, setPreferenceSnapshot } from './preferences';
 import { expenseDateError, shiftIsoDate } from './expenseDraft';
 import { enqueueChange } from '../services/sync/syncQueue';
 import type { SyncEntityType, Tombstone } from '../services/sync/types';
+import { normalizePhoneToE164 } from './contactImport';
 
 // ---------------------------------------------------------------------------
 // Storage engine
@@ -267,6 +268,84 @@ export function listFriends(includeArchived = false): Friend[] {
 export function getFriend(id: string): Friend | undefined {
   return load().friends.find((f) => f.id === id);
 }
+
+// The WhatsApp number is a friend's real identity: the contact-import review
+// screen matches on it, the `friends` table is unique on it, and a re-add
+// reuses the server's row for it. Records that are keyed only by id drift out
+// of step with those checks, so every friend lookup that involves a number
+// normalizes it the same way first.
+function friendNumberKey(friend: Partial<Friend>): string | undefined {
+  return normalizePhoneToE164(friend.whatsapp_e164 || friend.whatsapp_number || friend.phone_number || friend.phone);
+}
+
+// How much of the account's history points at a friend. A duplicate must
+// resolve onto the record the history already references, otherwise expenses
+// and repayments would be left pointing at a deleted row.
+function historyWeight(db: DB, friendId: string): number {
+  return db.expenseParticipants.filter((row) => row.friend_id === friendId).length
+    + db.repayments.filter((row) => row.friend_id === friendId).length
+    + db.groupMembers.filter((row) => row.friend_id === friendId).length
+    + db.expenseItemAssignments.filter((row) => row.friend_id === friendId).length;
+}
+
+function repointHistory(db: DB, fromId: string, toId: string) {
+  db.expenseParticipants.forEach((row) => { if (row.friend_id === fromId) row.friend_id = toId; });
+  db.repayments.forEach((row) => { if (row.friend_id === fromId) row.friend_id = toId; });
+  db.groupMembers.forEach((row) => { if (row.friend_id === fromId) row.friend_id = toId; });
+  db.expenseItemAssignments.forEach((row) => { if (row.friend_id === fromId) row.friend_id = toId; });
+}
+
+// Collapses friend records that share a number down to one. The `friends`
+// table is unique on (owner_id, whatsapp_e164), so a duplicate can only come
+// from the client storing the same person twice under different ids — which
+// is what leaves the import screen reporting their number as already added
+// with no way to add or remove it.
+//
+// Every reference to a removed record is moved to the survivor first, so no
+// expense, repayment or membership is lost. Removals are tombstoned and queued
+// so they propagate to the account's other devices like any other delete.
+// Returns the ids that were removed.
+export function dedupeFriendsByNumber(): string[] {
+  const db = load();
+  const groups = new Map<string, Friend[]>();
+  for (const friend of db.friends) {
+    const key = friendNumberKey(friend);
+    if (!key) continue;
+    const group = groups.get(key);
+    if (group) group.push(friend);
+    else groups.set(key, [friend]);
+  }
+
+  const removed: string[] = [];
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    // Keep the record the history points at; a newer edit breaks a tie.
+    const survivor = [...group].sort(
+      (a, b) => historyWeight(db, b.id) - historyWeight(db, a.id) || b.updated_at.localeCompare(a.updated_at),
+    )[0];
+    for (const loser of group) {
+      if (loser.id === survivor.id) continue;
+      repointHistory(db, loser.id, survivor.id);
+      // Carry over any contact detail the survivor is missing.
+      for (const field of ['nickname', 'email', 'avatar_url', 'notes'] as const) {
+        if (!survivor[field] && loser[field]) survivor[field] = loser[field];
+      }
+      if (!survivor.whatsapp_e164 && loser.whatsapp_e164) {
+        survivor.whatsapp_e164 = loser.whatsapp_e164;
+        survivor.whatsapp_number = loser.whatsapp_number;
+      }
+      recordTombstone('friend', loser.id);
+      enqueue('friend', loser.id, 'DELETE');
+      removed.push(loser.id);
+    }
+    const keep = survivor.id;
+    db.friends = db.friends.filter((friend) => !group.some((member) => member.id === friend.id) || friend.id === keep);
+  }
+
+  if (removed.length) persist();
+  return removed;
+}
+
 export function createFriend(input: Partial<Friend> & { name: string }): Friend {
   const db = load();
   const now = new Date().toISOString();
@@ -296,11 +375,21 @@ export function commitImportedFriends(friends: Friend[]): Friend[] {
   const db = load();
   const committed: Friend[] = [];
   friends.forEach((friend) => {
-    const existing = db.friends.find((item) => item.id === friend.id);
+    // Match on the number as well as the id. A re-add reuses the row the
+    // server already holds for that number, and that row's id can differ from
+    // the one a hand-entered friend was given locally. Keying on the id alone
+    // would store the same person twice, after which the import screen reports
+    // their number as already added forever.
+    const number = friendNumberKey(friend);
+    const existing = db.friends.find((item) => (
+      item.id === friend.id || (number !== undefined && friendNumberKey(item) === number)
+    ));
     if (existing) {
-      Object.assign(existing, friend);
+      // Keep the existing id so expenses, repayments and group memberships
+      // that already point at this friend stay attached.
+      Object.assign(existing, friend, { id: existing.id });
       committed.push(existing);
-      enqueue('friend', friend.id, 'UPDATE');
+      enqueue('friend', existing.id, 'UPDATE');
       return;
     }
     db.friends.push(friend);

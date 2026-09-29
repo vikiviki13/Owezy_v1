@@ -408,22 +408,75 @@ function parseFriendFields(value: unknown): FriendFields | null {
 
 // A friend the user deleted earlier still holds a row here, because deletions
 // only affect the synced app document. Re-adding that contact would collide
-// with the (owner_id, whatsapp_e164) unique constraint, so upsert and reuse
+// with the (owner_id, whatsapp_e164) unique constraint, so find or update
 // the existing row with the contact's current details.
 //
 // This deliberately runs on the service role rather than being read back by
 // the browser: security_enforcement.sql revokes all access to `friends` from
 // `authenticated`, so a client-side lookup of this row cannot be relied on.
 async function upsertFriendRow(admin: ReturnType<typeof adminClient>, ownerId: string, fields: FriendFields) {
-  const { data, error } = await admin.from('friends').upsert({
-    owner_id: ownerId,
-    name: fields.name,
-    nickname: fields.nickname || null,
-    whatsapp_e164: fields.whatsapp,
-    phone_number: fields.phone,
-    email: fields.email || null,
-  }, { onConflict: 'owner_id,whatsapp_e164' }).select(FRIEND_COLUMNS).single();
-  return { row: error || !data ? null : (data as Record<string, unknown>), error };
+  const { data: existing } = await admin
+    .from('friends')
+    .select(FRIEND_COLUMNS)
+    .eq('owner_id', ownerId)
+    .eq('whatsapp_e164', fields.whatsapp)
+    .maybeSingle();
+
+  if (existing) {
+    const { data: updated, error: updateError } = await admin
+      .from('friends')
+      .update({
+        name: fields.name,
+        nickname: fields.nickname || null,
+        phone_number: fields.phone,
+        email: fields.email || null,
+      })
+      .eq('id', (existing as Record<string, unknown>).id)
+      .select(FRIEND_COLUMNS)
+      .maybeSingle();
+
+    if (updated) return { row: updated as Record<string, unknown>, error: null };
+    return { row: existing as Record<string, unknown>, error: updateError };
+  }
+
+  const { data: inserted, error: insertError } = await admin
+    .from('friends')
+    .insert({
+      owner_id: ownerId,
+      name: fields.name,
+      nickname: fields.nickname || null,
+      whatsapp_e164: fields.whatsapp,
+      phone_number: fields.phone,
+      email: fields.email || null,
+    })
+    .select(FRIEND_COLUMNS)
+    .maybeSingle();
+
+  if (inserted) return { row: inserted as Record<string, unknown>, error: null };
+
+  if (insertError?.code === '23505') {
+    const { data: fallback } = await admin
+      .from('friends')
+      .select(FRIEND_COLUMNS)
+      .eq('owner_id', ownerId)
+      .eq('whatsapp_e164', fields.whatsapp)
+      .maybeSingle();
+
+    if (fallback) {
+      await admin
+        .from('friends')
+        .update({
+          name: fields.name,
+          nickname: fields.nickname || null,
+          phone_number: fields.phone,
+          email: fields.email || null,
+        })
+        .eq('id', (fallback as Record<string, unknown>).id);
+      return { row: fallback as Record<string, unknown>, error: null };
+    }
+  }
+
+  return { row: null, error: insertError };
 }
 
 async function verifyPin(
@@ -610,6 +663,19 @@ Deno.serve(async (request) => {
       const { row } = await upsertFriendRow(admin, user.id, fields);
       if (!row) throw new HttpError(503, 'friend_reclaim_failed', 'This friend could not be restored.');
       return reply(request, { row });
+    }
+
+    if (action === 'friends/delete') {
+      await requirePrivateDataAccess(admin, user.id, unlockToken);
+      const friendId = typeof body.friendId === 'string' ? body.friendId : '';
+      const whatsapp = typeof body.whatsappE164 === 'string' ? body.whatsappE164.trim() : '';
+      if (friendId) {
+        await admin.from('friends').delete().eq('owner_id', user.id).eq('id', friendId);
+      }
+      if (whatsapp) {
+        await admin.from('friends').delete().eq('owner_id', user.id).eq('whatsapp_e164', whatsapp);
+      }
+      return reply(request, { ok: true });
     }
 
     if (action === 'pin/create') {

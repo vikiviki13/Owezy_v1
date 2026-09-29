@@ -152,4 +152,18 @@ describe('re-adding a friend whose profile was deleted', () => {
     expect(result.successes).toHaveLength(0);
     expect(result.failures[0].reason).toBe('Name and a valid WhatsApp number are required.');
   });
+
+  it('synthesizes the friend locally if the server rejects with duplicate number and reclaim fails', async () => {
+    reclaimConfirmedFriend.mockRejectedValue(new SecurityServiceError('friend_reclaim_failed', 'This friend could not be restored.'));
+    readRow.mockResolvedValue({ data: null, error: { code: '42501', message: 'permission denied for table friends' } });
+    importConfirmedFriends.mockResolvedValue(rejectedAsDuplicate());
+
+    const result = await createImportedFriendsBatch(input);
+
+    expect(result.failures).toHaveLength(0);
+    expect(result.successes).toHaveLength(1);
+    expect(result.successes[0].friend.name).toBe('Arun');
+    expect(result.successes[0].friend.whatsapp_e164).toBe(NUMBER);
+    expect(listFriends().some((f) => f.name === 'Arun')).toBe(true);
+  });
 });

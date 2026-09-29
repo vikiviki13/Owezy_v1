@@ -271,6 +271,18 @@ export async function reclaimConfirmedFriend<TRow = Record<string, unknown>>(
   return invoke<{ row: TRow }>('friends/reclaim', { friend }, userId);
 }
 
+// Removes a friend's row from the server table when their profile is deleted.
+// Runs on the service role inside the Edge Function.
+export async function deleteServerFriend(friendId: string, whatsapp?: string): Promise<void> {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+    await invoke('friends/delete', { friendId, whatsappE164: whatsapp || undefined }, userData.user.id);
+  } catch {
+    // Non-fatal if offline or security service not reachable
+  }
+}
+
 export async function touchUnlockSession(userId: string) {
   markActive(userId);
   if (getUnlockGrant(userId)) await invoke('lock/touch', {}, userId);

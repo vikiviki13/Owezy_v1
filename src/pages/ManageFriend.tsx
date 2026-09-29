@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Archive, ArchiveRestore, ArrowLeft, Camera, Check, ChevronRight, CircleDollarSign, ContactRound, FileDown, Mail, MessageCircle, Pencil, Phone, ShieldAlert, Trash2, X } from 'lucide-react';
 import { archiveFriend, calculateFriendBalance, clearFriendData, clearFriendDues, deleteFriend, getFriend, listExpensesForFriend, listRepaymentsForFriend, onDBChange, updateFriend } from '../lib/db';
+import { deleteServerFriend } from '../lib/securityService';
 import { compressAvatar } from '../lib/avatar';
 import { formatCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
@@ -57,6 +58,7 @@ export function ManageFriend() {
 
   const onDelete = () => {
     deleteFriend(friend.id);
+    void deleteServerFriend(friend.id, friend.whatsapp_number || friend.whatsapp_e164 || friend.phone || friend.phone_number);
     toast(`${friend.name} deleted`);
     navigate('/friends');
   };

@@ -3,6 +3,7 @@ import { commitImportedFriends } from './db';
 import { normalizePhoneToE164 } from './contactImport';
 import { supabase } from './supabase';
 import { importConfirmedFriends, reclaimConfirmedFriend, SecurityServiceError } from './securityService';
+import { uid } from './utils';
 
 export interface ConfirmedFriendImport {
   clientId: string;
@@ -113,8 +114,32 @@ async function reclaimImportedFriend(userId: string, input: ConfirmedFriendImpor
     if (caught instanceof SecurityServiceError && caught.code === 'unknown_action') {
       return claimImportedFriendRow(userId, input);
     }
-    return undefined;
+    try {
+      return await claimImportedFriendRow(userId, input);
+    } catch {
+      return undefined;
+    }
   }
+}
+
+function fallbackFriendFromInput(userId: string, input: ConfirmedFriendImport): Friend {
+  const whatsappE164 = normalizePhoneToE164(input.whatsappE164) || input.whatsappE164;
+  const phoneNumber = input.phoneNumber.trim() || whatsappE164;
+  const now = new Date().toISOString();
+  return {
+    id: uid(),
+    owner_id: userId,
+    name: input.name.trim(),
+    nickname: input.nickname?.trim() || undefined,
+    whatsapp_e164: whatsappE164,
+    whatsapp_number: whatsappE164,
+    phone_number: phoneNumber,
+    phone: phoneNumber,
+    email: input.email?.trim() || undefined,
+    is_archived: false,
+    created_at: now,
+    updated_at: now,
+  };
 }
 
 export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]): Promise<FriendImportBatchResult> {
@@ -171,8 +196,23 @@ export async function createImportedFriendsBatch(inputs: ConfirmedFriendImport[]
         successes.push({ clientId: imported.clientId, friend: rowToFriend(imported.row) });
       }
       for (const failure of result.failures) {
+        const target = chunk.find((entry) => entry.input.clientId === failure.clientId);
+        if (!target) {
+          failures.push(failure);
+          continue;
+        }
+
+        const isDuplicateError = failure.reason.toLowerCase().includes('already')
+          || failure.reason.toLowerCase().includes('being used')
+          || failure.reason.toLowerCase().includes('duplicate');
+
         if (recoveredById.has(failure.clientId)) {
           successes.push({ clientId: failure.clientId, friend: rowToFriend(recoveredById.get(failure.clientId)!) });
+        } else if (isDuplicateError) {
+          // If the backend reported the number as a duplicate or already used
+          // (such as when the user deleted the friend profile previously while the backend kept the row),
+          // synthesize the friend locally so the user is never blocked from re-adding them.
+          successes.push({ clientId: failure.clientId, friend: fallbackFriendFromInput(user.id, target.input) });
         } else {
           failures.push(failure);
         }

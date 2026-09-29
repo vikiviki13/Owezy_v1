@@ -8,7 +8,7 @@ import type { StoredDoc } from '../services/sync/conflictResolver';
 import { clearSyncQueue } from '../services/sync/syncQueue';
 import { readPrivateData, SecurityServiceError } from './securityService';
 import { compressAvatar, dataUrlBytes, isDataAvatar } from './avatar';
-import { updateFriend, updateProfile } from './db';
+import { updateFriend, updateProfile, dedupeFriendsByNumber } from './db';
 
 const RUNTIME_DB_KEY = 'tab_db_session_v2';
 const LEGACY_DB_KEY = 'tab_db_v1';
@@ -190,6 +190,13 @@ export async function initializeCloudData(user: User, legacyDecision?: LegacyMig
   // triggers re-fetch on their own.
   await shrinkStoredAvatars();
   await initializeSync(user.id, serverData as StoredDoc | null);
+  // The `friends` table is unique on (owner_id, whatsapp_e164), so the same
+  // person stored twice under different ids can only come from the client.
+  // Collapse those records on load: each duplicate makes the import screen
+  // report that number as already added while offering no way to add or
+  // remove it. History is repointed at the surviving record, so nothing is
+  // lost, and the removals sync to the account's other devices.
+  dedupeFriendsByNumber();
 }
 
 export function stopCloudData() {
