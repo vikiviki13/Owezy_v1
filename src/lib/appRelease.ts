@@ -9,25 +9,34 @@ export interface ReleaseNote {
 export const RELEASE_NOTES: ReleaseNote[] = [
   {
     version: '1.1.0',
+    date: '2026-09-30',
     notes: [
-      'New update notifications — you\u2019ll be asked to install every new version right in the app',
-      'Fixed App Lock appearing for people who never enabled it',
-      'More reliable friend balances, repayment tracking and statement history',
+      'Contact Import — easily import phone contacts with duplicate detection and batch select',
+      'Manage Friend — edit friend profiles, settle dues, archive or delete contacts',
+      'Offline-first sync with automatic cloud backup and conflict resolution',
+      'Statements & Export — generate PDF/CSV statements and share directly via WhatsApp',
+      'Enhanced App Lock security — protect your financial records with PIN or biometric passkeys',
+      'Animated splash screen for app startup, reloads, and updates',
     ],
   },
   {
     version: '1.0.0',
+    date: '2026-08-10',
     notes: [
-      'Expense dates — pick any past date when adding an expense',
-      'WhatsApp message preview after saving an expense',
-      'Manage Friend — edit profile, clear all dues, archive or delete',
-      'Improved App Lock security',
+      'Expense dates — pick any past date when recording an expense',
+      'Flexible expense splitting — equal, unequal, and percentage splits with category tagging',
+      'WhatsApp message previews — preview and send reminders with one tap',
+      'Offline-first architecture with local cache and secure cloud sync',
     ],
   },
 ];
 
+export function getReleaseNotesForVersion(version: string): ReleaseNote | undefined {
+  return RELEASE_NOTES.find((item) => compareVersions(item.version, version) === 0);
+}
+
 export function latestReleaseNotes(): ReleaseNote | undefined {
-  return RELEASE_NOTES[0];
+  return getReleaseNotesForVersion(APP_VERSION) || RELEASE_NOTES[0];
 }
 
 // When set to a version number, users on any earlier version get a blocking
@@ -35,8 +44,8 @@ export function latestReleaseNotes(): ReleaseNote | undefined {
 export const REQUIRED_UPDATE_FROM_VERSION: string | undefined = undefined;
 
 export function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
+  const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0);
   const len = Math.max(pa.length, pb.length);
   for (let i = 0; i < len; i++) {
     const x = pa[i] || 0;

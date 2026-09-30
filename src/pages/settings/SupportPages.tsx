@@ -55,8 +55,8 @@ export function AboutSettings() {
     try {
       const result = await checkForAppUpdate();
       if (result === 'unsupported') toast('Updates are managed by your browser');
-      else if (result === 'update-found') toast('New update available');
-      else toast("You're up to date");
+      else if (result === 'update-found') toast('Update is available');
+      else toast(`You're up to date (v${APP_VERSION})`);
     } catch {
       toast('Could not check for updates. Check your connection and try again.');
     } finally {
@@ -72,7 +72,7 @@ export function AboutSettings() {
       </button>
     </SettingsSection>
     {release && (
-      <SettingsSection title={`What's New in ${release.version}`}>
+      <SettingsSection title={`What's New in v${release.version}`}>
         <ul className="px-4 py-4 flex flex-col gap-2">
           {release.notes.map((note) => (
             <li key={note} className="flex items-start gap-2 text-sm text-[var(--color-text-secondary)]">

@@ -1,3 +1,5 @@
+import { APP_VERSION, compareVersions } from '../lib/appRelease';
+
 export interface GitHubRelease {
   tag_name: string;
   name: string;
@@ -12,22 +14,38 @@ export interface GitHubReleaseNote {
   bugsFixed: string[];
 }
 
-const REPO_OWNER = 'anomalyco';
+const REPO_OWNER = 'vikiviki13';
 const REPO_NAME = 'Owezy_v1';
 
-const CHECK_INTERVAL_MS = 1 * 60 * 1000;
-
+const CHECK_INTERVAL_MS = 15 * 60 * 1000;
 const CHECKED_KEY = 'gh_release_checked_at';
+const NOTIFIED_VERSION_KEY = 'gh_release_notified_version';
+
+function getLocalStore(): Storage | null {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      return window.localStorage;
+    }
+  } catch {
+    // Ignore restricted access
+  }
+  return null;
+}
 
 function isFreshCheck(): boolean {
-  const checked = localStorage.getItem(CHECKED_KEY);
+  const store = getLocalStore();
+  if (!store) return false;
+  const checked = store.getItem(CHECKED_KEY);
   if (!checked) return false;
   const age = Date.now() - Number(checked);
   return age < CHECK_INTERVAL_MS;
 }
 
 function markChecked(): void {
-  localStorage.setItem(CHECKED_KEY, String(Date.now()));
+  const store = getLocalStore();
+  if (store) {
+    store.setItem(CHECKED_KEY, String(Date.now()));
+  }
 }
 
 export async function getLatestGitHubRelease(): Promise<GitHubRelease | null> {
@@ -53,7 +71,7 @@ export function parseReleaseNotes(release: GitHubRelease): GitHubReleaseNote {
 
   let section = '';
   for (const line of lines) {
-    if (line.startsWith('## ')) {
+    if (line.startsWith('## ') || line.startsWith('### ')) {
       section = line.toLowerCase();
       continue;
     }
@@ -63,7 +81,7 @@ export function parseReleaseNotes(release: GitHubRelease): GitHubReleaseNote {
 
       if (section.includes('bug') || section.includes('fix') || text.toLowerCase().includes('fix')) {
         bugsFixed.push(text);
-      } else if (section.includes('change') || section.includes('update') || section.includes('new') || section === '') {
+      } else if (section.includes('change') || section.includes('update') || section.includes('new') || section.includes('feature') || section === '') {
         changes.push(text);
       }
     }
@@ -76,8 +94,8 @@ export function parseReleaseNotes(release: GitHubRelease): GitHubReleaseNote {
   return {
     version: release.tag_name.replace(/^v/, ''),
     date,
-    changes: changes.filter((c) => c).slice(0, 5),
-    bugsFixed: bugsFixed.filter((b) => b).slice(0, 5),
+    changes: changes.filter((c) => c).slice(0, 6),
+    bugsFixed: bugsFixed.filter((b) => b).slice(0, 6),
   };
 }
 
@@ -92,12 +110,27 @@ export async function checkForGitHubUpdates(
   markChecked();
 
   const notes = parseReleaseNotes(release);
-  const hasUpdates = notes.changes.length > 0 || notes.bugsFixed.length > 0;
 
+  // Strictly verify that the GitHub release is newer than the running version
+  if (compareVersions(notes.version, APP_VERSION) <= 0) {
+    return null;
+  }
+
+  // Avoid notifying repeatedly for the same version
+  const store = getLocalStore();
+  const lastNotified = store?.getItem(NOTIFIED_VERSION_KEY);
+  if (lastNotified === notes.version) {
+    return null;
+  }
+
+  const hasUpdates = notes.changes.length > 0 || notes.bugsFixed.length > 0;
   if (hasUpdates) {
-    let message = `New update available: ${notes.version}`;
-    if (notes.bugsFixed.length > 0) {
-      message += ` - ${notes.bugsFixed.length} bug fix(es)`;
+    store?.setItem(NOTIFIED_VERSION_KEY, notes.version);
+    let message = `Update is available: v${notes.version}`;
+    if (notes.changes.length > 0) {
+      message += ` — ${notes.changes[0]}`;
+    } else if (notes.bugsFixed.length > 0) {
+      message += ` — ${notes.bugsFixed.length} bug fix${notes.bugsFixed.length > 1 ? 'es' : ''}`;
     }
     notify(message);
   }
@@ -106,5 +139,7 @@ export async function checkForGitHubUpdates(
 }
 
 export function clearGitHubCheckCache(): void {
-  localStorage.removeItem(CHECKED_KEY);
+  const store = getLocalStore();
+  store?.removeItem(CHECKED_KEY);
+  store?.removeItem(NOTIFIED_VERSION_KEY);
 }

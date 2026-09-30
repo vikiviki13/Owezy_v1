@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { CheckCircle2, LoaderCircle, RefreshCw, Sparkles, WifiOff, X } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
-import { APP_VERSION, isRequiredUpdate, latestReleaseNotes } from '../lib/appRelease';
+import { APP_VERSION, getReleaseNotesForVersion, isRequiredUpdate, latestReleaseNotes } from '../lib/appRelease';
+import { checkRemoteUpdate, RemoteReleaseInfo } from '../services/appUpdateService';
 
 type UpdatePhase = 'idle' | 'updating' | 'failed';
 
-const CHECK_INTERVAL_MS = 45 * 60 * 1000;
+const CHECK_INTERVAL_MS = 15 * 60 * 1000;
 
 export function AppUpdatePrompt() {
   const {
@@ -18,10 +19,15 @@ export function AppUpdatePrompt() {
   const [phase, setPhase] = useState<UpdatePhase>('idle');
   const [showNotes, setShowNotes] = useState(true);
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [remoteUpdate, setRemoteUpdate] = useState<RemoteReleaseInfo | null>(null);
+  const [dismissedVersion, setDismissedVersion] = useState<string | null>(() => {
+    try {
+      return sessionStorage.getItem('dismissed_update_version');
+    } catch {
+      return null;
+    }
+  });
   const refreshingRef = useRef(false);
-
-  // Keep the app usable while the new service worker waits in the background.
-  const required = isRequiredUpdate(APP_VERSION);
 
   const checkForUpdate = useCallback(() => {
     if ('serviceWorker' in navigator) {
@@ -31,23 +37,47 @@ export function AppUpdatePrompt() {
     }
   }, []);
 
+  const checkAllUpdates = useCallback(async () => {
+    checkForUpdate();
+    try {
+      const res = await checkRemoteUpdate(APP_VERSION);
+      if (res?.hasUpdate) {
+        setRemoteUpdate(res);
+      }
+    } catch {
+      // Ignore network errors on passive check
+    }
+  }, [checkForUpdate]);
+
+  // Run update check when app opens, on visibility change, and on interval
   useEffect(() => {
-    const handleOnline = () => setOnline(true);
+    const timer = window.setTimeout(() => {
+      void checkAllUpdates();
+    }, 50);
+
+    const handleOnline = () => {
+      setOnline(true);
+      void checkAllUpdates();
+    };
     const handleOffline = () => setOnline(false);
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-    const interval = window.setInterval(checkForUpdate, CHECK_INTERVAL_MS);
+
+    const interval = window.setInterval(checkAllUpdates, CHECK_INTERVAL_MS);
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') checkForUpdate();
+      if (document.visibilityState === 'visible') void checkAllUpdates();
     };
     document.addEventListener('visibilitychange', handleVisibility);
+
     return () => {
+      window.clearTimeout(timer);
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [checkForUpdate]);
+  }, [checkAllUpdates]);
 
   // Once the new service worker takes control, reload to run the latest build.
   useEffect(() => {
@@ -61,6 +91,18 @@ export function AppUpdatePrompt() {
     return () => navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
   }, []);
 
+  const isSWUpdate = needRefresh;
+  const isRemoteNewer = Boolean(remoteUpdate?.hasUpdate && remoteUpdate.version !== APP_VERSION);
+  const isDismissed = !isSWUpdate && isRemoteNewer && dismissedVersion === remoteUpdate?.version;
+  const hasUpdate = (isSWUpdate || isRemoteNewer) && !isDismissed;
+
+  const required = isRequiredUpdate(APP_VERSION) || remoteUpdate?.required === true;
+
+  const targetVersion = remoteUpdate?.version || (needRefresh ? 'Latest' : APP_VERSION);
+  const incomingNotes = (remoteUpdate?.notes && remoteUpdate.notes.length > 0)
+    ? remoteUpdate.notes
+    : getReleaseNotesForVersion(targetVersion)?.notes || latestReleaseNotes()?.notes;
+
   async function applyUpdate() {
     if (!online) return;
     setPhase('updating');
@@ -68,8 +110,21 @@ export function AppUpdatePrompt() {
     // Flag the next page load so the boot splash shows "Applying update…".
     try { sessionStorage.setItem('tab_boot_mode', 'updating'); } catch { /* ignore */ }
     try {
-      await updateServiceWorker(true);
-      // controllerchange listener reloads once the new worker activates.
+      if (needRefresh) {
+        await updateServiceWorker(true);
+      } else {
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg?.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else {
+            await reg?.update();
+          }
+        }
+        window.setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
     } catch {
       try { sessionStorage.removeItem('tab_boot_mode'); } catch { /* ignore */ }
       setPhase('failed');
@@ -78,6 +133,12 @@ export function AppUpdatePrompt() {
 
   function dismiss() {
     setNeedRefresh(false);
+    if (remoteUpdate?.version) {
+      try {
+        sessionStorage.setItem('dismissed_update_version', remoteUpdate.version);
+        setDismissedVersion(remoteUpdate.version);
+      } catch { /* ignore */ }
+    }
     setShowNotes(false);
     setPhase('idle');
   }
@@ -96,7 +157,7 @@ export function AppUpdatePrompt() {
     return undefined;
   }, [phase]);
 
-  if (offlineReady && !needRefresh) {
+  if (offlineReady && !hasUpdate) {
     return (
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm">
         <div className="flex items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-xl">
@@ -112,10 +173,10 @@ export function AppUpdatePrompt() {
     );
   }
 
-  if (!needRefresh) return null;
+  if (!hasUpdate) return null;
 
-  // Critical updates are always shown. The informational "new update available"
-  // prompt respects the App Updates toggle in settings.
+  // Critical updates are always shown. The informational update prompt respects
+  // the App Updates toggle in settings.
   if (!required && !preferences.app_updates_enabled) return null;
 
   if (required) {
@@ -133,6 +194,22 @@ export function AppUpdatePrompt() {
                 ? 'This will only take a moment.'
                 : 'Please update Owezy to continue securely.'}
           </p>
+
+          {incomingNotes && incomingNotes.length > 0 && (
+            <div className="mt-4 rounded-xl bg-[var(--color-surface-secondary)] p-3 text-left">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
+                <Sparkles size={12} /> Features in {targetVersion.startsWith('v') ? targetVersion : `v${targetVersion}`}
+              </p>
+              <ul className="mt-1.5 flex flex-col gap-1">
+                {incomingNotes.map((note) => (
+                  <li key={note} className="text-xs leading-5 text-[var(--color-text-secondary)] flex gap-1.5">
+                    <span className="text-[var(--color-primary)]">•</span>{note}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {phase === 'failed' ? (
             <button onClick={() => setPhase('idle')} className="w-full min-h-12 rounded-xl bg-[var(--color-primary)] text-white font-semibold mt-6">Try Again</button>
           ) : (
@@ -184,21 +261,23 @@ export function AppUpdatePrompt() {
                 <RefreshCw size={17} />
               </span>
               <div className="flex-1">
-                <p className="font-semibold text-sm">New update available</p>
-                <p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-0.5">A newer version of Owezy is ready with the latest improvements and fixes.</p>
+                <p className="font-semibold text-sm">Update is available</p>
+                <p className="text-xs leading-5 text-[var(--color-text-secondary)] mt-0.5">
+                  A new version of Owezy is ready with new features and improvements.
+                </p>
               </div>
               <button onClick={dismiss} aria-label="Dismiss" className="size-8 rounded-full grid place-items-center hover:bg-[var(--color-surface-secondary)]">
                 <X size={16} className="text-[var(--color-text-muted)]" />
               </button>
             </div>
 
-            {showNotes && latestReleaseNotes() && (
+            {showNotes && incomingNotes && incomingNotes.length > 0 && (
               <div className="mt-3 rounded-xl bg-[var(--color-surface-secondary)] p-3">
                 <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">
-                  <Sparkles size={12} /> What's New in {latestReleaseNotes()!.version}
+                  <Sparkles size={12} /> What's New in {targetVersion.startsWith('v') ? targetVersion : `v${targetVersion}`}
                 </p>
                 <ul className="mt-1.5 flex flex-col gap-1">
-                  {latestReleaseNotes()!.notes.map((note) => (
+                  {incomingNotes.map((note) => (
                     <li key={note} className="text-xs leading-5 text-[var(--color-text-secondary)] flex gap-1.5">
                       <span className="text-[var(--color-primary)]">•</span>{note}
                     </li>
@@ -221,9 +300,11 @@ export function AppUpdatePrompt() {
                 <WifiOff size={13} /> Connect to the internet to install the latest version.
               </p>
             ) : (
-              <button onClick={() => setShowNotes((v) => !v)} className="w-full text-center text-xs font-medium text-[var(--color-primary)] mt-3 min-h-8">
-                {showNotes ? 'Hide' : 'What\u2019s New'}
-              </button>
+              incomingNotes && incomingNotes.length > 0 && (
+                <button onClick={() => setShowNotes((v) => !v)} className="w-full text-center text-xs font-medium text-[var(--color-primary)] mt-3 min-h-8">
+                  {showNotes ? 'Hide' : 'What\u2019s New'}
+                </button>
+              )
             )}
           </>
         )}
@@ -231,4 +312,3 @@ export function AppUpdatePrompt() {
     </div>
   );
 }
-

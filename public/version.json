@@ -1,0 +1,13 @@
+{
+  "version": "1.1.0",
+  "buildDate": "2026-09-30",
+  "notes": [
+    "Contact Import — easily import phone contacts with duplicate detection and batch select",
+    "Manage Friend — edit friend profiles, settle dues, archive or delete contacts",
+    "Offline-first sync with automatic cloud backup and conflict resolution",
+    "Statements & Export — generate PDF/CSV statements and share directly via WhatsApp",
+    "Enhanced App Lock security — protect your financial records with PIN or biometric passkeys",
+    "Animated splash screen for app startup, reloads, and updates"
+  ],
+  "required": false
+}
