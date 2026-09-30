@@ -367,6 +367,24 @@ html.privacy-mode body::after {
   animation: nav-enter-prev 200ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
+/* Modern app opening entrance animation */
+#root {
+  animation: app-opening-reveal 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes app-opening-reveal {
+  0% {
+    opacity: 0.85;
+    transform: scale(0.985);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

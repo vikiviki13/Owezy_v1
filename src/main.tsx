@@ -26,6 +26,6 @@ function dismissBootSplash() {
   window.setTimeout(() => {
     boot.remove()
     try { sessionStorage.removeItem('tab_boot_mode') } catch { /* ignore */ }
-  }, 450)
+  }, 520)
 }
 requestAnimationFrame(dismissBootSplash)
