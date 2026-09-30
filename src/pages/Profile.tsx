@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  Bell, CalendarDays, ChevronRight, CircleHelp, Database, Download, Fingerprint,
+  Activity, Bell, CalendarDays, ChevronRight, CircleHelp, Database, Download, Fingerprint,
   BarChart3, Languages, LogOut, Moon, ReceiptText, RefreshCw, Share2, ShieldCheck, Smartphone, WalletCards, Info,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -10,7 +10,7 @@ import { SettingsRow, SettingsSection } from '../components/SettingsUI';
 import { usePreferences } from '../components/PreferencesContext';
 import { useToast } from '../components/ToastContext';
 import { flushCloudData } from '../lib/cloudData';
-import { getProfile, onDBChange } from '../lib/db';
+import { getProfile, onDBChange, listExpenses, listAllRepayments } from '../lib/db';
 import { currencySymbol, formatDateTime, nowTime, todayDate } from '../lib/utils';
 import { supabase } from '../lib/supabase';
 import { t } from '../lib/i18n';
@@ -25,6 +25,8 @@ export function Profile() {
   const toast = useToast();
 
   useEffect(() => onDBChange(() => setProfile({ ...getProfile() })), []);
+
+  const totalActivities = listExpenses().length + listAllRepayments().length;
 
   async function signOut() {
     setSigningOut(true);
@@ -45,7 +47,7 @@ export function Profile() {
     <div className="px-4 pt-6 pb-10 safe-top">
       <h1 className="text-xl font-semibold mb-5">{t('profile')}</h1>
 
-      <section className="flex items-center gap-4 py-2 mb-7">
+      <section className="flex items-center gap-4 py-2 mb-6">
         <Avatar name={profile.full_name} src={profile.avatar_url} size={72} />
         <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold truncate">{profile.full_name}</h2>
@@ -54,6 +56,32 @@ export function Profile() {
           <Link to="/profile/edit" className="inline-flex items-center gap-1 mt-2 text-sm font-semibold text-[var(--color-primary)] min-h-8">{t('editProfile')} <ChevronRight size={15} /></Link>
         </div>
       </section>
+
+      {/* Prominent Activity Card */}
+      <div className="mb-6">
+        <Link
+          to="/activity"
+          className="group relative flex items-center gap-4 p-4 rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-primary)]/50 hover:shadow-md transition-all duration-200"
+        >
+          <div className="size-12 rounded-2xl bg-gradient-to-tr from-[var(--color-primary-soft)] to-emerald-100 dark:to-emerald-950/40 text-[var(--color-primary)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+            <Activity size={24} strokeWidth={2.2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-base text-[var(--color-text-primary)]">Activity & History</span>
+              {totalActivities > 0 && (
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)]">
+                  {totalActivities}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">Track all expense transactions, settlements, and updates</p>
+          </div>
+          <div className="size-8 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)] transition-colors">
+            <ChevronRight size={18} />
+          </div>
+        </Link>
+      </div>
 
       <SettingsSection title={t('preferences')}>
         <SettingsRow icon={WalletCards} title="Currency" value={`${preferences.currency_code} · ${currencySymbol()}`} to="/profile/currency" />

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Activity as ActivityIcon } from 'lucide-react';
+import { ArrowLeft, Search, Activity as ActivityIcon } from 'lucide-react';
 import { listAllRepayments, listExpenses, getFriend, getExpenseParticipants } from '../lib/db';
 import { formatCurrency, formatTime, formatTimestampTime, todayDate } from '../lib/utils';
 import { StatusBadge } from '../components/StatusBadge';
@@ -50,8 +50,18 @@ export function Activity() {
   const groups = groupByDate(items);
 
   return (
-    <div className="px-4 pt-6 safe-top">
-      <h1 className="text-xl font-semibold mb-4">Activity</h1>
+    <div className="px-4 pt-6 pb-8 safe-top">
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          type="button"
+          onClick={() => navigate(-1)}
+          className="size-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+          aria-label="Go back"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <h1 className="text-xl font-semibold">Activity</h1>
+      </div>
       <div className="relative mb-4">
         <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, reason, amount" className="input pl-10" />

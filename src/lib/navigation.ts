@@ -8,7 +8,6 @@
 export const MAIN_NAV_ORDER = [
   { path: '/', label: 'Home' },
   { path: '/friends', label: 'Friends' },
-  { path: '/activity', label: 'Activity' },
   { path: '/groups', label: 'Groups' },
   { path: '/profile', label: 'Profile' },
 ] as const;
