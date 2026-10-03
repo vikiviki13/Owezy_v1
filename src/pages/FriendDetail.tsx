@@ -28,13 +28,17 @@ export function FriendDetail() {
   return (
     <div className="pb-6 safe-top">
       <div className="flex items-center gap-3 px-4 pt-6 mb-5">
-        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <Avatar name={friend.name} size={40} />
         <div className="flex-1 min-w-0">
           <h1 className="font-semibold truncate">{friend.name}</h1>
-          {friend.phone && <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1"><Phone size={11} /> {friend.phone}</p>}
+          {friend.phone && (
+            <a href={`tel:${friend.phone.replace(/[^\d+]/g, '')}`} className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors inline-flex items-center gap-1 mt-0.5">
+              <Phone size={11} /> {friend.phone}
+            </a>
+          )}
         </div>
         <button
           onClick={() => navigate(`/friends/${friend.id}/manage`)}
@@ -46,13 +50,33 @@ export function FriendDetail() {
       </div>
 
       <div className="px-4">
-        <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-5">
-          <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">Net balance</p>
-          <p className={`text-3xl font-extrabold mt-1 amount-tabular ${balance.netBalance >= 0 ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-primary)]'}`}>
+        <div className="rounded-3xl bg-[var(--color-surface)] border border-[var(--color-border)] p-5 mb-5 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs uppercase tracking-wide text-[var(--color-text-muted)] font-medium">Net balance</p>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+              balance.netBalance > 0
+                ? 'bg-[var(--color-primary-soft)] text-[var(--color-primary)]'
+                : balance.netBalance < 0
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-muted)]'
+            }`}>
+              {balance.netBalance > 0 ? 'They owe you' : balance.netBalance < 0 ? 'You owe them' : 'Settled up'}
+            </span>
+          </div>
+          <p className={`text-3xl font-extrabold mt-1 amount-tabular ${
+            balance.netBalance > 0
+              ? 'text-[var(--color-primary)]'
+              : balance.netBalance < 0
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-[var(--color-text-primary)]'
+          }`}>
             {formatCurrency(Math.abs(balance.netBalance))}
           </p>
-          <div className="mt-2 flex gap-3 text-xs text-[var(--color-text-muted)]"><span>They owe you {formatCurrency(balance.theyOweMe)}</span><span>I owe them {formatCurrency(balance.iOweThem)}</span></div>
-          <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="mt-2 flex gap-4 text-xs text-[var(--color-text-muted)]">
+            <span>They owe: <strong className="text-[var(--color-text-primary)] amount-tabular">{formatCurrency(balance.theyOweMe)}</strong></span>
+            <span>You owe: <strong className="text-[var(--color-text-primary)] amount-tabular">{formatCurrency(balance.iOweThem)}</strong></span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-[var(--color-border)]/60">
             <ActionBtn icon={<Receipt size={16} />} label="Add Expense" onClick={() => navigate(`/add-expense?friend=${friend.id}`)} />
             <ActionBtn icon={<HandCoins size={16} />} label="Repayment" onClick={() => navigate(`/record-repayment?friend=${friend.id}`)} />
             <ActionBtn icon={<Share2 size={16} />} label="Statement" onClick={() => navigate(`/statement/${friend.id}`)} />
@@ -78,8 +102,8 @@ export function FriendDetail() {
             <div className="grid grid-cols-2 gap-3">
               <Stat label="Total Paid" value={formatCurrency(balance.totalPaidByYou)} />
               <Stat label="Total Repaid" value={formatCurrency(balance.totalRepaid)} />
-              <Stat label="They owe me" value={formatCurrency(balance.theyOweMe)} highlight />
-              <Stat label="I owe them" value={formatCurrency(balance.iOweThem)} />
+              <Stat label="They owe me" value={formatCurrency(balance.theyOweMe)} highlight={balance.theyOweMe > 0} />
+              <Stat label="I owe them" value={formatCurrency(balance.iOweThem)} warning={balance.iOweThem > 0} />
             </div>
             <p className="text-sm font-semibold text-[var(--color-text-secondary)] mt-1">Recent transactions</p>
             <LedgerList ledger={ledger.slice(-5).reverse()} />
@@ -133,18 +157,33 @@ export function FriendDetail() {
 
 function ActionBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-1.5 bg-[var(--color-surface-secondary)] rounded-xl py-3 hover:opacity-80 transition-opacity">
-      <span className="text-[var(--color-primary)]">{icon}</span>
-      <span className="text-[11px] font-medium text-center leading-tight px-1">{label}</span>
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-center gap-1.5 bg-[var(--color-surface-secondary)] rounded-2xl py-3 px-2 hover:bg-[var(--color-primary-soft)] hover:text-[var(--color-primary)] active:scale-95 transition-all duration-200"
+    >
+      <span className="text-[var(--color-primary)] group-hover:scale-110 transition-transform duration-200">{icon}</span>
+      <span className="text-[11px] font-semibold text-center leading-tight px-1 text-[var(--color-text-secondary)] group-hover:text-[var(--color-primary)] transition-colors">{label}</span>
     </button>
   );
 }
 
-function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function Stat({ label, value, highlight, warning }: { label: string; value: string; highlight?: boolean; warning?: boolean }) {
   return (
-    <div className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl p-3 text-center">
-      <p className="text-[11px] text-[var(--color-text-muted)]">{label}</p>
-      <p className={`font-semibold amount-tabular text-sm mt-0.5 ${highlight ? 'text-[var(--color-primary)]' : ''}`}>{value}</p>
+    <div className={`border rounded-2xl p-3.5 text-center transition-all ${
+      highlight
+        ? 'bg-[var(--color-primary-soft)]/50 border-[var(--color-primary)]/30'
+        : warning
+          ? 'bg-amber-500/10 border-amber-500/30'
+          : 'bg-[var(--color-surface)] border-[var(--color-border)]'
+    }`}>
+      <p className="text-[11px] font-medium text-[var(--color-text-muted)] uppercase tracking-wider">{label}</p>
+      <p className={`font-bold amount-tabular text-base mt-1 ${
+        highlight
+          ? 'text-[var(--color-primary)]'
+          : warning
+            ? 'text-amber-600 dark:text-amber-400'
+            : 'text-[var(--color-text-primary)]'
+      }`}>{value}</p>
     </div>
   );
 }

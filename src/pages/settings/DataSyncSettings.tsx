@@ -6,7 +6,7 @@ import { useToast } from '../../components/ToastContext';
 import { getSyncOnMobileData, getSyncSnapshot, setSyncOnMobileData, syncNow } from '../../services/sync/syncManager';
 import { listQueueItems } from '../../services/sync/syncQueue';
 import type { SyncQueueItem, SyncStatusSnapshot } from '../../services/sync/types';
-import { formatTimestamp } from '../../lib/utils';
+import { formatTimestamp, formatCurrency } from '../../lib/utils';
 
 const ENTITY_LABELS: Record<string, string> = {
   profile: 'Profile',
@@ -51,7 +51,7 @@ export function DataSyncSettings() {
             details.set(id, String(record.name ?? ''));
           } else {
             const description = kind === 'repayment' ? 'Settlement' : String(record.description ?? '');
-            const amount = typeof record.amount === 'number' ? `₹${record.amount.toLocaleString('en-IN')}` : '';
+            const amount = typeof record.amount === 'number' ? formatCurrency(record.amount) : '';
             details.set(id, [description, amount].filter(Boolean).join(' — '));
           }
         }

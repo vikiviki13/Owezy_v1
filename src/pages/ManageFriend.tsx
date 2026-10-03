@@ -8,6 +8,7 @@ import { formatCurrency, todayDate } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { BottomSheet } from '../components/BottomSheet';
+import { copyToClipboard } from '../lib/share';
 import { ExpenseCalendar } from '../components/ExpenseCalendar';
 import { expenseDateError, expenseDateLabel, shiftIsoDate } from '../lib/expenseDraft';
 import { PaymentMethod } from '../types';
@@ -72,7 +73,7 @@ export function ManageFriend() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <h1 className="font-semibold text-lg">Manage Friend</h1>
@@ -92,9 +93,9 @@ export function ManageFriend() {
       <Section title="Friend Information">
         <Row icon={<ContactRound size={17} />} title="Edit Profile" subtitle="Photo, name, nickname, contact details" onClick={() => setEditOpen(true)} />
         {whatsapp && <Row icon={<MessageCircle size={17} />} title="WhatsApp Number" subtitle={whatsapp} onClick={() => window.open(`https://wa.me/${whatsapp.replace(/\D/g, '')}`, '_blank', 'noopener,noreferrer')} />}
-        {friend.phone && <Row icon={<Phone size={17} />} title="Phone" subtitle={friend.phone} />}
-        {friend.email && <Row icon={<Mail size={17} />} title="Email" subtitle={friend.email} />}
-        {friend.notes && <Row icon={<Pencil size={17} />} title="Notes" subtitle={friend.notes} />}
+        {friend.phone && <Row icon={<Phone size={17} />} title="Phone" subtitle={friend.phone} onClick={() => window.open(`tel:${friend.phone?.replace(/[^\d+]/g, '')}`, '_self')} />}
+        {friend.email && <Row icon={<Mail size={17} />} title="Email" subtitle={friend.email} onClick={() => window.open(`mailto:${friend.email}`, '_self')} />}
+        {friend.notes && <Row icon={<Pencil size={17} />} title="Notes" subtitle={friend.notes} onClick={async () => { const ok = await copyToClipboard(friend.notes || ''); toast(ok ? 'Notes copied to clipboard' : 'Notes copied'); }} />}
       </Section>
 
       <Section title="Financial">
@@ -409,7 +410,7 @@ function ClearDataScreen({ friendName, onCancel, onConfirm }: { friendName: stri
   return (
     <div className="px-4 pt-6 pb-8 safe-top">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={onCancel} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={onCancel} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <h1 className="font-semibold text-lg">Clear Friend Data</h1>

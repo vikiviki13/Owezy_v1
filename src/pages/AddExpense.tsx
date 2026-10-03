@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Search, Check, ContactRound, LoaderCircle, X, Utensils, Plane, Film, ShoppingBag, Building2, MoreHorizontal, CalendarDays, CheckCircle2, Eye, MessageCircle } from 'lucide-react';
 import { calculateFriendBalance, createFriend, createExpense, listFriends, getGroupMembers } from '../lib/db';
-import { formatCurrency, roundCurrency, todayDate, nowTime } from '../lib/utils';
+import { formatCurrency, roundCurrency, todayDate, nowTime, currencySymbol } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { ExpenseCategory, ExpensePayerType, SplitMode } from '../types';
@@ -271,7 +271,7 @@ export function AddExpense() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top min-h-screen">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => (step === 1 ? navigate(-1) : setStep((s) => (s - 1) as 1 | 2))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => (step === 1 ? navigate(-1) : setStep((s) => (s - 1) as 1 | 2))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <h1 className="font-semibold text-lg">Add Expense</h1>
@@ -361,7 +361,7 @@ export function AddExpense() {
         <div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-2">Total bill amount</p>
           <div className="flex items-center gap-1 mb-6">
-            <span className="text-3xl font-bold text-[var(--color-text-muted)]">₹</span>
+            <span className="text-3xl font-bold text-[var(--color-text-muted)]">{currencySymbol()}</span>
             <input
               autoFocus
               value={total}

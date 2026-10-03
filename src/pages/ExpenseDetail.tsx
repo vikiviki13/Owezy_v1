@@ -53,7 +53,7 @@ export function ExpenseDetail() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <div className="flex-1">

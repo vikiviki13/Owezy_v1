@@ -21,7 +21,7 @@ export function Groups() {
     <div className="px-4 pt-6 safe-top">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">Groups</h1>
-        <button onClick={() => setOpen(true)} className="w-9 h-9 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center">
+        <button onClick={() => setOpen(true)} className="w-9 h-9 rounded-full bg-[var(--color-primary)] text-white flex items-center justify-center" aria-label="Create group">
           <Plus size={18} />
         </button>
       </div>

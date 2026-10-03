@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { updateProfile } from '../lib/db';
 import { useHorizontalSwipe } from '../hooks/useHorizontalSwipe';
+import { currencySymbol } from '../lib/utils';
+import { getPreferenceSnapshot } from '../lib/preferences';
 
 /* ── Illustration for slide 0: "You pay." ── */
 function PayIllustration() {
@@ -726,7 +728,9 @@ export function Onboarding({ onDone }: { onDone: () => void }) {
             {/* Currency note */}
             <div className="flex items-center gap-1.5 mb-5">
               <span className="text-sm text-[var(--color-text-secondary)]">Default currency:</span>
-              <span className="inline-flex items-center bg-[var(--color-primary-soft)] border border-[#d1fae5] rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-[var(--color-primary)]">INR {'\u20B9'}</span>
+              <span className="inline-flex items-center bg-[var(--color-primary-soft)] border border-[#d1fae5] dark:border-emerald-900/50 rounded-full px-2.5 py-0.5 text-[13px] font-semibold text-[var(--color-primary)]">
+                {getPreferenceSnapshot().currency_code} {currencySymbol()}
+              </span>
             </div>
 
             {/* Actions */}

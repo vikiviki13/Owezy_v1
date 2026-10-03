@@ -54,7 +54,7 @@ export function BugReportPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="your@email.com"
-            className="w-full bg-[var(--color-surface-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
+            className="w-full bg-[var(--color-surface-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
           />
         </div>
       </SettingsSection>
@@ -67,7 +67,7 @@ export function BugReportPage() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="What went wrong? What were you doing when it happened?"
             rows={5}
-            className="w-full bg-[var(--color-surface-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-sm text-[var(--color-text)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
+            className="w-full bg-[var(--color-surface-secondary)] border border-[var(--color-border)] rounded-xl px-3 py-2 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] resize-none"
           />
           <p className="text-xs text-[var(--color-text-muted)] mt-1">{description.length}/500 characters</p>
         </div>
@@ -98,17 +98,19 @@ export function BugReportPage() {
       </SettingsSection>
 
       <SettingsSection title="Send Report">
-        <button
-          onClick={handleSubmit}
-          disabled={!isFormValid}
-          className="w-full min-h-12 px-4 bg-[var(--color-primary)] text-white font-semibold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          <Send size={16} />
-          <span>Send via WhatsApp</span>
-        </button>
-        <p className="text-center text-xs text-[var(--color-text-muted)] mt-3">
-          This will redirect to WhatsApp Web or app. No data is stored on our servers.
-        </p>
+        <div className="p-4">
+          <button
+            onClick={handleSubmit}
+            disabled={!isFormValid}
+            className="w-full min-h-12 px-4 bg-[var(--color-primary)] text-white font-semibold rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 active:scale-[0.99] transition-transform"
+          >
+            <Send size={16} />
+            <span>Send via WhatsApp</span>
+          </button>
+          <p className="text-center text-xs text-[var(--color-text-muted)] mt-3">
+            This will redirect to WhatsApp Web or app. No data is stored on our servers.
+          </p>
+        </div>
       </SettingsSection>
     </SettingsPage>
   );

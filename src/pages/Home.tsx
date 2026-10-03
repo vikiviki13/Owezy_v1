@@ -124,9 +124,16 @@ export function Home() {
 
 function QuickAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className="flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl py-4 hover:border-[var(--color-primary)] transition-colors">
-      <div className="w-9 h-9 rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center">{icon}</div>
-      <span className="text-xs font-medium text-center px-1">{label}</span>
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-2xl py-4 shadow-sm hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-95 transition-all duration-200"
+    >
+      <div className="w-10 h-10 rounded-full bg-[var(--color-primary-soft)] text-[var(--color-primary)] flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
+        {icon}
+      </div>
+      <span className="text-xs font-semibold text-center px-1 text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+        {label}
+      </span>
     </button>
   );
 }

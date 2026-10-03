@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check } from 'lucide-react';
 import { calculateFriendBalance, listExpensesForFriend, listFriends, recordRepayment, getExpenseParticipants } from '../lib/db';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, currencySymbol } from '../lib/utils';
 import { Avatar } from '../components/Avatar';
 import { useToast } from '../components/ToastContext';
 import { PaymentMethod } from '../types';
@@ -56,7 +56,7 @@ export function RecordRepayment() {
     return (
       <div className="px-4 pt-6 safe-top">
         <div className="flex items-center gap-3 mb-6">
-          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+          <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
             <ArrowLeft size={18} />
           </button>
           <h1 className="font-semibold text-lg">Record Repayment</h1>
@@ -87,7 +87,7 @@ export function RecordRepayment() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => setPickerOpen(true)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center">
+        <button onClick={() => setPickerOpen(true)} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Choose friend">
           <ArrowLeft size={18} />
         </button>
         <Avatar name={friend?.name || ''} size={36} />
@@ -104,7 +104,7 @@ export function RecordRepayment() {
 
       <p className="text-sm text-[var(--color-text-secondary)] mb-2">{direction === 'to_friend' ? 'Amount paid' : 'Amount received'}</p>
       <div className="flex items-center gap-1 mb-2">
-        <span className="text-3xl font-bold text-[var(--color-text-muted)]">₹</span>
+        <span className="text-3xl font-bold text-[var(--color-text-muted)]">{currencySymbol()}</span>
         <input
           autoFocus
           value={amount}
