@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { CheckCircle2, LoaderCircle, RefreshCw, Sparkles, WifiOff, X } from 'lucide-react';
 import { usePreferences } from './PreferencesContext';
-import { APP_VERSION, getReleaseNotesForVersion, isRequiredUpdate, latestReleaseNotes } from '../lib/appRelease';
+import { APP_VERSION, compareVersions, getReleaseNotesForVersion, isRequiredUpdate, latestReleaseNotes } from '../lib/appRelease';
 import { checkRemoteUpdate, RemoteReleaseInfo } from '../services/appUpdateService';
 
 type UpdatePhase = 'idle' | 'updating' | 'failed';
@@ -17,12 +17,12 @@ export function AppUpdatePrompt() {
   } = useRegisterSW();
   const { preferences } = usePreferences();
   const [phase, setPhase] = useState<UpdatePhase>('idle');
-  const [showNotes, setShowNotes] = useState(true);
+  const [showNotes, setShowNotes] = useState(false);
   const [online, setOnline] = useState(() => navigator.onLine);
   const [remoteUpdate, setRemoteUpdate] = useState<RemoteReleaseInfo | null>(null);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(() => {
     try {
-      return sessionStorage.getItem('dismissed_update_version');
+      return localStorage.getItem('dismissed_update_version');
     } catch {
       return null;
     }
@@ -92,8 +92,19 @@ export function AppUpdatePrompt() {
   }, []);
 
   const isSWUpdate = needRefresh;
-  const isRemoteNewer = Boolean(remoteUpdate?.hasUpdate && remoteUpdate.version !== APP_VERSION);
-  const isDismissed = !isSWUpdate && isRemoteNewer && dismissedVersion === remoteUpdate?.version;
+  const isRemoteNewer = Boolean(
+    remoteUpdate?.hasUpdate &&
+    remoteUpdate.version &&
+    compareVersions(remoteUpdate.version, APP_VERSION) > 0
+  );
+  // If user previously dismissed this version (or an even newer version), don't prompt again
+  const isDismissed = Boolean(
+    !isSWUpdate &&
+    isRemoteNewer &&
+    dismissedVersion &&
+    remoteUpdate?.version &&
+    compareVersions(dismissedVersion, remoteUpdate.version) >= 0
+  );
   const hasUpdate = (isSWUpdate || isRemoteNewer) && !isDismissed;
 
   const required = isRequiredUpdate(APP_VERSION) || remoteUpdate?.required === true;
@@ -107,6 +118,12 @@ export function AppUpdatePrompt() {
     if (!online) return;
     setPhase('updating');
     setShowNotes(false);
+    if (remoteUpdate?.version) {
+      try {
+        localStorage.setItem('dismissed_update_version', remoteUpdate.version);
+        setDismissedVersion(remoteUpdate.version);
+      } catch { /* ignore */ }
+    }
     // Flag the next page load so the boot splash shows "Applying update…".
     try { sessionStorage.setItem('tab_boot_mode', 'updating'); } catch { /* ignore */ }
     try {
@@ -135,7 +152,7 @@ export function AppUpdatePrompt() {
     setNeedRefresh(false);
     if (remoteUpdate?.version) {
       try {
-        sessionStorage.setItem('dismissed_update_version', remoteUpdate.version);
+        localStorage.setItem('dismissed_update_version', remoteUpdate.version);
         setDismissedVersion(remoteUpdate.version);
       } catch { /* ignore */ }
     }
