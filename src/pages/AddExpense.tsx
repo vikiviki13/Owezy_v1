@@ -59,7 +59,7 @@ export function AddExpense() {
   ]));
   type ExpenseAudience = 'self' | 'friends';
   const [audience, setAudience] = useState<ExpenseAudience>(initialFriendIds.length ? 'friends' : 'self');
-  const [step, setStep] = useState<1 | 2 | 3>(contactHandoff?.newFriendIds.length ? 2 : 1);
+  const [step, setStep] = useState<1 | 2>(contactHandoff?.newFriendIds.length ? 2 : 1);
   const [selected, setSelected] = useState<string[]>(initialFriendIds);
   const [search, setSearch] = useState('');
   const [newFriendName, setNewFriendName] = useState('');
@@ -203,6 +203,8 @@ export function AddExpense() {
             friend,
             amount: participant.share_amount,
             reason,
+            description: purpose.trim() || undefined,
+            category,
             expenseDate: date,
             pendingBalance,
           }),
@@ -223,7 +225,7 @@ export function AddExpense() {
   }
 
   const canProceedStep1 = true;
-  const canProceedStep2 = totalNum > 0 && (splitMode === 'equal' || customDiff === 0);
+  const canSave = totalNum > 0 && (audience === 'self' || splitMode === 'equal' || customDiff === 0);
 
   if (savedExpense) {
     return (
@@ -271,12 +273,12 @@ export function AddExpense() {
   return (
     <div className="px-4 pt-6 pb-8 safe-top min-h-screen">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => (step === 1 ? navigate(-1) : setStep((s) => (s - 1) as 1 | 2))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
+        <button onClick={() => (step === 1 ? navigate(-1) : setStep(1))} className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-border)] flex items-center justify-center" aria-label="Go back">
           <ArrowLeft size={18} />
         </button>
         <h1 className="font-semibold text-lg">Add Expense</h1>
         <div className="ml-auto flex gap-1">
-          {[1, 2, 3].map((n) => (
+          {[1, 2].map((n) => (
             <div key={n} className={`h-1.5 rounded-full transition-all ${n === step ? 'w-6 bg-[var(--color-primary)]' : 'w-1.5 bg-[var(--color-border)]'}`} />
           ))}
         </div>
@@ -296,7 +298,7 @@ export function AddExpense() {
           </div>
 
           {selected.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2 mb-4 sticky top-0 z-10 bg-[var(--color-bg)] py-2 -mt-2">
               {selected.map((id) => {
                 const f = friends.find((x) => x.id === id);
                 if (!f) return null;
@@ -310,17 +312,18 @@ export function AddExpense() {
           )}
 
           <div className="flex flex-col gap-1 mb-4">
-            {filtered.map((f) => (
-              <button key={f.id} onClick={() => toggleFriend(f.id)} className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-[var(--color-surface-secondary)] text-left">
-                <Avatar name={f.name} size={38} />
-                <span className="flex-1 font-medium">{f.name}</span>
-                {selected.includes(f.id) && (
-                  <span className="w-5 h-5 rounded-full bg-[var(--color-primary)] flex items-center justify-center">
-                    <Check size={13} className="text-white" />
+            {filtered.map((f) => {
+              const isSelected = selected.includes(f.id);
+              return (
+                <button key={f.id} onClick={() => toggleFriend(f.id)} className={`flex items-center gap-3 p-2.5 rounded-xl text-left transition-colors ${isSelected ? 'bg-[var(--color-primary-soft)]' : 'hover:bg-[var(--color-surface-secondary)]'}`}>
+                  <Avatar name={f.name} size={38} />
+                  <span className={`flex-1 font-medium ${isSelected ? 'text-[var(--color-primary-hover)]' : ''}`}>{f.name}</span>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${isSelected ? 'bg-[var(--color-primary)]' : 'border-2 border-[var(--color-border)]'}`}>
+                    {isSelected && <Check size={13} className="text-white" />}
                   </span>
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -360,7 +363,7 @@ export function AddExpense() {
       {step === 2 && (
         <div>
           <p className="text-sm text-[var(--color-text-secondary)] mb-2">Total bill amount</p>
-          <div className="flex items-center gap-1 mb-6">
+          <div className="flex items-center gap-1 mb-5">
             <span className="text-3xl font-bold text-[var(--color-text-muted)]">{currencySymbol()}</span>
             <input
               autoFocus
@@ -372,12 +375,36 @@ export function AddExpense() {
             />
           </div>
 
-          <label className="block mb-5">
+          <label className="block mb-4">
             <span className="text-sm font-medium text-[var(--color-text-secondary)]">Expense Name</span>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Barbeque Nation, Taj Hotel, PVR"
+              className="input mt-2"
+            />
+          </label>
+
+          <p className="text-sm text-[var(--color-text-secondary)] mb-2">What was it for?</p>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setCategory(c.key)}
+                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${category === c.key ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
+              >
+                {c.icon}
+                <span className="text-xs font-medium">{c.key}</span>
+              </button>
+            ))}
+          </div>
+
+          <label className="block mb-4">
+            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Purpose / Reason</span>
+            <input
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="e.g. Team lunch, monthly rent, personal dinner"
               className="input mt-2"
             />
           </label>
@@ -462,23 +489,11 @@ export function AddExpense() {
             </div>
           )}
 
-          <button
-            disabled={!canProceedStep2}
-            onClick={() => setStep(3)}
-            className="w-full mt-4 bg-[var(--color-primary)] disabled:opacity-40 text-white font-medium rounded-xl py-3.5"
-          >
-            Continue
-          </button>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div>
           {audience === 'self' ? (
-            <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-5 text-sm text-[var(--color-text-secondary)]">
+            <div className="rounded-xl bg-[var(--color-primary-soft)] p-3 mb-4 text-sm text-[var(--color-text-secondary)]">
               Personal expense · Paid by you · For you
             </div>
-          ) : <p className="text-sm text-[var(--color-text-secondary)] mb-3">Who paid?</p>}
+          ) : <p className="text-sm text-[var(--color-text-secondary)] mb-3 mt-4">Who paid?</p>}
           {audience === 'friends' && <div className="flex gap-2 mb-3">
             {(['me', 'friend', 'multiple'] as ExpensePayerType[]).map((type) => (
               <button key={type} onClick={() => setPayerType(type)} className={`flex-1 rounded-xl py-2 text-xs font-medium capitalize ${payerType === type ? 'bg-[var(--color-primary)] text-white' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'}`}>
@@ -493,7 +508,7 @@ export function AddExpense() {
             </select>
           )}
           {audience === 'friends' && payerType === 'multiple' && (
-            <div className="mb-5 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3">
+            <div className="mb-4 flex flex-col gap-2 rounded-xl border border-[var(--color-border)] p-3">
               <p className="text-xs text-[var(--color-text-muted)]">Enter each payment. The total must equal the bill.</p>
               {[{ id: 'owner', label: 'You' }, ...friends.filter((friend) => selected.includes(friend.id)).map((friend) => ({ id: friend.id, label: friend.name }))].map((payer) => (
                 <div key={payer.id} className="flex items-center justify-between gap-3">
@@ -503,36 +518,13 @@ export function AddExpense() {
               ))}
             </div>
           )}
-          <p className="text-sm text-[var(--color-text-secondary)] mb-3">What was it for?</p>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {CATEGORIES.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setCategory(c.key)}
-                className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-colors ${category === c.key ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)] text-[var(--color-primary-hover)]' : 'border-[var(--color-border)] text-[var(--color-text-secondary)]'}`}
-              >
-                {c.icon}
-                <span className="text-xs font-medium">{c.key}</span>
-              </button>
-            ))}
-          </div>
 
-          <label className="block mb-4">
-            <span className="text-sm font-medium text-[var(--color-text-secondary)]">Purpose / Reason</span>
-            <input
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder="e.g. Team lunch, monthly rent, personal dinner"
-              className="input mt-2"
-            />
-          </label>
-
-          <div className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-col gap-3 mb-4">
             <input value={merchant} onChange={(e) => setMerchant(e.target.value)} placeholder="Restaurant / place (optional)" className="input" />
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (optional)" rows={2} className="input resize-none" />
           </div>
 
-          <div className="mb-6">
+          <div className="mb-5">
             <p className="mb-2 text-sm font-medium text-[var(--color-text-secondary)]">Expense date</p>
             <button
               type="button"
@@ -548,11 +540,11 @@ export function AddExpense() {
             </label>
           </div>
 
-          <div className="bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-6 text-sm text-[var(--color-text-secondary)]">
+          <div className="bg-[var(--color-surface-secondary)] rounded-xl p-3 mb-5 text-sm text-[var(--color-text-secondary)]">
             {expenseDateLabel(date)} · Paid by you · {formatCurrency(totalNum)} total
           </div>
 
-          <button onClick={save} className="w-full bg-[var(--color-primary)] text-white font-medium rounded-xl py-3.5">
+          <button onClick={save} disabled={!canSave} className="w-full bg-[var(--color-primary)] disabled:opacity-40 text-white font-medium rounded-xl py-3.5">
             Add Expense
           </button>
         </div>

@@ -914,6 +914,20 @@ export function calculateProportionalAdjustment(amount: number, weights: number[
   return rounded;
 }
 
+// Compose a rich display title from the expense's name, purpose/description,
+// and category so exports/statements show full context.
+function buildLedgerTitle(expense: Expense): string {
+  const parts: string[] = [];
+  const name = expense.title?.trim();
+  const purpose = expense.description?.trim();
+  // If the title is the same as the category (the fallback), only show it once.
+  const titleIsCategory = name && name === expense.category;
+  if (name && !titleIsCategory) parts.push(name);
+  if (purpose) parts.push(purpose);
+  parts.push(expense.category);
+  return parts.join(' · ');
+}
+
 export function friendLedger(friendId: string): LedgerEntry[] {
   const db = load();
   const entries: LedgerEntry[] = [];
@@ -933,7 +947,7 @@ export function friendLedger(friendId: string): LedgerEntry[] {
     if (owed > 0) {
       entries.push({
         id: uid(), kind: 'expense', date: expense.expense_date, time: expense.expense_time,
-        title: expense.title, amount: owed, sign: 1, runningBalance: 0, status: part.status, refId: expense.id,
+        title: buildLedgerTitle(expense), amount: owed, sign: 1, runningBalance: 0, status: part.status, refId: expense.id,
       });
     }
   }
@@ -947,7 +961,7 @@ export function friendLedger(friendId: string): LedgerEntry[] {
     if (advancedForMe > 0) {
       entries.push({
         id: uid(), kind: 'expense', date: expense.expense_date, time: expense.expense_time,
-        title: `Advanced for you — ${expense.title}`, amount: advancedForMe, sign: -1,
+        title: `Advanced for you — ${buildLedgerTitle(expense)}`, amount: advancedForMe, sign: -1,
         runningBalance: 0, status: undefined, refId: expense.id,
       });
     }

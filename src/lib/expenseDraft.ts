@@ -45,19 +45,30 @@ export function buildExpenseWhatsAppMessage({
   friend,
   amount,
   reason,
+  description,
+  category,
   expenseDate,
   pendingBalance,
 }: {
   friend: Friend;
   amount: number;
   reason: string;
+  description?: string;
+  category?: string;
   expenseDate: string;
   pendingBalance: number;
 }): string {
+  // Build a rich label: "Barbeque Nation · Team lunch · Food"
+  const parts: string[] = [];
+  const reasonIsCategory = reason && category && reason === category;
+  if (reason && !reasonIsCategory) parts.push(reason);
+  if (description) parts.push(description);
+  if (category) parts.push(category);
+  const label = parts.length ? parts.join(' · ') : reason;
   return [
     `Hi ${preferredFriendName(friend)} 👋`,
     '',
-    `I paid ${formatCurrency(amount)} for ${reason} on ${formatDate(expenseDate)}.`,
+    `I paid ${formatCurrency(amount)} for ${label} on ${formatDate(expenseDate)}.`,
     '',
     `Your pending balance is now ${formatCurrency(pendingBalance)}.`,
   ].join('\n');

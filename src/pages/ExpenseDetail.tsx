@@ -26,8 +26,12 @@ export function ExpenseDetail() {
 
   async function handleShare() {
     if (!expense) return;
+    const titleParts: string[] = [expense.title];
+    if (expense.description) titleParts.push(expense.description);
+    if (expense.title !== expense.category) titleParts.push(expense.category);
+    const richTitle = titleParts.join(' · ');
     const lines = [
-      `${expense.title} — ${formatCurrency(expense.total_amount)}`,
+      `${richTitle} — ${formatCurrency(expense.total_amount)}`,
       `Paid by ${payerLabel} on ${formatDate(expense.expense_date)}`,
       '',
       ...participants.map((p) => `${getFriend(p.friend_id)?.name}: ${formatCurrency(p.share_amount)} (${p.status})`),
